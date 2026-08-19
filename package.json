@@ -1,0 +1,36 @@
+{
+  "name": "managment-karting-backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+"scripts": {
+  "dev": "nodemon src/server.ts",
+  "build": "tsc",
+  "start": "node dist/server.js"
+},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/matiasArrebillaga/Managment-karting-backend.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/matiasArrebillaga/Managment-karting-backend/issues"
+  },
+  "homepage": "https://github.com/matiasArrebillaga/Managment-karting-backend#readme",
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "mysql2": "^3.23.3",
+    "reflect-metadata": "^0.2.2",
+    "typeorm": "^1.1.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.2.0",
+    "nodemon": "^3.1.14",
+    "ts-node": "^10.9.2",
+    "typescript": "^7.0.2"
+  }
+}
