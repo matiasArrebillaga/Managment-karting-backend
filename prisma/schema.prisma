@@ -1,0 +1,155 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model carreras {
+  fechaCarrera          DateTime          @db.Date
+  horaInicio            DateTime          @db.Time(0)
+  horaFin               DateTime          @db.Time(0)
+  Kartings_idKartings   Int
+  Torneos_idTorneos     Int
+  Circuitos_idCircuitos Int
+  circuitos             circuitos         @relation(fields: [Circuitos_idCircuitos], references: [idCircuitos], onDelete: NoAction, onUpdate: NoAction, map: "fk_Carrera_Circuitos1")
+  kartings              kartings          @relation(fields: [Kartings_idKartings], references: [idKartings], onDelete: NoAction, onUpdate: NoAction, map: "fk_Carrera_Kartings1")
+  torneos               torneos           @relation(fields: [Torneos_idTorneos], references: [idTorneos], onDelete: NoAction, onUpdate: NoAction, map: "fk_Carrera_Torneos1")
+  participaciones       participaciones[]
+
+  @@id([Kartings_idKartings, Torneos_idTorneos, Circuitos_idCircuitos, fechaCarrera])
+  @@index([Circuitos_idCircuitos], map: "fk_Carrera_Circuitos1_idx")
+  @@index([Kartings_idKartings], map: "fk_Carrera_Kartings1_idx")
+  @@index([Torneos_idTorneos], map: "fk_Carrera_Torneos1_idx")
+}
+
+model circuitos {
+  idCircuitos Int        @id @default(autoincrement())
+  distancia   Int
+  dificultad  String     @db.VarChar(45)
+  maximo      Int
+  carreras    carreras[]
+  reservas    reservas[]
+}
+
+model kartings {
+  idKartings                  Int          @id @default(autoincrement())
+  categoria                   String       @db.VarChar(45)
+  modelo                      String       @db.VarChar(45)
+  estado                      String       @db.VarChar(45)
+  fechaAdquisicion            DateTime     @db.Date
+  TiposKarting_idTiposKarting Int
+  carreras                    carreras[]
+  tiposkarting                tiposkarting @relation(fields: [TiposKarting_idTiposKarting], references: [idTiposKarting], onDelete: NoAction, onUpdate: NoAction, map: "fk_Kartings_TiposKarting1")
+  reservas                    reservas[]
+
+  @@index([TiposKarting_idTiposKarting], map: "fk_Kartings_TiposKarting1_idx")
+}
+
+model licencias {
+  idLicencias                   Int            @id @default(autoincrement())
+  fechaEmision                  DateTime       @db.Date
+  fechaVencimiento              DateTime       @db.Date
+  Personas_idPersona            Int
+  TiposLicencias_idTipoLicencia Int
+  personas                      personas       @relation(fields: [Personas_idPersona], references: [idPersona], onDelete: NoAction, onUpdate: NoAction, map: "fk_Licencias_Personas1")
+  tiposlicencias                tiposlicencias @relation(fields: [TiposLicencias_idTipoLicencia], references: [idTipoLicencia], onDelete: NoAction, onUpdate: NoAction, map: "fk_Licencias_TiposLicencias1")
+
+  @@index([Personas_idPersona], map: "fk_Licencias_Personas1_idx")
+  @@index([TiposLicencias_idTipoLicencia], map: "fk_Licencias_TiposLicencias1_idx")
+}
+
+model localidades {
+  idLocalidades Int        @id @default(autoincrement())
+  nombre        String     @db.VarChar(45)
+  personas      personas[]
+}
+
+model participaciones {
+  Carrera_Kartings_idKartings   Int
+  Carrera_Torneos_idTorneos     Int
+  Carrera_Circuitos_idCircuitos Int
+  Carrera_fecha                 DateTime @db.Date
+  Personas_idPersona            Int
+  puntos                        Int
+  tiempo                        String   @db.VarChar(45)
+  posicion_final                String   @db.VarChar(45)
+  carreras                      carreras @relation(fields: [Carrera_Kartings_idKartings, Carrera_Torneos_idTorneos, Carrera_Circuitos_idCircuitos, Carrera_fecha], references: [Kartings_idKartings, Torneos_idTorneos, Circuitos_idCircuitos, fechaCarrera], onDelete: NoAction, onUpdate: NoAction, map: "fk_Carrera_has_Personas_Carrera1")
+  personas                      personas @relation(fields: [Personas_idPersona], references: [idPersona], onDelete: NoAction, onUpdate: NoAction, map: "fk_Carrera_has_Personas_Personas1")
+
+  @@id([Carrera_Kartings_idKartings, Carrera_Torneos_idTorneos, Carrera_Circuitos_idCircuitos, Carrera_fecha, Personas_idPersona])
+  @@index([Carrera_Kartings_idKartings, Carrera_Torneos_idTorneos, Carrera_Circuitos_idCircuitos, Carrera_fecha], map: "fk_Carrera_has_Personas_Carrera1_idx")
+  @@index([Personas_idPersona], map: "fk_Carrera_has_Personas_Personas1_idx")
+}
+
+model personas {
+  idPersona                 Int                @id @default(autoincrement())
+  nombre                    String             @db.VarChar(45)
+  apellido                  String             @db.VarChar(45)
+  dni                       String             @db.VarChar(45)
+  fechaNacimiento           DateTime           @db.Date
+  mail                      String             @db.VarChar(45)
+  telefono                  String             @db.VarChar(45)
+  Localidades_idLocalidades Int
+  licencias                 licencias[]
+  participaciones           participaciones[]
+  localidades               localidades        @relation(fields: [Localidades_idLocalidades], references: [idLocalidades], onDelete: NoAction, onUpdate: NoAction, map: "fk_Personas_Localidades")
+  personas_torneos          personas_torneos[]
+  reservas                  reservas[]
+
+  @@index([Localidades_idLocalidades], map: "fk_Personas_Localidades_idx")
+}
+
+model personas_torneos {
+  Torneos_idTorneos  Int
+  Personas_idPersona Int
+  fecha_inscipcion   DateTime @db.Date
+  hora_inscripcion   DateTime @db.Time(0)
+  personas           personas @relation(fields: [Personas_idPersona], references: [idPersona], onDelete: NoAction, onUpdate: NoAction, map: "fk_Torneos_has_Personas_Personas1")
+  torneos            torneos  @relation(fields: [Torneos_idTorneos], references: [idTorneos], onDelete: NoAction, onUpdate: NoAction, map: "fk_Torneos_has_Personas_Torneos1")
+
+  @@id([Torneos_idTorneos, Personas_idPersona])
+  @@index([Personas_idPersona], map: "fk_Torneos_has_Personas_Personas1_idx")
+  @@index([Torneos_idTorneos], map: "fk_Torneos_has_Personas_Torneos1_idx")
+}
+
+model reservas {
+  idReservas            Int       @id @default(autoincrement())
+  fechaReserva          DateTime  @db.Date
+  monto                 Decimal   @db.Decimal(10, 0)
+  Personas_idPersona    Int
+  Circuitos_idCircuitos Int
+  Kartings_idKartings   Int
+  circuitos             circuitos @relation(fields: [Circuitos_idCircuitos], references: [idCircuitos], onDelete: NoAction, onUpdate: NoAction, map: "fk_Reservas_Circuitos1")
+  kartings              kartings  @relation(fields: [Kartings_idKartings], references: [idKartings], onDelete: NoAction, onUpdate: NoAction, map: "fk_Reservas_Kartings1")
+  personas              personas  @relation(fields: [Personas_idPersona], references: [idPersona], onDelete: NoAction, onUpdate: NoAction, map: "fk_Reservas_Personas1")
+
+  @@index([Circuitos_idCircuitos], map: "fk_Reservas_Circuitos1_idx")
+  @@index([Kartings_idKartings], map: "fk_Reservas_Kartings1_idx")
+  @@index([Personas_idPersona], map: "fk_Reservas_Personas1_idx")
+}
+
+model tiposkarting {
+  idTiposKarting Int        @id @default(autoincrement())
+  nombre         String     @db.VarChar(45)
+  descripcion    String     @db.VarChar(45)
+  kartings       kartings[]
+}
+
+model tiposlicencias {
+  idTipoLicencia Int         @id @default(autoincrement())
+  nombre         String      @db.VarChar(45)
+  descripcion    String      @db.VarChar(45)
+  licencias      licencias[]
+}
+
+model torneos {
+  idTorneos        Int                @id @default(autoincrement())
+  nombre           String             @db.VarChar(45)
+  descripcion      String             @db.VarChar(45)
+  fechaInicio      DateTime           @db.Date
+  fechaFin         DateTime           @db.Date
+  carreras         carreras[]
+  personas_torneos personas_torneos[]
+}
