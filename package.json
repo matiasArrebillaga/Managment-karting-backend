@@ -3,11 +3,11 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "scripts": {
-    "dev": "nodemon src/server.ts",
-    "build": "tsc",
-    "start": "node dist/server.js"
-  },
+"scripts": {
+  "dev": "nodemon --exec tsx src/server.ts",
+  "build": "tsc",
+  "start": "node dist/server.js"
+},
   "repository": {
     "type": "git",
     "url": "git+https://github.com/matiasArrebillaga/Managment-karting-backend.git"
@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/matiasArrebillaga/Managment-karting-backend#readme",
   "dependencies": {
+    "@prisma/adapter-mariadb": "^7.9.1",
     "@prisma/client": "^7.9.1",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
@@ -31,6 +32,7 @@
     "nodemon": "^3.1.14",
     "prisma": "^7.9.1",
     "ts-node": "^10.9.2",
+    "tsx": "^4.23.12",
     "typescript": "^5.9.3"
   }
 }

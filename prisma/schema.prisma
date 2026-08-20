@@ -1,11 +1,11 @@
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "mysql"
 }
-
 model carreras {
   fechaCarrera          DateTime          @db.Date
   horaInicio            DateTime          @db.Time(0)
