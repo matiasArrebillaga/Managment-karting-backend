@@ -6,6 +6,7 @@ generator client {
 datasource db {
   provider = "mysql"
 }
+
 model carreras {
   fechaCarrera          DateTime          @db.Date
   horaInicio            DateTime          @db.Time(0)
