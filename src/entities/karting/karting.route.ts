@@ -16,7 +16,14 @@ export class kartingController{
     }
     async getById (req: Request, res: Response){
         try{
-            const karting= await kartingService.getById();
+            const id = Number(req.params.idKartings)
+            const karting= await kartingService.getById(id);
+            
+            if (!karting){
+                return res.status(404).json({
+                    message: "Karting no encontrado"
+                });
+            }
             res.json(karting);
         }catch(error){
             res.status(500).json({
