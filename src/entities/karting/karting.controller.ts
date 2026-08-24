@@ -1,9 +1,8 @@
 import {Request , Response} from "express";
-import { KartingService } from "./karting.service";
+import kartingService from "./karting.service";
 
-const kartingService = new KartingService();
 
-export class kartingController{
+class KartingController{
     async getAll(req: Request, res: Response){
         try{
             const kartings = await kartingService.getAll();
@@ -32,3 +31,4 @@ export class kartingController{
         }
     }
 }
+export default new KartingController();

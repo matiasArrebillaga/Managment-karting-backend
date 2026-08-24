@@ -1,6 +1,6 @@
 import { prisma } from "../../config/prisma";
 
-export class KartingService {
+class KartingService {
     async getAll(){
         return await prisma.kartings.findMany();
     }
@@ -26,3 +26,4 @@ export class KartingService {
         });
     }
 }
+export default new KartingService();
