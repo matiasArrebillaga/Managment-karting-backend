@@ -1,4 +1,5 @@
 import { prisma } from "../../config/prisma";
+import { IKarting } from "./karting.interface";
 
 class KartingService {
     async getAll(){
@@ -14,10 +15,10 @@ class KartingService {
             data
         })
     }
-    async update(idKartings:number,data:any){
+    async update(idKartings:number,data:IKarting){
         return await prisma.kartings.update({
             where: {idKartings},
-            data
+            data:data
         });
     }
     async delete(idKartings:number){

@@ -43,7 +43,7 @@ class KartingController{
     }
     async update (req: Request, res:Response){
         try{
-            const data: Partial<IKarting>=req.body
+            const data: IKarting=req.body
             const id = Number(req.params.id)
             const kartingActualizado = await kartingService.update(id,data)
             if (!kartingActualizado){

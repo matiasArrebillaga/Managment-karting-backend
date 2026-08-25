@@ -1,8 +1,8 @@
 export interface IKarting {
     idKartings: number;
-    categoria: string;
-    modelo: string;
-    estado: string;
+    categoria?: string;
+    modelo?: string;
+    estado?: string;
     fechaAdquisicion: Date;
-    TiposKarting_idTiposKarting: number;
+    TiposKarting_idTiposKarting?: number;
 }
