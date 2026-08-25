@@ -5,6 +5,6 @@ const router = Router();
 
 
 router.get("/", kartingController.getAll);
-router.get("/id", kartingController.getById);
+router.get("/:id", kartingController.getById);
 
 export default router;

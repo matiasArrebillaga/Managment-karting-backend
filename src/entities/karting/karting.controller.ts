@@ -15,9 +15,8 @@ class KartingController{
     }
     async getById (req: Request, res: Response){
         try{
-            const id = Number(req.params.idKartings)
+            const id = Number(req.params.id)
             const karting= await kartingService.getById(id);
-            
             if (!karting){
                 return res.status(404).json({
                     message: "Karting no encontrado"
