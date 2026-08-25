@@ -15,10 +15,10 @@ class KartingService {
             data
         })
     }
-    async update(idKartings:number,data:IKarting){
+    async update(idKartings:number,data:Partial<IKarting>){
         return await prisma.kartings.update({
             where: {idKartings},
-            data:data
+            data
         });
     }
     async delete(idKartings:number){

@@ -43,15 +43,14 @@ class KartingController{
     }
     async update (req: Request, res:Response){
         try{
-            const data: IKarting=req.body
             const id = Number(req.params.id)
-            const kartingActualizado = await kartingService.update(id,data)
+            const kartingActualizado = await kartingService.update(id,req.body)
             if (!kartingActualizado){
                 return res.status(404).json({
                     message: "Karting no encontrado"
                 })
             }
-            res.status(500).json(kartingActualizado)
+            res.status(200).json(kartingActualizado)
         }catch(error){
             res.status(500).json({
                 message:"Error al Actualizar el karting"
