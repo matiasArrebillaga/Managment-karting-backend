@@ -1,5 +1,5 @@
 import { prisma } from "../../config/prisma";
-import { IKarting } from "./karting.interface";
+import { CreateKarting, IKarting, UpdateKarting } from "./karting.interface";
 
 class KartingService {
     async getAll(){
@@ -15,7 +15,7 @@ class KartingService {
             data
         })
     }
-    async update(idKartings:number,data:Partial<IKarting>){
+    async update(idKartings:number,data:UpdateKarting){
         return await prisma.kartings.update({
             where: {idKartings},
             data

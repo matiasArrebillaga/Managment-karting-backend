@@ -6,3 +6,6 @@ export interface IKarting {
     fechaAdquisicion: Date;
     TiposKarting_idTiposKarting?: number;
 }
+
+export type CreateKarting = Omit<IKarting, "idKartings">;
+export type UpdateKarting = Partial<CreateKarting>;
