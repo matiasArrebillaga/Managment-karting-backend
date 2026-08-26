@@ -1,5 +1,5 @@
 import {prisma} from "../../config/prisma"
-import { IPersona } from "./persona.interface"
+import { IPersona, UpdatePersona } from "./persona.interface"
 
 class PersonaService {
     async getAll(){
@@ -15,7 +15,7 @@ class PersonaService {
             data
         })
     }
-    async update(idPersona:number,data:Partial<IPersona>){
+    async update(idPersona:number,data:UpdatePersona){
         return await prisma.personas.update({
             where: {idPersona},
             data

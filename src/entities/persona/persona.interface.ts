@@ -5,6 +5,9 @@ export interface IPersona {
     dni: string;
     fechaNacimiento: Date;
     mail: string;
-    telefono: string
+    telefono: string;
     Localidades_idLocalidades?: number;
 }
+
+export type CreatePersona = Omit<IPersona, "idPersona">;
+export type UpdatePersona = Partial<CreatePersona>;

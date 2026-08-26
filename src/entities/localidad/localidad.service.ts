@@ -1,5 +1,5 @@
 import {prisma} from "../../config/prisma"
-import { ILocalidad } from "./localidad.interface";
+import { CreateLocalidad, ILocalidad, UpdateLocalidad } from "./localidad.interface";
 class LocalidadService {
     async getAll(){
         return await prisma.localidades.findMany();
@@ -9,12 +9,12 @@ class LocalidadService {
             where: {idLocalidades}
         });
     }
-    async create(data:any){
+    async create(data:CreateLocalidad){
         return await prisma.localidades.create({
             data
         })
     }
-    async update(idLocalidades:number,data:Partial<ILocalidad>){
+    async update(idLocalidades:number,data:UpdateLocalidad){
         return await prisma.localidades.update({
             where: {idLocalidades},
             data
