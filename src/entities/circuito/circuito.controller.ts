@@ -65,6 +65,9 @@ class CircuitoController{
                     message: "Circuito no encontrado"
                 });
             }
+            res.status(200).json({
+                message: "Circuito eliminado correctamente"
+            });            
         }catch (error){
             res.status(500).json ({
                 message:"Error al eliminar el circuito"
