@@ -92,6 +92,7 @@ model personas {
   fechaNacimiento           DateTime           @db.Date
   mail                      String             @db.VarChar(45)
   telefono                  String             @db.VarChar(45)
+  contraseña                String             @db.VarChar(255)
   Localidades_idLocalidades Int
   licencias                 licencias[]
   participaciones           participaciones[]

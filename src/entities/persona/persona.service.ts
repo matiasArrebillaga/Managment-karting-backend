@@ -4,10 +4,12 @@ import { IPersona, UpdatePersona } from "./persona.interface"
 class PersonaService {
     async getAll(){
         return await prisma.personas.findMany();
+        omit: {contraseña:true}
     }
     async getById(idPersona:number){
         return await prisma.personas.findUnique({
-            where: {idPersona}
+            where: {idPersona},
+            omit: {contraseña: true}
         });
     }
     async create(data:any){
