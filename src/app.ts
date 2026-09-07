@@ -3,9 +3,11 @@ import kartingRoutes from "./entities/karting/karting.routes"
 import personaRoutes from "./entities/persona/persona.routes"
 import localidadRoutes from "./entities/localidad/localidad.routes"
 import circuitoRoutes from "./entities/circuito/circuito.routes"
-import tipoLicenciasRouters from "./entities/tiposLicencias/tiposLicencias.routes"
-import tipoKartingRouters from "./entities/tiposKartings/tiposKarting.routes"
+import tipoLicenciasRouters from "./entities/tipoLicencia/tiposLicencias.routes"
+import tipoKartingRouters from "./entities/tipoKarting/tiposKarting.routes"
 import torneo from "./entities/torneos/torneo.routes"
+import licenciaRoutes from  "./entities/licencia/licencia.routes";
+import reservaRoutes from  "./entities/reserva/reserva.routes";
 
 
 const app = express();
@@ -18,6 +20,8 @@ app.use("/api/circuitos", circuitoRoutes);
 app.use("/api/tiposLicencias",tipoLicenciasRouters);
 app.use("/api/tiposKartings",tipoKartingRouters);
 app.use("/api/torneos",torneo);
+app.use("/apilicencias",licenciaRoutes);
+app.use("/api/reservas",reservaRoutes);
 
 
 app.get("/", (req, res) => {
