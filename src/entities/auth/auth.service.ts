@@ -14,10 +14,17 @@ class AuthService {
     if (personaExistente){
         throw new Error ("El mail ya esta registrado");
     }
+
+    const fechaNacimiento = new Date(data.fechaNacimiento);
+    if (Number.isNaN(fechaNacimiento.getTime())) {
+        throw new Error("La fecha de nacimiento no es válida");
+    }
+
     const contraseñaHasheada= await bcrypt.hash(data.contraseña,10)
     const nuevaPersona = await prisma.personas.create({
         data: {
             ...data,
+            fechaNacimiento,
             contraseña: contraseñaHasheada
         }
     });

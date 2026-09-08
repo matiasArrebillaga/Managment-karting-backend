@@ -84,6 +84,12 @@ model participaciones {
   @@index([Personas_idPersona], map: "fk_Carrera_has_Personas_Personas1_idx")
 }
 
+model roles {
+  idRol    Int        @id @default(autoincrement())
+  nombre   String     @db.VarChar(20)
+  personas personas[]
+}
+
 model personas {
   idPersona                 Int                @id @default(autoincrement())
   nombre                    String             @db.VarChar(45)
@@ -94,13 +100,16 @@ model personas {
   telefono                  String             @db.VarChar(45)
   contraseña                String             @db.VarChar(255)
   Localidades_idLocalidades Int
+  idRol                     Int
+  rol                       roles             @relation(fields: [idRol], references: [idRol])
   licencias                 licencias[]
   participaciones           participaciones[]
-  localidades               localidades        @relation(fields: [Localidades_idLocalidades], references: [idLocalidades], onDelete: NoAction, onUpdate: NoAction, map: "fk_Personas_Localidades")
+  localidades               localidades       npx prisma migrate dev --name mi_cambio@relation(fields: [Localidades_idLocalidades], references: [idLocalidades], onDelete: NoAction, onUpdate: NoAction, map: "fk_Personas_Localidades")
   personas_torneos          personas_torneos[]
   reservas                  reservas[]
 
   @@index([Localidades_idLocalidades], map: "fk_Personas_Localidades_idx")
+  @@index([idRol], map: "fk_Personas_Roles_idx")
 }
 
 model personas_torneos {
