@@ -3,6 +3,9 @@ import kartingRoutes from "./entities/karting/karting.routes"
 import personaRoutes from "./entities/persona/persona.routes"
 import localidadRoutes from "./entities/localidad/localidad.routes"
 import circuitoRoutes from "./entities/circuito/circuito.routes"
+import authRoutes from "./entities/auth/auth.routes"
+import rolRoutes from "./entities/rol/rol.routes"
+import { AuthRequest, verifyToken } from "./middleware/auth.middleware";
 import tipoLicenciasRouters from "./entities/tipoLicencia/tiposLicencias.routes"
 import tipoKartingRouters from "./entities/tipoKarting/tiposKarting.routes"
 import torneo from "./entities/torneos/torneo.routes"
@@ -21,6 +24,8 @@ app.use("/api/kartings", kartingRoutes);
 app.use("/api/personas",personaRoutes);
 app.use("/api/localidades", localidadRoutes);
 app.use("/api/circuitos", circuitoRoutes);
+app.use("/api/auth", authRoutes)
+app.use("/api/roles", rolRoutes);
 app.use("/api/tiposLicencias",tipoLicenciasRouters);
 app.use("/api/tiposKartings",tipoKartingRouters);
 app.use("/api/torneos",torneo);
@@ -30,7 +35,12 @@ app.use("/api/carreras",carreraRoutes);
 app.use("/api/participaciones",participacionRoutes);
 app.use("/api/inscripciones",inscripcionRoutes);
 
-
+app.get("/api/protegida", verifyToken, (req: AuthRequest, res) => {
+    res.json({
+        message: "Acceso autorizado",
+        user: req.user
+    });
+});
 app.get("/", (req, res) => {
     res.send("API funcionando");
 });

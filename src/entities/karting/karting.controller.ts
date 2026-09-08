@@ -66,6 +66,9 @@ class KartingController{
                     message: "Karting no encontrado"
                 });
             }
+            res.status(200).json({
+                message: "Karting eliminado correctamente"
+            });            
         }catch (error){
             res.status(500).json ({
                 message:"Error al eliminar el karting"
