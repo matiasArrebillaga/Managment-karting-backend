@@ -6,6 +6,17 @@ import circuitoRoutes from "./entities/circuito/circuito.routes"
 import authRoutes from "./entities/auth/auth.routes"
 import rolRoutes from "./entities/rol/rol.routes"
 import { AuthRequest, verifyToken } from "./middleware/auth.middleware";
+import tipoLicenciasRouters from "./entities/tipoLicencia/tiposLicencias.routes"
+import tipoKartingRouters from "./entities/tipoKarting/tiposKarting.routes"
+import torneo from "./entities/torneos/torneo.routes"
+import licenciaRoutes from  "./entities/licencia/licencia.routes";
+import reservaRoutes from  "./entities/reserva/reserva.routes";
+import carreraRoutes from "./entities/carrera/carrera.routes"
+import participacionRoutes from "./entities/participacion/participacion.routes"
+import inscripcionRoutes from "./entities/inscripcion/inscripcion.routes"
+
+
+
 const app = express();
 app.use(express.json());
 
@@ -15,6 +26,14 @@ app.use("/api/localidades", localidadRoutes);
 app.use("/api/circuitos", circuitoRoutes);
 app.use("/api/auth", authRoutes)
 app.use("/api/roles", rolRoutes);
+app.use("/api/tiposLicencias",tipoLicenciasRouters);
+app.use("/api/tiposKartings",tipoKartingRouters);
+app.use("/api/torneos",torneo);
+app.use("/api/licencias",licenciaRoutes);
+app.use("/api/reservas",reservaRoutes);
+app.use("/api/carreras",carreraRoutes);
+app.use("/api/participaciones",participacionRoutes);
+app.use("/api/inscripciones",inscripcionRoutes);
 
 app.get("/api/protegida", verifyToken, (req: AuthRequest, res) => {
     res.json({
@@ -22,7 +41,6 @@ app.get("/api/protegida", verifyToken, (req: AuthRequest, res) => {
         user: req.user
     });
 });
-
 app.get("/", (req, res) => {
     res.send("API funcionando");
 });

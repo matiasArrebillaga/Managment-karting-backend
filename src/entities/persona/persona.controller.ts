@@ -16,7 +16,7 @@ class PersonaController{
     async getById (req: Request, res: Response){
         try{
             const id = Number(req.params.id)
-            const persona = await personaService.getById(id);
+            const persona : IPersona | null = await personaService.getById(id);
             if (!persona){
                 return res.status(404).json({
                     message: "Persona no encontrado"

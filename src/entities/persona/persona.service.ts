@@ -1,5 +1,5 @@
 import {prisma} from "../../config/prisma"
-import { IPersona, UpdatePersona } from "./persona.interface"
+import { IPersona, UpdatePersona , CreatePersona } from "./persona.interface"
 
 class PersonaService {
     async getAll(){
@@ -12,7 +12,7 @@ class PersonaService {
             omit: {contraseña: true}
         });
     }
-    async create(data:any){
+    async create(data:CreatePersona){
         return await prisma.personas.create({
             data
         })
