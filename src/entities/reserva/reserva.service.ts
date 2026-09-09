@@ -26,5 +26,15 @@ class ReservaService {
             where:{idReservas}
         });
     }
+    private async validarEligibilidadLicencia(personaId: number, kartingId: number): Promise<void>{
+        const karting = await prisma.kartings.findUnique({
+            where: {idKartings: kartingId},
+            include: {
+                tiposkarting:{
+                    include:{tiposlicencias:true}
+                }
+            }
+        })
+    }
 }
 export default new ReservaService();
