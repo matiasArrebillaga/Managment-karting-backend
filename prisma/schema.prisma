@@ -104,7 +104,7 @@ model personas {
   rol                       roles             @relation(fields: [idRol], references: [idRol])
   licencias                 licencias[]
   participaciones           participaciones[]
-  localidades               localidades       npx prisma migrate dev --name mi_cambio@relation(fields: [Localidades_idLocalidades], references: [idLocalidades], onDelete: NoAction, onUpdate: NoAction, map: "fk_Personas_Localidades")
+  localidades               localidades         @relation(fields: [Localidades_idLocalidades], references: [idLocalidades], onDelete: NoAction, onUpdate: NoAction, map: "fk_Personas_Localidades")
   personas_torneos          personas_torneos[]
   reservas                  reservas[]
 
@@ -142,17 +142,22 @@ model reservas {
 }
 
 model tiposkarting {
-  idTiposKarting Int        @id @default(autoincrement())
-  nombre         String     @db.VarChar(45)
-  descripcion    String     @db.VarChar(45)
-  kartings       kartings[]
-}
+  idTiposKarting                       Int            @id @default(autoincrement())
+  nombre                               String         @db.VarChar(45)
+  descripcion                          String         @db.VarChar(45)
+  TiposLicencias_idTipoLicenciaMinima  Int            @default(1)
+  tiposlicencias                       tiposlicencias @relation(fields: [TiposLicencias_idTipoLicenciaMinima], references: [idTipoLicencia], onDelete: NoAction, onUpdate: NoAction, map: "fk_TiposKarting_TiposLicencias")
+  kartings                             kartings[]
 
+  @@index([TiposLicencias_idTipoLicenciaMinima], map: "fk_TiposKarting_TiposLicencias_idx")
+}
 model tiposlicencias {
-  idTipoLicencia Int         @id @default(autoincrement())
-  nombre         String      @db.VarChar(45)
-  descripcion    String      @db.VarChar(45)
+  idTipoLicencia Int             @id @default(autoincrement())
+  nombre         String          @db.VarChar(45)
+  descripcion    String          @db.VarChar(45)
+  nivel          Int
   licencias      licencias[]
+  tiposkarting   tiposkarting[]
 }
 
 model torneos {
