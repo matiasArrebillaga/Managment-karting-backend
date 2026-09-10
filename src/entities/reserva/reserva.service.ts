@@ -76,7 +76,7 @@ class ReservaService {
             where: {
                 Personas_idPersona: personaId,
                 fechaVencimiento: { gte: hoy },
-                tipoLicencias: { nivel: { gte: nivelRequerido } },
+                tiposlicencias: { nivel: { gte: nivelRequerido } },
             },
         });
         if (!licenciaValida) {
