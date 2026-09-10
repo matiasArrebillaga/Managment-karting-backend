@@ -6,3 +6,4 @@ dist/
 .claude/
 .windsurf/
 migrations/
+.prettierrc
