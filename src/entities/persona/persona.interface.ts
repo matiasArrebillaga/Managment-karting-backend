@@ -7,7 +7,10 @@ export interface IPersona {
     mail: string;
     telefono: string;
     Localidades_idLocalidades: number;
+    idRol: number;
 }
 
-export type CreatePersona = Omit<IPersona, "idPersona">;
+export type CreatePersona = Omit<IPersona, "idPersona"> & {
+    contraseña: string;
+};
 export type UpdatePersona = Partial<CreatePersona>;
