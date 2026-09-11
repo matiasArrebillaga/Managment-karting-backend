@@ -25,4 +25,4 @@ Este es el backend para el sistema de gestión de carreras de karting.
    ```
 
 4. **Mirar la documentacion:**
-http://localhost:{PORT}/api-docs/
+http://localhost:3000/api-docs/
