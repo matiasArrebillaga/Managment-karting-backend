@@ -91,22 +91,23 @@ model roles {
 }
 
 model personas {
-  idPersona                 Int                @id @default(autoincrement())
-  nombre                    String             @db.VarChar(45)
-  apellido                  String             @db.VarChar(45)
-  dni                       String             @db.VarChar(45)
-  fechaNacimiento           DateTime           @db.Date
-  mail                      String             @db.VarChar(45)
-  telefono                  String             @db.VarChar(45)
-  contraseña                String             @db.VarChar(255)
+  idPersona                 Int      @id @default(autoincrement())
+  nombre                    String   @db.VarChar(45)
+  apellido                  String   @db.VarChar(45)
+  dni                       String   @db.VarChar(45)
+  fechaNacimiento           DateTime @db.Date
+  mail                      String   @db.VarChar(45)
+  telefono                  String   @db.VarChar(45)
+  contraseña               String   @db.VarChar(255)
   Localidades_idLocalidades Int
   idRol                     Int
-  rol                       roles             @relation(fields: [idRol], references: [idRol])
-  licencias                 licencias[]
-  participaciones           participaciones[]
-  localidades               localidades       npx prisma migrate dev --name mi_cambio@relation(fields: [Localidades_idLocalidades], references: [idLocalidades], onDelete: NoAction, onUpdate: NoAction, map: "fk_Personas_Localidades")
-  personas_torneos          personas_torneos[]
-  reservas                  reservas[]
+
+  rol              roles              @relation(fields: [idRol], references: [idRol])
+  licencias        licencias[]
+  participaciones  participaciones[]
+  localidades      localidades        @relation(fields: [Localidades_idLocalidades], references: [idLocalidades], onDelete: NoAction, onUpdate: NoAction, map: "fk_Personas_Localidades")
+  personas_torneos personas_torneos[]
+  reservas         reservas[]
 
   @@index([Localidades_idLocalidades], map: "fk_Personas_Localidades_idx")
   @@index([idRol], map: "fk_Personas_Roles_idx")
