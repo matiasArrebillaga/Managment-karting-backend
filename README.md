@@ -26,3 +26,6 @@ Este es el backend para el sistema de gestión de carreras de karting.
 
 4. **Mirar la documentacion:**
 http://localhost:3000/api-docs/
+
+5.**Conectar al frontend**
+Esta listo para conectarse al frontend, por default usa el port 3000
