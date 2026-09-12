@@ -1,4 +1,5 @@
 import express from "express";
+import cors from "cors";
 import kartingRoutes from "./entities/karting/karting.routes";
 import personaRoutes from "./entities/persona/persona.routes";
 import localidadRoutes from "./entities/localidad/localidad.routes";
@@ -18,6 +19,10 @@ import swaggerUi from "swagger-ui-express";
 import openapiSpec from "./config/openapi";
 
 const app = express();
+app.use(cors({
+    origin: process.env.FRONTEND_URL, 
+    credentials: true
+}));
 app.use(express.json());
 
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(openapiSpec));
