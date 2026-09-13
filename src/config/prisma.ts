@@ -9,8 +9,13 @@ const adapter = new PrismaMariaDb({
     password: process.env.DB_PASSWORD!,
     database: process.env.DB_DATABASE!,
     connectionLimit: 5,
+    allowPublicKeyRetrieval: true
 });
 
 export const prisma = new PrismaClient({
     adapter,
 });
+
+prisma.$connect()
+    .then(() => console.log("✅ Prisma conectado"))
+    .catch((error) => console.error("❌ Error conectando Prisma:", error));

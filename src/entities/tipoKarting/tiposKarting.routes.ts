@@ -1,13 +1,14 @@
 import { Router } from "express";
 import TiposKartingsController from "./tiposKarting.controller";
+import { verifyRoles } from "../../middleware/auth.middleware";
 
 const router = Router();
 
 
-router.get("/", TiposKartingsController.getAll);
-router.get("/:id", TiposKartingsController.getById);
-router.post("/", TiposKartingsController.create);
-router.patch("/:id", TiposKartingsController.update);
-router.delete("/:id",TiposKartingsController.delete);
+router.get("/", verifyRoles("EMPLEADO","ADMIN","EMPLEADO"),TiposKartingsController.getAll);
+router.get("/:id",verifyRoles("EMPLEADO","ADMIN","EMPLEADO"), TiposKartingsController.getById);
+router.post("/", verifyRoles("EMPLEADO","ADMIN"),TiposKartingsController.create);
+router.patch("/:id",verifyRoles("EMPLEADO","ADMIN"), TiposKartingsController.update);
+router.delete("/:id",verifyRoles("ADMIN"),TiposKartingsController.delete);
 
 export default router;

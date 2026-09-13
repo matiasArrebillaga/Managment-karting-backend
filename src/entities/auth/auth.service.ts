@@ -32,24 +32,45 @@ class AuthService {
     return personaSinPassword;
     }
     
-    async login (data: ILoginDTO){
-        const persona = await prisma.personas.findFirst({
-            where: {mail: data.mail}
-        });
-        if (!persona){
-            throw new Error ("Credenciales invalidas");
+    
+    async login(data: ILoginDTO) {
+
+    const persona = await prisma.personas.findFirst({
+        where: { mail: data.mail },
+        include: {
+            rol: true
         }
-        const contraseñaValida = await bcrypt.compare(data.contraseña,persona.contraseña);
-        if (!contraseñaValida){
-            throw new Error ("Credenciales invalidas");
-        }
-        const token = jwt.sign(
-            {idPersona: persona.idPersona, mail: persona.mail},
-            JWT_SECRET,
-            {expiresIn: JWT_EXPIRES_IN}
-        );
-        const {contraseña, ...personaSinContraseña} = persona;
-        return {token,persona: personaSinContraseña};
+    });
+
+    if (!persona) {
+        throw new Error("Credenciales invalidas");
     }
+
+    const contraseñaValida = await bcrypt.compare(
+        data.contraseña,
+        persona.contraseña
+    );
+
+    if (!contraseñaValida) {
+        throw new Error("Credenciales invalidas");
+    }
+
+    const token = jwt.sign(
+        {
+            idPersona: persona.idPersona,
+            mail: persona.mail,
+            rol: persona.rol.nombre
+        },
+        JWT_SECRET,
+        { expiresIn: JWT_EXPIRES_IN }
+    );
+
+    const { contraseña, ...personaSinContraseña } = persona;
+
+    return {
+        token,
+        persona: personaSinContraseña
+    };
+}
 }
 export default new AuthService();
