@@ -152,7 +152,16 @@ class CarrerasService {
 
     return await this.create(data); 
 }
-
+    async getByTorneo(idTorneo: number) {
+    return await prisma.carreras.findMany({
+        where: { Torneos_idTorneos: idTorneo },
+        include: {
+            circuitos: true,
+            kartings: true
+        },
+        orderBy: { fechaCarrera: "asc" }
+    });
+}
 }
 
 export default new CarrerasService();

@@ -129,6 +129,16 @@ async create(req: Request, res: Response) {
             });
         }
     }
+    async getByTorneo(req: Request, res: Response) {
+    try {
+        const idTorneo = Number(req.params.idTorneo);
+        const carreras = await CarrerasService.getByTorneo(idTorneo);
+        res.status(200).json(carreras);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Error al obtener las carreras del torneo" });
+    }
+}
 }
 
 export default new CarrerasController();

@@ -22,5 +22,5 @@ carrera.delete(
     "/:fechaCarrera/:Kartings_idKartings/:Torneos_idTorneos/:Circuitos_idCircuitos",
     CarrerasController.delete
 );
-
+carrera.get("/torneo/:idTorneo", CarrerasController.getByTorneo);
 export default carrera;
