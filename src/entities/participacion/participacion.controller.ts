@@ -63,46 +63,30 @@ class ParticipacionesController {
     }
 
     // Crear una participación
-    async create(req: Request, res: Response) {
-        try {
-            const data = {
-                Carrera_Kartings_idKartings:
-                    Number(req.body.Carrera_Kartings_idKartings),
+async create(req: Request, res: Response) {
+    try {
+        const data = {
+            Carrera_Kartings_idKartings: Number(req.body.Carrera_Kartings_idKartings),
+            Carrera_Torneos_idTorneos: Number(req.body.Carrera_Torneos_idTorneos),
+            Carrera_Circuitos_idCircuitos: Number(req.body.Carrera_Circuitos_idCircuitos),
+            Carrera_fecha: new Date(String(req.body.Carrera_fecha)),
+            Personas_idPersona: Number(req.body.Personas_idPersona),
+            puntos: Number(req.body.puntos),
+            tiempo: String(req.body.tiempo),
+            posicion_final: String(req.body.posicion_final)
+        };
 
-                Carrera_Torneos_idTorneos:
-                    Number(req.body.Carrera_Torneos_idTorneos),
+        const participacion = await ParticipacionesService.registrarParticipacion(data);
 
-                Carrera_Circuitos_idCircuitos:
-                    Number(req.body.Carrera_Circuitos_idCircuitos),
+        res.status(201).json(participacion);
 
-                Carrera_fecha:
-                    new Date(String(req.body.Carrera_fecha)),
-
-                Personas_idPersona:
-                    Number(req.body.Personas_idPersona),
-
-                puntos:
-                    Number(req.body.puntos),
-
-                tiempo:
-                    String(req.body.tiempo),
-
-                posicion_final:
-                    String(req.body.posicion_final)
-            };
-
-            const participacion =
-                await ParticipacionesService.create(data);
-
-            res.status(201).json(participacion);
-
-        } catch (error) {
-            console.error(error);
-            res.status(500).json({
-                message: "Error al crear la participación"
-            });
-        }
+    } catch (error: any) {
+        console.error(error);
+        res.status(400).json({
+            message: error.message || "Error al crear la participación"
+        });
     }
+}
 
     // Actualizar una participación
     async update(req: Request, res: Response) {
