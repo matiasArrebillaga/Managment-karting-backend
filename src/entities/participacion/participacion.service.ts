@@ -218,6 +218,31 @@ class ParticipacionesService {
 
     return await this.create(data);
 }
+async getTablaGeneral(idTorneo: number) {
+    const resultados = await prisma.participaciones.groupBy({
+        by: ["Personas_idPersona"],
+        where: { Carrera_Torneos_idTorneos: idTorneo },
+        _sum: { puntos: true },
+        orderBy: { _sum: { puntos: "desc" } }
+    });
+
+    const personaIds = resultados.map((r: { Personas_idPersona: any; }) => r.Personas_idPersona);
+    const personas = await prisma.personas.findMany({
+        where: { idPersona: { in: personaIds } },
+        select: { idPersona: true, nombre: true, apellido: true }
+    });
+
+    return resultados.map((r: { Personas_idPersona: any; _sum: { puntos: any; }; }, i: number) => {
+        const persona = personas.find((p: { idPersona: any; }) => p.idPersona === r.Personas_idPersona);
+        return {
+            posicion: i + 1,
+            idPersona: r.Personas_idPersona,
+            nombre: persona?.nombre,
+            apellido: persona?.apellido,
+            puntosTotales: r._sum.puntos ?? 0
+        };
+    });
+}
 }
 
 export default new ParticipacionesService();

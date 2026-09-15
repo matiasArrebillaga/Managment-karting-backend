@@ -63,9 +63,9 @@ class ParticipacionesController {
     }
 
     // Crear una participación
-async create(req: Request, res: Response) {
-    try {
-        const data = {
+    async create(req: Request, res: Response) {
+        try {
+         const data = {
             Carrera_Kartings_idKartings: Number(req.body.Carrera_Kartings_idKartings),
             Carrera_Torneos_idTorneos: Number(req.body.Carrera_Torneos_idTorneos),
             Carrera_Circuitos_idCircuitos: Number(req.body.Carrera_Circuitos_idCircuitos),
@@ -177,6 +177,16 @@ async create(req: Request, res: Response) {
             });
         }
     }
+    async getTablaGeneral(req: Request, res: Response) {
+    try {
+        const idTorneo = Number(req.params.idTorneo);
+        const tabla = await ParticipacionesService.getTablaGeneral(idTorneo);
+        res.status(200).json(tabla);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Error al obtener la tabla general" });
+    }
+}
 }
 
 export default new ParticipacionesController();
