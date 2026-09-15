@@ -341,6 +341,63 @@ for (const resource of compositeResources) {
     };
 }
 
+paths["/api/carreras/torneo/{idTorneo}"] = {
+    get: {
+        tags: ["Carreras"],
+        summary: "Obtener carreras por torneo",
+        parameters: [{
+            name: "idTorneo",
+            in: "path",
+            required: true,
+            description: "Identificador del torneo",
+            schema: { type: "integer", format: "int32" }
+        }],
+        responses: {
+            "200": {
+                description: "Carreras del torneo obtenidas correctamente",
+                content: {
+                    "application/json": {
+                        schema: {
+                            type: "array",
+                            items: { $ref: "#/components/schemas/Carrera" }
+                        }
+                    }
+                }
+            },
+            "404": standardResponses("Carrera")["404"],
+            "500": standardResponses("Carrera")["500"]
+        }
+    }
+};
+
+paths["/api/participaciones/torneo/{idTorneo}/tabla-general"] = {
+    get: {
+        tags: ["Participaciones"],
+        summary: "Obtener la tabla general de un torneo",
+        parameters: [{
+            name: "idTorneo",
+            in: "path",
+            required: true,
+            description: "Identificador del torneo",
+            schema: { type: "integer", format: "int32" }
+        }],
+        responses: {
+            "200": {
+                description: "Tabla general obtenida correctamente",
+                content: {
+                    "application/json": {
+                        schema: {
+                            type: "array",
+                            items: { $ref: "#/components/schemas/TablaGeneralItem" }
+                        }
+                    }
+                }
+            },
+            "500": standardResponses("Participación")["500"]
+        }
+    }
+};
+
 const integerId = { type: "integer", format: "int32" };
 const date = { type: "string", format: "date" };
 const dateTime = { type: "string", format: "date-time" };
@@ -402,6 +459,13 @@ const schemas = {
     Carrera: objectSchema({ fechaCarrera: date, horaInicio: dateTime, horaFin: dateTime, Kartings_idKartings: integerId, Torneos_idTorneos: integerId, Circuitos_idCircuitos: integerId }),
     ParticipacionRequest: objectSchema({ Carrera_Kartings_idKartings: integerId, Carrera_Torneos_idTorneos: integerId, Carrera_Circuitos_idCircuitos: integerId, Carrera_fecha: date, Personas_idPersona: integerId, puntos: integerId, tiempo: { type: "string" }, posicion_final: { type: "string" } }),
     Participacion: objectSchema({ Carrera_Kartings_idKartings: integerId, Carrera_Torneos_idTorneos: integerId, Carrera_Circuitos_idCircuitos: integerId, Carrera_fecha: date, Personas_idPersona: integerId, puntos: integerId, tiempo: { type: "string" }, posicion_final: { type: "string" } }),
+    TablaGeneralItem: objectSchema({
+        posicion: integerId,
+        idPersona: integerId,
+        nombre: { type: "string", example: "Juan" },
+        apellido: { type: "string", example: "Pérez" },
+        puntosTotales: integerId
+    }),
     InscripcionRequest: objectSchema({ Torneos_idTorneos: integerId, Personas_idPersona: integerId, fecha_inscipcion: date, hora_inscripcion: dateTime }),
     Inscripcion: objectSchema({ Torneos_idTorneos: integerId, Personas_idPersona: integerId, fecha_inscipcion: date, hora_inscripcion: dateTime })
 };
