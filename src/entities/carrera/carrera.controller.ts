@@ -48,28 +48,27 @@ class CarrerasController {
         }
     }
 
-    async create(req: Request, res: Response) {
-        try {
-            const data = {
-                fechaCarrera: new Date(req.body.fechaCarrera),
-                horaInicio: new Date(req.body.horaInicio),
-                horaFin: new Date(req.body.horaFin),
-                Kartings_idKartings: Number(req.body.Kartings_idKartings),
-                Torneos_idTorneos: Number(req.body.Torneos_idTorneos),
-                Circuitos_idCircuitos: Number(req.body.Circuitos_idCircuitos)
-            };
+async create(req: Request, res: Response) {
+    try {
+        const data = {
+            fechaCarrera: new Date(req.body.fechaCarrera),
+            horaInicio: new Date(req.body.horaInicio),
+            horaFin: new Date(req.body.horaFin),
+            Kartings_idKartings: Number(req.body.Kartings_idKartings),
+            Torneos_idTorneos: Number(req.body.Torneos_idTorneos),
+            Circuitos_idCircuitos: Number(req.body.Circuitos_idCircuitos)
+        };
 
-            const carrera = await CarrerasService.create(data);
+        const carrera = await CarrerasService.crearCarrera(data);
+        res.status(201).json(carrera);
 
-            res.status(201).json(carrera);
-
-        } catch (error) {
-            console.error(error);
-            res.status(500).json({
-                message: "Error al crear la carrera"
-            });
-        }
+    } catch (error: any) {
+        console.error(error);
+        res.status(400).json({
+            message: error.message || "Error al crear la carrera"
+        });
     }
+}
 
     async update(req: Request, res: Response) {
         try {
