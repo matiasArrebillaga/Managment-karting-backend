@@ -12,11 +12,7 @@ class PersonaService {
             omit: {contraseña: true}
         });
     }
-    async create(data:CreatePersona){
-        return await prisma.personas.create({
-            data
-        })
-    }
+
     async update(idPersona:number,data:UpdatePersona){
         return await prisma.personas.update({
             where: {idPersona},

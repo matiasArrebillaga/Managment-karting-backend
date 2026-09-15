@@ -1,12 +1,12 @@
-export interface IPersonaTorneo {
+export interface IInscripcion {
     Torneos_idTorneos: number;
     Personas_idPersona: number;
     fecha_inscipcion: Date;
     hora_inscripcion: Date;
 }
 
-export type CreatePersonaTorneo = IPersonaTorneo;
+export type CreatePersonaTorneo = IInscripcion;
 
 export type UpdatePersonaTorneo = Partial<
-    Pick<IPersonaTorneo, "fecha_inscipcion" | "hora_inscripcion">
+    Pick<IInscripcion, "fecha_inscipcion" | "hora_inscripcion">
 >;
