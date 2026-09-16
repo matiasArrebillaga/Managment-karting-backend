@@ -33,6 +33,6 @@ participacion.delete(
     "/:Carrera_fecha/:Carrera_Kartings_idKartings/:Carrera_Torneos_idTorneos/:Carrera_Circuitos_idCircuitos/:Personas_idPersona",
     ParticipacionesController.delete
 );
-
+participacion.get("/torneo/:idTorneo/tabla-general", ParticipacionesController.getTablaGeneral);
 export default participacion;
 

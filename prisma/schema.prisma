@@ -128,7 +128,7 @@ model personas_torneos {
 model reservas {
   idReservas            Int       @id @default(autoincrement())
   fechaReserva          DateTime  @db.Date
-  monto                 Decimal   @db.Decimal(10, 0)
+  monto                 Decimal   @db.Decimal(10, 2)
   Personas_idPersona    Int
   Circuitos_idCircuitos Int
   Kartings_idKartings   Int
