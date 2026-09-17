@@ -3,8 +3,9 @@ import { IPersona, UpdatePersona , CreatePersona } from "./persona.interface"
 
 class PersonaService {
     async getAll(){
-        return await prisma.personas.findMany();
-        omit: {contraseña:true}
+        return await prisma.personas.findMany({
+            omit: { contraseña: true }
+        });
     }
     async getById(idPersona:number){
         return await prisma.personas.findUnique({

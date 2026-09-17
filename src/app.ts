@@ -1,5 +1,4 @@
 import express from "express";
-
 import kartingRoutes from "./entities/karting/karting.routes";
 import personaRoutes from "./entities/persona/persona.routes";
 import localidadRoutes from "./entities/localidad/localidad.routes";
@@ -15,29 +14,36 @@ import reservaRoutes from "./entities/reserva/reserva.routes";
 import carreraRoutes from "./entities/carrera/carrera.routes";
 import participacionRoutes from "./entities/participacion/participacion.routes";
 import inscripcionRoutes from "./entities/inscripcion/inscripcion.routes";
+import swaggerUi from "swagger-ui-express";
+import openapiSpec from "./config/openapi";
+
 
 const app = express();
-
+app.use(cors({
+    origin: process.env.FRONTEND_URL, 
+    credentials: true
+}));
 app.use(express.json());
 
-// Ruta para obtener el token
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(openapiSpec));
+app.get("/api-docs.json", (req, res) => {
+    res.json(openapiSpec);
+});
+
+app.use("/api/kartings", kartingRoutes);
+app.use("/api/personas", personaRoutes);
+app.use("/api/localidades", localidadRoutes);
+app.use("/api/circuitos", circuitoRoutes);
 app.use("/api/auth", authRoutes);
-
-// Rutas protegidas
-app.use("/api/kartings", verifyToken, kartingRoutes);
-app.use("/api/personas", verifyToken, personaRoutes);
-app.use("/api/localidades", verifyToken, localidadRoutes);
-app.use("/api/circuitos", verifyToken, circuitoRoutes);
-app.use("/api/roles", verifyToken, rolRoutes);
-app.use("/api/tiposLicencias", verifyToken, tipoLicenciasRouters);
-app.use("/api/tiposKartings", verifyToken, tipoKartingRouters);
-app.use("/api/torneos", verifyToken, torneo);
-app.use("/api/licencias", verifyToken, licenciaRoutes);
-app.use("/api/reservas", verifyToken, reservaRoutes);
-app.use("/api/carreras", verifyToken, carreraRoutes);
-app.use("/api/participaciones", verifyToken, participacionRoutes);
-app.use("/api/inscripciones", verifyToken, inscripcionRoutes);
-
+app.use("/api/roles", rolRoutes);
+app.use("/api/tiposLicencias", tipoLicenciasRouters);
+app.use("/api/tiposKartings", tipoKartingRouters);
+app.use("/api/torneos", torneo);
+app.use("/api/licencias", licenciaRoutes);
+app.use("/api/reservas", reservaRoutes);
+app.use("/api/carreras", carreraRoutes);
+app.use("/api/participaciones", participacionRoutes);
+app.use("/api/inscripciones", inscripcionRoutes);
 app.get("/", (req, res) => {
     res.send("API funcionando");
 });

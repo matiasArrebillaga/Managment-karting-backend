@@ -39,6 +39,6 @@ participacion.delete(
     verifyRoles("ADMIN"),
     ParticipacionesController.delete
 );
-
+participacion.get("/torneo/:idTorneo/tabla-general", ParticipacionesController.getTablaGeneral);
 export default participacion;
 

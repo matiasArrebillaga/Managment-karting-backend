@@ -101,13 +101,12 @@ model personas {
   contraseña               String   @db.VarChar(255)
   Localidades_idLocalidades Int
   idRol                     Int
-
-  rol              roles              @relation(fields: [idRol], references: [idRol])
-  licencias        licencias[]
-  participaciones  participaciones[]
-  localidades      localidades        @relation(fields: [Localidades_idLocalidades], references: [idLocalidades], onDelete: NoAction, onUpdate: NoAction, map: "fk_Personas_Localidades")
-  personas_torneos personas_torneos[]
-  reservas         reservas[]
+  rol                       roles             @relation(fields: [idRol], references: [idRol])
+  licencias                 licencias[]
+  participaciones           participaciones[]
+  localidades               localidades         @relation(fields: [Localidades_idLocalidades], references: [idLocalidades], onDelete: NoAction, onUpdate: NoAction, map: "fk_Personas_Localidades")
+  personas_torneos          personas_torneos[]
+  reservas                  reservas[]
 
   @@index([Localidades_idLocalidades], map: "fk_Personas_Localidades_idx")
   @@index([idRol], map: "fk_Personas_Roles_idx")
@@ -129,7 +128,7 @@ model personas_torneos {
 model reservas {
   idReservas            Int       @id @default(autoincrement())
   fechaReserva          DateTime  @db.Date
-  monto                 Decimal   @db.Decimal(10, 0)
+  monto                 Decimal   @db.Decimal(10, 2)
   Personas_idPersona    Int
   Circuitos_idCircuitos Int
   Kartings_idKartings   Int
@@ -143,17 +142,22 @@ model reservas {
 }
 
 model tiposkarting {
-  idTiposKarting Int        @id @default(autoincrement())
-  nombre         String     @db.VarChar(45)
-  descripcion    String     @db.VarChar(45)
-  kartings       kartings[]
-}
+  idTiposKarting                       Int            @id @default(autoincrement())
+  nombre                               String         @db.VarChar(45)
+  descripcion                          String         @db.VarChar(45)
+  TiposLicencias_idTipoLicenciaMinima  Int            @default(1)
+  tiposlicencias                       tiposlicencias @relation(fields: [TiposLicencias_idTipoLicenciaMinima], references: [idTipoLicencia], onDelete: NoAction, onUpdate: NoAction, map: "fk_TiposKarting_TiposLicencias")
+  kartings                             kartings[]
 
+  @@index([TiposLicencias_idTipoLicenciaMinima], map: "fk_TiposKarting_TiposLicencias_idx")
+}
 model tiposlicencias {
-  idTipoLicencia Int         @id @default(autoincrement())
-  nombre         String      @db.VarChar(45)
-  descripcion    String      @db.VarChar(45)
+  idTipoLicencia Int             @id @default(autoincrement())
+  nombre         String          @db.VarChar(45)
+  descripcion    String          @db.VarChar(45)
+  nivel          Int
   licencias      licencias[]
+  tiposkarting   tiposkarting[]
 }
 
 model torneos {

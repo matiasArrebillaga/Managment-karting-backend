@@ -114,6 +114,135 @@ class ParticipacionesService {
             }
         });
     }
+    private validarDatos (puntos: number, tiempo: string, posicion_final: string){
+        if (isNaN(puntos)|| puntos <0){
+            throw new Error ("Los puntos deben ser un numero valido mayor o igual a 0");
+        }
+        if (!tiempo || !posicion_final){
+            throw new Error ("El tiempo y la posicion final son obligatorios");
+        }
+    }
+    private async validarCarreraYPersona(
+    Carrera_Kartings_idKartings: number,
+    Carrera_Torneos_idTorneos: number,
+    Carrera_Circuitos_idCircuitos: number,
+    Carrera_fecha: Date,
+    Personas_idPersona: number
+    ){
+        const [carrera, persona]= await Promise.all ([
+        prisma.carreras.findUnique({
+            where: {
+                Kartings_idKartings_Torneos_idTorneos_Circuitos_idCircuitos_fechaCarrera: {
+                    Kartings_idKartings: Carrera_Kartings_idKartings,
+                    Torneos_idTorneos: Carrera_Torneos_idTorneos,
+                    Circuitos_idCircuitos: Carrera_Circuitos_idCircuitos,
+                    fechaCarrera: Carrera_fecha
+                }
+            }
+        }),
+        prisma.personas.findUnique({ where: { idPersona: Personas_idPersona } })            
+        ]);
+        if (!carrera) throw new Error ("La carrera indicada no existe");
+        if (!persona) throw new Error ("La persona indicada no existe");
+        return {carrera};
+    }
+    private validarCarreraFinalizada(carrera: {fechaCarrera:Date;horaFin:Date}){
+        const ahora = new Date();
+        const fechaFinCarrera = new Date(carrera.fechaCarrera);
+        fechaFinCarrera.setHours(
+            carrera.horaFin.getHours(),
+            carrera.horaFin.getMinutes()
+        );
+        if (fechaFinCarrera> ahora){
+            throw new Error ("No se puede registrar el resultado de una carrera que aun no paso"); 
+        }
+    }
+    private async validarInscripcionAlTorneo(Torneos_idTorneos: number, Personas_idPersona: number) {
+     const inscripcion = await prisma.personas_torneos.findUnique({
+            where: {
+               Torneos_idTorneos_Personas_idPersona: {
+                 Torneos_idTorneos,
+                    Personas_idPersona
+             }
+         }
+     });
+
+     if (!inscripcion) {
+           throw new Error("La persona no está inscripta en el torneo de esa carrera");
+     }
+    }
+    private async validarParticipacionNoDuplicada(
+    Carrera_Kartings_idKartings: number,
+    Carrera_Torneos_idTorneos: number,
+    Carrera_Circuitos_idCircuitos: number,
+    Carrera_fecha: Date,
+    Personas_idPersona: number
+) {
+    const existente = await this.getById(
+        Carrera_Kartings_idKartings,
+        Carrera_Torneos_idTorneos,
+        Carrera_Circuitos_idCircuitos,
+        Carrera_fecha,
+        Personas_idPersona
+    );
+
+    if (existente) {
+        throw new Error("Ya existe una participación registrada para esta persona en esta carrera");
+    }
+    }
+    async registrarParticipacion(data: CreateParticipacion) {
+    this.validarDatos(data.puntos, data.tiempo, data.posicion_final);
+
+    const { carrera } = await this.validarCarreraYPersona(
+        data.Carrera_Kartings_idKartings,
+        data.Carrera_Torneos_idTorneos,
+        data.Carrera_Circuitos_idCircuitos,
+        data.Carrera_fecha,
+        data.Personas_idPersona
+    );
+
+    this.validarCarreraFinalizada(carrera);
+
+    await this.validarInscripcionAlTorneo(
+        data.Carrera_Torneos_idTorneos,
+        data.Personas_idPersona
+    );
+
+    await this.validarParticipacionNoDuplicada(
+        data.Carrera_Kartings_idKartings,
+        data.Carrera_Torneos_idTorneos,
+        data.Carrera_Circuitos_idCircuitos,
+        data.Carrera_fecha,
+        data.Personas_idPersona
+    );
+
+    return await this.create(data);
+}
+async getTablaGeneral(idTorneo: number) {
+    const resultados = await prisma.participaciones.groupBy({
+        by: ["Personas_idPersona"],
+        where: { Carrera_Torneos_idTorneos: idTorneo },
+        _sum: { puntos: true },
+        orderBy: { _sum: { puntos: "desc" } }
+    });
+
+    const personaIds = resultados.map((r: { Personas_idPersona: any; }) => r.Personas_idPersona);
+    const personas = await prisma.personas.findMany({
+        where: { idPersona: { in: personaIds } },
+        select: { idPersona: true, nombre: true, apellido: true }
+    });
+
+    return resultados.map((r: { Personas_idPersona: any; _sum: { puntos: any; }; }, i: number) => {
+        const persona = personas.find((p: { idPersona: any; }) => p.idPersona === r.Personas_idPersona);
+        return {
+            posicion: i + 1,
+            idPersona: r.Personas_idPersona,
+            nombre: persona?.nombre,
+            apellido: persona?.apellido,
+            puntosTotales: r._sum.puntos ?? 0
+        };
+    });
+}
 }
 
 export default new ParticipacionesService();

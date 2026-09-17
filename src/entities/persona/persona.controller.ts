@@ -1,6 +1,6 @@
 import {Request , Response} from "express";
 import personaService from "./persona.service";
-import { IPersona } from "./persona.interface";
+import { CreatePersona, IPersona } from "./persona.interface";
 
 class PersonaController{
     async getAll(req: Request, res: Response){
@@ -31,7 +31,7 @@ class PersonaController{
     }
     async create (req: Request, res: Response){
         try {
-            const data: IPersona = req.body
+            const data: CreatePersona = req.body
             const nuevoPersona= await personaService.create(data);
             res.status(201).json(nuevoPersona);
         }catch (error){
