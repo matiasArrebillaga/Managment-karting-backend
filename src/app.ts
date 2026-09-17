@@ -1,11 +1,12 @@
 import express from "express";
+import cors from "cors";
 import kartingRoutes from "./entities/karting/karting.routes";
 import personaRoutes from "./entities/persona/persona.routes";
 import localidadRoutes from "./entities/localidad/localidad.routes";
 import circuitoRoutes from "./entities/circuito/circuito.routes";
 import authRoutes from "./entities/auth/auth.routes";
 import rolRoutes from "./entities/rol/rol.routes";
-import { verifyToken } from "./middleware/auth.middleware";
+import { AuthRequest, verifyToken } from "./middleware/auth.middleware";
 import tipoLicenciasRouters from "./entities/tipoLicencia/tiposLicencias.routes";
 import tipoKartingRouters from "./entities/tipoKarting/tiposKarting.routes";
 import torneo from "./entities/torneos/torneo.routes";
@@ -16,7 +17,6 @@ import participacionRoutes from "./entities/participacion/participacion.routes";
 import inscripcionRoutes from "./entities/inscripcion/inscripcion.routes";
 import swaggerUi from "swagger-ui-express";
 import openapiSpec from "./config/openapi";
-
 
 const app = express();
 app.use(cors({
