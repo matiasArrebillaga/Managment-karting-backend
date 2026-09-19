@@ -66,6 +66,9 @@ class TiposKartingsController{
                     message: "Tipos de karting no encontrado"
                 });
             }
+            res.status(200).json({
+                message: "Tipo de karting eliminado correctamente"
+            });
         }catch (error){
             res.status(500).json ({
                 message:"Error al eliminar los tipos de karting"
