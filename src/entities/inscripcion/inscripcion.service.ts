@@ -25,12 +25,54 @@ class PersonasTorneosService {
         });
     }
 
+//Aca lo que estoy validando es que el torneo exista y que la persona no pueda anotarse a un torneo el mismo dia
+
+   private async validarTorneo(
+    idTorneo: number,
+    idPers: number
+) {
+    const torneo = await prisma.torneos.findUnique({
+        where: {
+            idTorneos: idTorneo
+        }
+    });
+
+    if (!torneo) {
+        throw new Error("El torneo ingresado no existe");
+    }
+
+    const inscripciones = await prisma.personas_torneos.findMany({
+        where: {
+            Personas_idPersona: idPers
+        },
+        include: {
+            torneos: true
+        }
+    });
+
+    const mismoDia = inscripciones.some(inscripcion => {
+        return (
+            inscripcion.torneos.fechaInicio.toDateString() ===
+            torneo.fechaInicio.toDateString()
+        );
+    });
+
+    if (mismoDia) {
+        throw new Error(
+            "La persona ya está inscripta en otro torneo el mismo día"
+        );
+    }
+}
+
     async create(data: CreatePersonaTorneo) {
+        this.validarTorneo(
+            data.Personas_idPersona , data.Torneos_idTorneos
+        )
         return await prisma.personas_torneos.create({
             data: {
                 fecha_inscipcion: data.fecha_inscipcion,
-                hora_inscripcion: data.hora_inscripcion,
-
+                hora_inscripcion: data.fecha_inscipcion,
+                
                 torneos: {
                     connect: {
                         idTorneos: data.Torneos_idTorneos
@@ -45,6 +87,8 @@ class PersonasTorneosService {
             }
         });
     }
+
+    
 
     async update(
         Torneos_idTorneos: number,

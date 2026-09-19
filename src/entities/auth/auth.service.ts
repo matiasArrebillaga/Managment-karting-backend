@@ -7,49 +7,99 @@ const JWT_SECRET = process.env.JWT_SECRET as string;
 const JWT_EXPIRES_IN = "1d";
 
 class AuthService {
-    async register (data:IRegisterDTO){
+
+    async register(data: IRegisterDTO) {
+
         const personaExistente = await prisma.personas.findFirst({
-            where: {mail:data.mail}
+            where: { mail: data.mail }
         });
-    if (personaExistente){
-        throw new Error ("El mail ya esta registrado");
+
+        if (personaExistente) {
+            throw new Error("El mail ya está registrado");
+        }
+
+        const localidad = await prisma.localidades.findUnique({
+            where: {
+                idLocalidades: data.Localidades_idLocalidades
+            }
+        });
+
+        if (!localidad) {
+            throw new Error("La localidad ingresada no existe");
+        }
+
+        const rol = await prisma.roles.findUnique({
+            where: {
+                idRol: data.idRol
+            }
+        });
+
+        if (!rol) {
+            throw new Error("El rol ingresado no existe");
+        }
+
+        const fechaNacimiento = new Date(data.fechaNacimiento);
+
+        if (Number.isNaN(fechaNacimiento.getTime())) {
+            throw new Error("La fecha de nacimiento no es válida");
+        }
+
+        const contraseñaHasheada = await bcrypt.hash(
+            data.contraseña,
+            10
+        );
+
+        const nuevaPersona = await prisma.personas.create({
+            data: {
+                ...data,
+                fechaNacimiento,
+                contraseña: contraseñaHasheada
+            }
+        });
+
+        const { contraseña, ...personaSinPassword } = nuevaPersona;
+
+        return personaSinPassword;
     }
 
-    const fechaNacimiento = new Date(data.fechaNacimiento);
-    if (Number.isNaN(fechaNacimiento.getTime())) {
-        throw new Error("La fecha de nacimiento no es válida");
-    }
+async login(data: ILoginDTO) {
 
-    const contraseñaHasheada= await bcrypt.hash(data.contraseña,10)
-    const nuevaPersona = await prisma.personas.create({
-        data: {
-            ...data,
-            fechaNacimiento,
-            contraseña: contraseñaHasheada
+    const persona = await prisma.personas.findFirst({
+        where: { mail: data.mail },
+        include: {
+            rol: true
         }
     });
-    const {contraseña, ...personaSinPassword}= nuevaPersona;
-    return personaSinPassword;
+
+    if (!persona) {
+        throw new Error("Credenciales invalidas");
     }
-    
-    async login (data: ILoginDTO){
-        const persona = await prisma.personas.findFirst({
-            where: {mail: data.mail}
-        });
-        if (!persona){
-            throw new Error ("Credenciales invalidas");
-        }
-        const contraseñaValida = await bcrypt.compare(data.contraseña,persona.contraseña);
-        if (!contraseñaValida){
-            throw new Error ("Credenciales invalidas");
-        }
-        const token = jwt.sign(
-            {idPersona: persona.idPersona, mail: persona.mail},
-            JWT_SECRET,
-            {expiresIn: JWT_EXPIRES_IN}
-        );
-        const {contraseña, ...personaSinContraseña} = persona;
-        return {token,persona: personaSinContraseña};
+
+    const contraseñaValida = await bcrypt.compare(
+        data.contraseña,
+        persona.contraseña
+    );
+
+    if (!contraseñaValida) {
+        throw new Error("Credenciales invalidas");
     }
+
+    const token = jwt.sign(
+        {
+            idPersona: persona.idPersona,
+            mail: persona.mail,
+            rol: persona.rol.nombre
+        },
+        JWT_SECRET,
+        { expiresIn: JWT_EXPIRES_IN }
+    );
+
+    const { contraseña, ...personaSinContraseña } = persona;
+
+    return {
+        token,
+        persona: personaSinContraseña
+    };
+}
 }
 export default new AuthService();
