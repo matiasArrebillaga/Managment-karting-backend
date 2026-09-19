@@ -66,6 +66,9 @@ class LicenciaController{
                     message: "Licencia no encontrada"
                 });
             }
+            res.status(200).json({
+                message: "Licencia eliminada correctamente"
+            });
         }catch (error){
             res.status(500).json ({
                 message:"Error al eliminar la licencia"
