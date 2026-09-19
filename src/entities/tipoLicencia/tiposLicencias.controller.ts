@@ -65,6 +65,9 @@ class TiposLicenciasController{
                     message: "Tipos de licencias no encontrado"
                 });
             }
+            res.status(200).json({
+                message: "Tipo de licencia eliminado correctamente"
+            });
         }catch (error){
             res.status(500).json ({
                 message:"Error al eliminar los tipos de licencias"
