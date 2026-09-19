@@ -30,20 +30,23 @@ app.get("/api-docs.json", (req, res) => {
     res.json(openapiSpec);
 });
 
-app.use("/api/kartings", kartingRoutes);
-app.use("/api/personas", personaRoutes);
-app.use("/api/localidades", localidadRoutes);
-app.use("/api/circuitos", circuitoRoutes);
+// Ruta para obtener el token
 app.use("/api/auth", authRoutes);
-app.use("/api/roles", rolRoutes);
-app.use("/api/tiposLicencias", tipoLicenciasRouters);
-app.use("/api/tiposKartings", tipoKartingRouters);
-app.use("/api/torneos", torneo);
-app.use("/api/licencias", licenciaRoutes);
-app.use("/api/reservas", reservaRoutes);
-app.use("/api/carreras", carreraRoutes);
-app.use("/api/participaciones", participacionRoutes);
-app.use("/api/inscripciones", inscripcionRoutes);
+
+// Rutas protegidas
+app.use("/api/kartings", verifyToken, kartingRoutes);
+app.use("/api/personas", verifyToken, personaRoutes);
+app.use("/api/localidades", verifyToken, localidadRoutes);
+app.use("/api/circuitos", verifyToken, circuitoRoutes);
+app.use("/api/roles", verifyToken, rolRoutes);
+app.use("/api/tiposLicencias", verifyToken, tipoLicenciasRouters);
+app.use("/api/tiposKartings", verifyToken, tipoKartingRouters);
+app.use("/api/torneos", verifyToken, torneo);
+app.use("/api/licencias", verifyToken, licenciaRoutes);
+app.use("/api/reservas", verifyToken, reservaRoutes);
+app.use("/api/carreras", verifyToken, carreraRoutes);
+app.use("/api/participaciones", verifyToken, participacionRoutes);
+app.use("/api/inscripciones", verifyToken, inscripcionRoutes);
 app.get("/", (req, res) => {
     res.send("API funcionando");
 });
