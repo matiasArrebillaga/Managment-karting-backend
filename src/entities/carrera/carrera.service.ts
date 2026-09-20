@@ -113,6 +113,11 @@ class CarrerasService {
         if (!karting) throw new Error ("El karting indicado no existe")
         if(!torneo) throw new Error ("El torneo indicado no existe")
         if (!circuito) throw new Error ("El circuito indicado no existe");
+        if (circuito.maximo < torneo.cupoMaximo) {
+            throw new Error(
+                "El circuito no tiene capacidad suficiente para el cupo máximo del torneo"
+            );
+        }
         if (karting.estado?.toLowerCase() !== "disponible"){
             throw new Error("El karting no esta disponible (estado: ${karting.estado})");
         }
