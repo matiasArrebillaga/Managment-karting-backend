@@ -1,0 +1,37 @@
+name: Tests y Build
+
+# Cuándo se dispara el workflow
+on:
+  push:
+    branches: ["develop", "test-branch", "backend-matias", "backend/mirko"]
+  pull_request:
+    branches: ["develop", "test-branch", "backend-matias", "backend/mirko"]
+
+jobs:
+  test:
+    name: Ejecutar tests y build
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Descarga el código del repo en la máquina virtual
+      - name: Descargar código
+        uses: actions/checkout@v4
+
+      # 2. Instala Node.js (misma versión mínima que pide el README)
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      # 3. Instala las dependencias del proyecto
+      - name: Instalar dependencias
+        run: npm ci
+
+      # 4. Corre los tests (usan Prisma mockeado, no hace falta una DB real)
+      - name: Ejecutar tests
+        run: npm test -- --runInBand --forceExit
+
+      # 5. Verifica que el proyecto compile sin errores de TypeScript
+      - name: Compilar proyecto
+        run: npm run build
