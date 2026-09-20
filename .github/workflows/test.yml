@@ -30,6 +30,8 @@ jobs:
 
       # 4. Genera el cliente tipado de Prisma sin requerir una DB real
       - name: Generar cliente Prisma
+        env:
+          DATABASE_URL: mysql://ci:ci@127.0.0.1:3306/karting
         run: npx prisma generate
 
       # 5. Corre los tests (usan Prisma mockeado, no hace falta una DB real)
