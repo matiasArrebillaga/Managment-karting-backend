@@ -27,10 +27,7 @@ class PersonasTorneosService {
 
 //Aca lo que estoy validando es que el torneo exista y que la persona no pueda anotarse a un torneo el mismo dia
 
-   private async validarTorneo(
-    idTorneo: number,
-    idPers: number
-) {
+   private async validarTorneo(idTorneo: number, idPers: number) {
     const torneo = await prisma.torneos.findUnique({
         where: {
             idTorneos: idTorneo
@@ -39,6 +36,22 @@ class PersonasTorneosService {
 
     if (!torneo) {
         throw new Error("El torneo ingresado no existe");
+    }
+
+    const persona = await prisma.personas.findUnique({
+        where: { idPersona: idPers }
+    });
+
+    if (!persona) {
+        throw new Error("La persona ingresada no existe");
+    }
+
+    const cantidadInscripciones = await prisma.personas_torneos.count({
+        where: { Torneos_idTorneos: idTorneo }
+    });
+
+    if (cantidadInscripciones >= torneo.cupoMaximo) {
+        throw new Error("El torneo alcanzó el cupo máximo de inscripciones");
     }
 
     const inscripciones = await prisma.personas_torneos.findMany({
@@ -65,24 +78,20 @@ class PersonasTorneosService {
 }
 
     async create(data: CreatePersonaTorneo) {
-        this.validarTorneo(
-            data.Personas_idPersona , data.Torneos_idTorneos
-        )
+        await this.validarTorneo(
+            data.Torneos_idTorneos,
+            data.Personas_idPersona
+        );
+
         return await prisma.personas_torneos.create({
             data: {
                 fecha_inscipcion: data.fecha_inscipcion,
-                hora_inscripcion: data.fecha_inscipcion,
-                
+                hora_inscripcion: data.hora_inscripcion,
                 torneos: {
-                    connect: {
-                        idTorneos: data.Torneos_idTorneos
-                    }
+                    connect: { idTorneos: data.Torneos_idTorneos }
                 },
-
                 personas: {
-                    connect: {
-                        idPersona: data.Personas_idPersona
-                    }
+                    connect: { idPersona: data.Personas_idPersona }
                 }
             }
         });

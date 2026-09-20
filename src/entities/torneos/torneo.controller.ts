@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { ITorneos } from "./torneo.interface";
+import { CreateTorneos, UpdateTorneos } from "./torneo.interface";
 import TorneosService from "./torneo.service";
 
 
@@ -53,18 +53,23 @@ catch (error) {
 
     async create(req: Request, res: Response) {
         try {
-
-            const data: ITorneos = req.body;
+            const data: CreateTorneos = {
+                nombre: req.body.nombre,
+                descripcion: req.body.descripcion,
+                cupoMaximo: Number(req.body.cupoMaximo),
+                fechaInicio: new Date(req.body.fechaInicio),
+                fechaFin: new Date(req.body.fechaFin)
+            };
 
             const nuevoTorneo = await TorneosService.create(data);
 
             res.status(201).json(nuevoTorneo);
 
-        } catch (error) {
+        } catch (error: any) {
             console.log(error);
 
-            res.status(500).json({
-                message: "Error al crear el torneo"
+            res.status(400).json({
+                message: error.message || "Error al crear el torneo"
             });
 
         }
@@ -75,8 +80,9 @@ catch (error) {
 
             const id = Number(req.params.id);
 
-            const torneoActualizado =
-                await TorneosService.update(id, req.body);
+            const data: UpdateTorneos = req.body;
+
+            const torneoActualizado = await TorneosService.update(id, data);
 
             if (!torneoActualizado) {
                 return res.status(404).json({
@@ -86,10 +92,10 @@ catch (error) {
 
             res.status(200).json(torneoActualizado);
 
-        } catch (error) {
+        } catch (error: any) {
 
-            res.status(500).json({
-                message: "Error al actualizar el torneo"
+            res.status(400).json({
+                message: error.message || "Error al actualizar el torneo"
             });
 
         }

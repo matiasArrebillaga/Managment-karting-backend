@@ -72,11 +72,11 @@ class PersonasTorneosController {
 
             res.status(201).json(inscripcion);
 
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
 
-            res.status(500).json({
-                message: "Error al crear la inscripción"
+            res.status(400).json({
+                message: error.message || "Error al crear la inscripción"
             });
         }
     }
@@ -147,4 +147,3 @@ class PersonasTorneosController {
 }
 
 export default new PersonasTorneosController();
-
