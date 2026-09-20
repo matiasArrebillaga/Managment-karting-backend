@@ -1,5 +1,6 @@
 
 import {prisma} from "../../config/prisma.js";
+import type { Prisma } from "../../generated/prisma/client.js";
 import {
     CreatePersonaTorneo,
     UpdatePersonaTorneo
@@ -54,7 +55,9 @@ class PersonasTorneosService {
         throw new Error("El torneo alcanzó el cupo máximo de inscripciones");
     }
 
-    const inscripciones = await prisma.personas_torneos.findMany({
+    const inscripciones: Prisma.personas_torneosGetPayload<{
+        include: { torneos: true };
+    }>[] = await prisma.personas_torneos.findMany({
         where: {
             Personas_idPersona: idPers
         },
