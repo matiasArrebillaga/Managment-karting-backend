@@ -27,5 +27,5 @@ carrera.delete(
     verifyRoles("ADMIN"),
     CarrerasController.delete
 );
-carrera.get("/torneo/:idTorneo", CarrerasController.getByTorneo);
+carrera.get("/torneo/:idTorneo",verifyRoles("EMPLEADO","CLIENTE","ADMIN"), CarrerasController.getByTorneo);
 export default carrera;
