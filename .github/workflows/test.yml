@@ -1,0 +1,43 @@
+name: Tests y Build
+
+# Cuándo se dispara el workflow
+on:
+  push:
+    branches: ["develop", "test-branch", "backend-matias", "backend/mirko"]
+  pull_request:
+    branches: ["develop", "test-branch", "backend-matias", "backend/mirko"]
+
+jobs:
+  test:
+    name: Ejecutar tests y build
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Descarga el código del repo en la máquina virtual
+      - name: Descargar código
+        uses: actions/checkout@v4
+
+      # 2. Instala Node.js (misma versión mínima que pide el README)
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.19.0"
+          cache: "npm"
+
+      # 3. Instala las dependencias del proyecto
+      - name: Instalar dependencias
+        run: npm ci
+
+      # 4. Genera el cliente tipado de Prisma sin requerir una DB real
+      - name: Generar cliente Prisma
+        env:
+          DATABASE_URL: mysql://ci:ci@127.0.0.1:3306/karting
+        run: npx prisma generate
+
+      # 5. Corre los tests (usan Prisma mockeado, no hace falta una DB real)
+      - name: Ejecutar tests
+        run: npm test -- --runInBand --forceExit
+
+      # 6. Verifica que el proyecto compile sin errores de TypeScript
+      - name: Compilar proyecto
+        run: npm run build
