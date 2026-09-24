@@ -1,19 +1,17 @@
-import {Request , Response} from "express";
+import {Request , Response, NextFunction} from "express";
 import { ITiposLicencias } from "./tiposLicencias.interface";
 import tiposLicenciasService from "./tiposLicencias.service";
 
 class TiposLicenciasController{
-    async getAll(req: Request, res: Response){
+    async getAll(req: Request, res: Response, next: NextFunction){
         try{
             const tiposLicencias = await tiposLicenciasService.getAll();
             res.json(tiposLicencias);
         }catch (error){
-            res.status(500).json({
-                message: "Error al obtener los tipos de licencias"
-            });
+            next(error);
         }
     }
-    async getById (req: Request, res: Response){
+    async getById (req: Request, res: Response, next: NextFunction){
         try{
             const id = Number(req.params.id)
             const tiposLicencias = await tiposLicenciasService.getById(id);
@@ -24,23 +22,19 @@ class TiposLicenciasController{
             }
             res.json(tiposLicencias);
         }catch(error){
-            res.status(500).json({
-               message: "Error al obtener los tipos de licencias"
-            });
+            next(error);
         }
     }
-    async create (req: Request, res: Response){
+    async create (req: Request, res: Response, next: NextFunction){
         try {
             const data: ITiposLicencias = req.body
             const nuevoTiposLicencias= await tiposLicenciasService.create(data);
             res.status(201).json(nuevoTiposLicencias);
         }catch (error){
-        res.status(500).json({
-            message:"Error al crear los tipos de licencias"
-        });
+        next(error);
     } 
     }
-    async update (req: Request, res:Response){
+    async update (req: Request, res:Response, next: NextFunction){
         try{
             const id = Number(req.params.id)
             const tiposLicenciasActualizado = await tiposLicenciasService.update(id,req.body)
@@ -51,12 +45,10 @@ class TiposLicenciasController{
             }
             res.status(200).json(tiposLicenciasActualizado)
         }catch(error){
-            res.status(500).json({
-                message:"Error al actualizar los tipos de licencias"
-            });
+            next(error);
         }
     }
-        async delete (req: Request, res: Response){
+        async delete (req: Request, res: Response, next: NextFunction){
         try {
             const id = Number(req.params.id);
             const tiposLicenciasEliminado = await tiposLicenciasService.delete(id);
@@ -69,9 +61,7 @@ class TiposLicenciasController{
                 message: "Tipo de licencia eliminado correctamente"
             });
         }catch (error){
-            res.status(500).json ({
-                message:"Error al eliminar los tipos de licencias"
-            });
+            next(error);
         }
     }
 }

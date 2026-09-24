@@ -1,20 +1,18 @@
-import {Request , Response} from "express";
+import {Request , Response, NextFunction} from "express";
 import localidadService from "./localidad.service";
 import { ILocalidad } from "./localidad.interface";
 
 
 class LocalidadController{
-    async getAll(req: Request, res: Response){
+    async getAll(req: Request, res: Response, next: NextFunction){
         try{
             const localidades = await localidadService.getAll();
             res.json(localidades);
         }catch (error){
-            res.status(500).json({
-                message: "Error al obtener las localidades"
-            });
+            next(error);
         }
     }
-    async getById (req: Request, res: Response){
+    async getById (req: Request, res: Response, next: NextFunction){
         try{
             const id = Number(req.params.id)
             const localidad= await localidadService.getById(id);
@@ -25,23 +23,19 @@ class LocalidadController{
             }
             res.json(localidad);
         }catch(error){
-            res.status(500).json({
-               message: "Error al obtener la localidad"
-            });
+            next(error);
         }
     }
-    async create (req: Request, res: Response){
+    async create (req: Request, res: Response, next: NextFunction){
         try {
             const data: ILocalidad = req.body
             const nuevoLocalidad= await localidadService.create(data);
             res.status(201).json(nuevoLocalidad);
         }catch (error){
-        res.status(500).json({
-            message:"Error al crear la localidad"
-        });
+        next(error);
     } 
     }
-    async update (req: Request, res:Response){
+    async update (req: Request, res:Response, next: NextFunction){
         try{
             const id = Number(req.params.id)
             const localidadActualizado = await localidadService.update(id,req.body)
@@ -52,12 +46,10 @@ class LocalidadController{
             }
             res.status(200).json(localidadActualizado)
         }catch(error){
-            res.status(500).json({
-                message:"Error al Actualizar la localidad"
-            });
+            next(error);
         }
     }
-        async delete (req: Request, res: Response){
+        async delete (req: Request, res: Response, next: NextFunction){
         try {
             const id = Number(req.params.id);
             const localidadEliminado = await localidadService.delete(id);
@@ -70,9 +62,7 @@ class LocalidadController{
                 message: "Localidad eliminada correctamente"
             });
         }catch (error){
-            res.status(500).json ({
-                message:"Error al eliminar la localidad"
-            });
+            next(error);
         }
     }
 }

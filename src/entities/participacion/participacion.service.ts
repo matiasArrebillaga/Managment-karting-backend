@@ -6,6 +6,13 @@ import {
 } from "./participacion.interface.js";
 
 class ParticipacionesService {
+    private validarId(id: number) {
+        if (!Number.isInteger(id)) throw new Error("El identificador debe ser un número entero");
+    }
+    private validarFecha(fecha: Date) {
+        if (!(fecha instanceof Date) || Number.isNaN(fecha.getTime())) throw new Error("La fecha de carrera no es válida");
+    }
+    private validarClaves(...ids: number[]) { ids.forEach(id => this.validarId(id)); }
 
     // Obtener todas las participaciones
     async getAll() {
@@ -20,6 +27,8 @@ class ParticipacionesService {
         Carrera_fecha: Date,
         Personas_idPersona: number
     ) {
+        this.validarClaves(Carrera_Kartings_idKartings, Carrera_Torneos_idTorneos, Carrera_Circuitos_idCircuitos, Personas_idPersona);
+        this.validarFecha(Carrera_fecha);
         return await prisma.participaciones.findUnique({
             where: {
                 Carrera_Kartings_idKartings_Carrera_Torneos_idTorneos_Carrera_Circuitos_idCircuitos_Carrera_fecha_Personas_idPersona: {
@@ -115,10 +124,11 @@ class ParticipacionesService {
         });
     }
     private validarDatos (puntos: number, tiempo: string, posicion_final: string){
-        if (isNaN(puntos)|| puntos <0){
+        if (!Number.isFinite(puntos)|| !Number.isInteger(puntos) || puntos <0){
             throw new Error ("Los puntos deben ser un numero valido mayor o igual a 0");
         }
-        if (!tiempo || !posicion_final){
+        if (typeof tiempo !== "string" || tiempo.trim().length === 0 || tiempo.trim().length > 45 ||
+            typeof posicion_final !== "string" || posicion_final.trim().length === 0 || posicion_final.trim().length > 45){
             throw new Error ("El tiempo y la posicion final son obligatorios");
         }
     }
@@ -191,6 +201,8 @@ class ParticipacionesService {
     }
     }
     async registrarParticipacion(data: CreateParticipacion) {
+    this.validarClaves(data.Carrera_Kartings_idKartings, data.Carrera_Torneos_idTorneos, data.Carrera_Circuitos_idCircuitos, data.Personas_idPersona);
+    this.validarFecha(data.Carrera_fecha);
     this.validarDatos(data.puntos, data.tiempo, data.posicion_final);
 
     const { carrera } = await this.validarCarreraYPersona(
@@ -216,7 +228,7 @@ class ParticipacionesService {
         data.Personas_idPersona
     );
 
-    return await this.create(data);
+    return await this.create({...data, tiempo: data.tiempo.trim(), posicion_final: data.posicion_final.trim()});
 }
 async getTablaGeneral(idTorneo: number) {
     const resultados = await prisma.participaciones.groupBy({
@@ -246,4 +258,3 @@ async getTablaGeneral(idTorneo: number) {
 }
 
 export default new ParticipacionesService();
-

@@ -1,19 +1,17 @@
-import {Request , Response} from "express";
+import {Request , Response, NextFunction} from "express";
 import personaService from "./persona.service";
 import { CreatePersona, IPersona } from "./persona.interface";
 
 class PersonaController{
-    async getAll(req: Request, res: Response){
+    async getAll(req: Request, res: Response, next: NextFunction){
         try{
             const personas = await personaService.getAll();
             res.json(personas);
         }catch (error){
-            res.status(500).json({
-                message: "Error al obtener las personas"
-            });
+            next(error);
         }
     }
-    async getById (req: Request, res: Response){
+    async getById (req: Request, res: Response, next: NextFunction){
         try{
             const id = Number(req.params.id)
             const persona : IPersona | null = await personaService.getById(id);
@@ -24,23 +22,19 @@ class PersonaController{
             }
             res.json(persona);
         }catch(error){
-            res.status(500).json({
-               message: "Error al obtener la persona"
-            });
+            next(error);
         }
     }
-    async create (req: Request, res: Response){
+    async create (req: Request, res: Response, next: NextFunction){
         try {
             const data: CreatePersona = req.body
             const nuevoPersona= await personaService.create(data);
             res.status(201).json(nuevoPersona);
         }catch (error){
-        res.status(500).json({
-            message:"Error al crear la persona"
-        });
-    } 
+            next(error);
+        }
     }
-    async update (req: Request, res:Response){
+    async update (req: Request, res:Response, next: NextFunction){
         try{
             const id = Number(req.params.id)
             const personaActualizado = await personaService.update(id,req.body)
@@ -51,12 +45,10 @@ class PersonaController{
             }
             res.status(200).json(personaActualizado)
         }catch(error){
-            res.status(500).json({
-                message:"Error al actualizar la persona"
-            });
+            next(error);
         }
     }
-        async delete (req: Request, res: Response){
+        async delete (req: Request, res: Response, next: NextFunction){
         try {
             const id = Number(req.params.id);
             const personaEliminado = await personaService.delete(id);
@@ -67,11 +59,9 @@ class PersonaController{
             }
             res.status(200).json({
                 message: "Persona eliminada correctamente"
-            });            
-        }catch (error){
-            res.status(500).json ({
-                message:"Error al eliminar la persona"
             });
+        }catch (error){
+            next(error);
         }
     }
 }
