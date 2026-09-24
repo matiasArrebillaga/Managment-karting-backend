@@ -1,19 +1,17 @@
-import {Request, Response} from "express";
+import {Request, Response, NextFunction} from "express";
 import circuitoService from "./circuito.service"
 import { ICircuito } from "./circuto.interface";
 
 class CircuitoController{
-    async getAll(req: Request, res: Response){
+    async getAll(req: Request, res: Response, next: NextFunction){
         try{
             const circuitos = await circuitoService.getAll();
             res.json(circuitos);
         }catch (error){
-            res.status(500).json({
-                message: "Error al obtener los circuitos"
-            });
+            next(error);
         }
     }
-    async getById (req: Request, res: Response){
+    async getById (req: Request, res: Response, next: NextFunction){
         try{
             const id = Number(req.params.id)
             const circuito= await circuitoService.getById(id);
@@ -24,23 +22,19 @@ class CircuitoController{
             }
             res.json(circuito);
         }catch(error){
-            res.status(500).json({
-               message: "Error al obtener el circuito"
-            });
+            next(error);
         }
     }
-    async create (req: Request, res: Response){
-        try {
+    async create (req: Request, res: Response, next: NextFunction){
+     try {
             const data: ICircuito = req.body
-            const nuevoCircuito= await circuitoService.create(data);
-            res.status(201).json(nuevoCircuito);
-        }catch (error){
-        res.status(500).json({
-            message:"Error al crear el circuito"
-        });
-    } 
+            const nuevoCircuito = await circuitoService.create(data);
+         res.status(201).json(nuevoCircuito);
+        }   catch (error) {
+            next(error);
+     }
     }
-    async update (req: Request, res:Response){
+    async update (req: Request, res:Response, next: NextFunction){
         try{
             const id = Number(req.params.id)
             const circuitoActualizado = await circuitoService.update(id,req.body)
@@ -51,12 +45,10 @@ class CircuitoController{
             }
             res.status(200).json(circuitoActualizado)
         }catch(error){
-            res.status(500).json({
-                message:"Error al Actualizar el circuito"
-            });
+            next(error);
         }
     }
-        async delete (req: Request, res: Response){
+        async delete (req: Request, res: Response, next: NextFunction){
         try {
             const id = Number(req.params.id);
             const circuitoEliminado = await circuitoService.delete(id);
@@ -69,9 +61,7 @@ class CircuitoController{
                 message: "Circuito eliminado correctamente"
             });            
         }catch (error){
-            res.status(500).json ({
-                message:"Error al eliminar el circuito"
-            });
+            next(error);
         }
     }
 }

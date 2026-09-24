@@ -1,24 +1,21 @@
 
-import { Request, Response } from "express";
+import { Request, Response, NextFunction} from "express";
 import CarrerasService from "./carrera.service";
 
 class CarrerasController {
 
-    async getAll(req: Request, res: Response) {
+    async getAll(req: Request, res: Response, next: NextFunction) {
         try {
             const carreras = await CarrerasService.getAll();
 
             res.status(200).json(carreras);
 
         } catch (error) {
-            console.error(error);
-            res.status(500).json({
-                message: "Error al obtener las carreras"
-            });
+            next(error);
         }
     }
 
-    async getById(req: Request, res: Response) {
+    async getById(req: Request, res: Response, next: NextFunction) {
         try {
             const fechaCarrera = new Date(String(req.params.fechaCarrera));
             const Kartings_idKartings = Number(req.params.Kartings_idKartings);
@@ -41,14 +38,11 @@ class CarrerasController {
             res.status(200).json(carrera);
 
         } catch (error) {
-            console.error(error);
-            res.status(500).json({
-                message: "Error al obtener la carrera"
-            });
+            next(error);
         }
     }
 
-async create(req: Request, res: Response) {
+async create(req: Request, res: Response, next: NextFunction) {
     try {
         const data = {
             fechaCarrera: new Date(req.body.fechaCarrera),
@@ -63,14 +57,11 @@ async create(req: Request, res: Response) {
         res.status(201).json(carrera);
 
     } catch (error: any) {
-        console.error(error);
-        res.status(400).json({
-            message: error.message || "Error al crear la carrera"
-        });
-    }
+            next(error);
+        }
 }
 
-    async update(req: Request, res: Response) {
+    async update(req: Request, res: Response, next: NextFunction) {
         try {
             const fechaCarrera = new Date(String(req.params.fechaCarrera));
             const Kartings_idKartings = Number(req.params.Kartings_idKartings);
@@ -97,14 +88,11 @@ async create(req: Request, res: Response) {
             res.status(200).json(carrera);
 
         } catch (error) {
-            console.error(error);
-            res.status(500).json({
-                message: "Error al actualizar la carrera"
-            });
+            next(error);
         }
     }
 
-    async delete(req: Request, res: Response) {
+    async delete(req: Request, res: Response, next: NextFunction) {
         try {
             const fechaCarrera = new Date(String(req.params.fechaCarrera));
             const Kartings_idKartings = Number(req.params.Kartings_idKartings);
@@ -123,21 +111,17 @@ async create(req: Request, res: Response) {
             });
 
         } catch (error) {
-            console.error(error);
-            res.status(500).json({
-                message: "Error al eliminar la carrera"
-            });
+            next(error);
         }
     }
-    async getByTorneo(req: Request, res: Response) {
+    async getByTorneo(req: Request, res: Response, next: NextFunction) {
     try {
         const idTorneo = Number(req.params.idTorneo);
         const carreras = await CarrerasService.getByTorneo(idTorneo);
         res.status(200).json(carreras);
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Error al obtener las carreras del torneo" });
-    }
+            next(error);
+        }
 }
 }
 

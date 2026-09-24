@@ -7,5 +7,5 @@ export interface IReserva {
     Kartings_idKartings : number;
 }
 
-export type CreateReserva = Omit<IReserva,"idReserva">;
+export type CreateReserva = Omit<IReserva,"idReservas">;
 export type UpdateReserva = Partial<IReserva>;

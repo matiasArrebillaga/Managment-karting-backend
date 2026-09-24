@@ -1,10 +1,10 @@
 
-import { Request, Response } from "express";
+import { Request, Response, NextFunction} from "express";
 import PersonasTorneosService from "./inscripcion.service";
 
 class PersonasTorneosController {
 
-    async getAll(req: Request, res: Response) {
+    async getAll(req: Request, res: Response, next: NextFunction) {
         try {
             const inscripciones =
                 await PersonasTorneosService.getAll();
@@ -12,15 +12,11 @@ class PersonasTorneosController {
             res.status(200).json(inscripciones);
 
         } catch (error) {
-            console.error(error);
-
-            res.status(500).json({
-                message: "Error al obtener las inscripciones"
-            });
+            next(error);
         }
     }
 
-    async getById(req: Request, res: Response) {
+    async getById(req: Request, res: Response, next: NextFunction) {
         try {
             const Torneos_idTorneos =
                 Number(req.params.Torneos_idTorneos);
@@ -43,15 +39,11 @@ class PersonasTorneosController {
             res.status(200).json(inscripcion);
 
         } catch (error) {
-            console.error(error);
-
-            res.status(500).json({
-                message: "Error al obtener la inscripción"
-            });
+            next(error);
         }
     }
 
-    async create(req: Request, res: Response) {
+    async create(req: Request, res: Response, next: NextFunction) {
         try {
             const data = {
                 Torneos_idTorneos:
@@ -73,15 +65,11 @@ class PersonasTorneosController {
             res.status(201).json(inscripcion);
 
         } catch (error: any) {
-            console.error(error);
-
-            res.status(400).json({
-                message: error.message || "Error al crear la inscripción"
-            });
+            next(error);
         }
     }
 
-    async update(req: Request, res: Response) {
+    async update(req: Request, res: Response, next: NextFunction) {
         try {
             const Torneos_idTorneos =
                 Number(req.params.Torneos_idTorneos);
@@ -111,15 +99,11 @@ class PersonasTorneosController {
             res.status(200).json(inscripcion);
 
         } catch (error) {
-            console.error(error);
-
-            res.status(500).json({
-                message: "Error al actualizar la inscripción"
-            });
+            next(error);
         }
     }
 
-    async delete(req: Request, res: Response) {
+    async delete(req: Request, res: Response, next: NextFunction) {
         try {
             const Torneos_idTorneos =
                 Number(req.params.Torneos_idTorneos);
@@ -137,11 +121,7 @@ class PersonasTorneosController {
             });
 
         } catch (error) {
-            console.error(error);
-
-            res.status(500).json({
-                message: "Error al eliminar la inscripción"
-            });
+            next(error);
         }
     }
 }

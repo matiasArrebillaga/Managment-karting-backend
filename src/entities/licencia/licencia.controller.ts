@@ -1,20 +1,18 @@
 import LicenciaService from "./licencia.service";
-import {Request , Response} from "express";
+import {Request , Response, NextFunction} from "express";
 import {ILicencia} from "./licencia.interface"
 
 
 class LicenciaController{
-    async getAll(req: Request, res: Response){
+    async getAll(req: Request, res: Response, next: NextFunction){
         try{
             const licencias  = await LicenciaService.getAll();
             res.json(licencias);
         }catch (error){
-            res.status(500).json({
-                message: "Error al obtener las licencias"
-            });
+            next(error);
         }
     }
-    async getById (req: Request, res: Response){
+    async getById (req: Request, res: Response, next: NextFunction){
         try{
             const id = Number(req.params.id)
             const licencia= await LicenciaService.getById(id);
@@ -25,23 +23,19 @@ class LicenciaController{
             }
             res.json(licencia);
         }catch(error){
-            res.status(500).json({
-               message: "Error al obtener la licencia"
-            });
+            next(error);
         }
     }
-    async create (req: Request, res: Response){
+    async create (req: Request, res: Response, next: NextFunction){
         try {
             const data: ILicencia  = req.body
             const nuevaLicencia= await LicenciaService.create(data);
             res.status(201).json(nuevaLicencia);
         }catch (error){
-        res.status(500).json({
-            message:"Error al crear la licencia"
-        });
-    } 
+            next(error);
+        }
     }
-    async update (req: Request, res:Response){
+    async update (req: Request, res:Response, next: NextFunction){
         try{
             const id = Number(req.params.id)
             const licenciaActualizada = await LicenciaService.update(id,req.body)
@@ -52,12 +46,10 @@ class LicenciaController{
             }
             res.status(200).json(licenciaActualizada)
         }catch(error){
-            res.status(500).json({
-                message:"Error al Actualizar la licencia"
-            });
+            next(error);
         }
     }
-        async delete (req: Request, res: Response){
+        async delete (req: Request, res: Response, next: NextFunction){
         try {
             const id = Number(req.params.id);
             const licenciaEliminada = await LicenciaService.delete(id);
@@ -70,9 +62,7 @@ class LicenciaController{
                 message: "Licencia eliminada correctamente"
             });
         }catch (error){
-            res.status(500).json ({
-                message:"Error al eliminar la licencia"
-            });
+            next(error);
         }
     }
 }

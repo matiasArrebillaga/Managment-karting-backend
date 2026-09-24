@@ -1,19 +1,17 @@
-import {Request , Response} from "express";
+import {Request , Response, NextFunction} from "express";
 import rolService from "./rol.service";
 import { IRol } from "./rol.interface";
 
 class RolController{
-    async getAll(req: Request, res: Response){
+    async getAll(req: Request, res: Response, next: NextFunction){
         try{
             const roles = await rolService.getAll();
             res.json(roles);
         }catch (error){
-            res.status(500).json({
-                message: "Error al obtener los roles"
-            });
+            next(error);
         }
     }
-    async getById (req: Request, res: Response){
+    async getById (req: Request, res: Response, next: NextFunction){
         try{
             const id = Number(req.params.id)
             const rol = await rolService.getById(id);
@@ -24,23 +22,19 @@ class RolController{
             }
             res.json(rol);
         }catch(error){
-            res.status(500).json({
-               message: "Error al obtener el rol"
-            });
+            next(error);
         }
     }
-    async create (req: Request, res: Response){
+    async create (req: Request, res: Response, next: NextFunction){
         try {
             const data: IRol = req.body
             const nuevoRol = await rolService.create(data);
             res.status(201).json(nuevoRol);
         }catch (error){
-        res.status(500).json({
-            message:"Error al crear el rol"
-        });
+        next(error);
     }
     }
-    async update (req: Request, res:Response){
+    async update (req: Request, res:Response, next: NextFunction){
         try{
             const id = Number(req.params.id)
             const rolActualizado = await rolService.update(id,req.body)
@@ -51,12 +45,10 @@ class RolController{
             }
             res.status(200).json(rolActualizado)
         }catch(error){
-            res.status(500).json({
-                message:"Error al actualizar el rol"
-            });
+            next(error);
         }
     }
-    async delete (req: Request, res: Response){
+    async delete (req: Request, res: Response, next: NextFunction){
         try {
             const id = Number(req.params.id);
             const rolEliminado = await rolService.delete(id);
@@ -69,9 +61,7 @@ class RolController{
                 message: "Rol eliminado correctamente"
             });
         }catch (error){
-            res.status(500).json ({
-                message:"Error al eliminar el rol"
-            });
+            next(error);
         }
     }
 }
