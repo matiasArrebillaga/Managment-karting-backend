@@ -17,6 +17,7 @@ import participacionRoutes from "./entities/participacion/participacion.routes";
 import inscripcionRoutes from "./entities/inscripcion/inscripcion.routes";
 import swaggerUi from "swagger-ui-express";
 import openapiSpec from "./config/openapi";
+import { errorHandler, notFoundHandler } from "./middleware/error.middleware";
 
 const app = express();
 app.use(cors({
@@ -50,5 +51,8 @@ app.use("/api/inscripciones", verifyToken, inscripcionRoutes);
 app.get("/", (req, res) => {
     res.send("API funcionando");
 });
+
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 export default app;

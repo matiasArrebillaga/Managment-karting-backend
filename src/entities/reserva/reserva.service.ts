@@ -2,26 +2,54 @@ import { prisma } from "../../config/prisma";
 import { UpdateReserva, CreateReserva } from "./reserva.interface";
 
 class ReservaService {
+    private validarId(id: number) {
+        if (!Number.isInteger(id)) throw new Error("El identificador debe ser un número entero");
+    }
+    private validarDatos(data: CreateReserva | UpdateReserva) {
+        for (const campo of ["Personas_idPersona", "Circuitos_idCircuitos", "Kartings_idKartings"] as const) {
+            if (data[campo] !== undefined && !Number.isInteger(data[campo])) throw new Error(`El campo ${campo} debe ser un identificador entero`);
+        }
+        if (data.monto !== undefined && (!Number.isFinite(data.monto) || data.monto < 0)) throw new Error("El monto debe ser un número válido mayor o igual a cero");
+        if (data.fechaReserva !== undefined) {
+            const fecha = new Date(data.fechaReserva);
+            if (Number.isNaN(fecha.getTime())) throw new Error("La fecha de reserva no es válida");
+        }
+    }
     async getAll() {
         return await prisma.reservas.findMany();
     }
     async getById(idReservas: number) {
+        this.validarId(idReservas);
         return await prisma.reservas.findUnique({
             where: { idReservas },
         });
     }
     async create(data: CreateReserva) {
+        this.validarDatos(data);
         return await prisma.reservas.create({
             data,
         });
     }
     async update(idReservas: number, data: UpdateReserva) {
+        this.validarId(idReservas);
+        this.validarDatos(data);
+        for (const [campo, tabla, clave] of [
+            ["Personas_idPersona", prisma.personas, "idPersona"],
+            ["Circuitos_idCircuitos", prisma.circuitos, "idCircuitos"],
+            ["Kartings_idKartings", prisma.kartings, "idKartings"]
+        ] as const) {
+            const valor = data[campo as keyof UpdateReserva] as number | undefined;
+            if (valor !== undefined && !await (tabla as any).findUnique({where: {[clave]: valor}})) {
+                throw new Error(`La relación ${campo} indicada no existe`);
+            }
+        }
         return await prisma.reservas.update({
             where: { idReservas },
             data,
         });
     }
     async delete(idReservas: number) {
+        this.validarId(idReservas);
         return await prisma.reservas.delete({
             where: { idReservas },
         });
@@ -86,6 +114,13 @@ class ReservaService {
         }
     }
     async realizarReserva (data: CreateReserva){
+        this.validarDatos(data);
+        const [persona, karting] = await Promise.all([
+            prisma.personas.findUnique({where: {idPersona: data.Personas_idPersona}}),
+            prisma.kartings.findUnique({where: {idKartings: data.Kartings_idKartings}})
+        ]);
+        if (!persona) throw new Error("La persona no existe");
+        if (!karting) throw new Error("El karting no existe");
         await this.validarDisponibilidadRecursos(
             data.Kartings_idKartings, data.Circuitos_idCircuitos, data.fechaReserva
         );
@@ -93,7 +128,7 @@ class ReservaService {
             data.Personas_idPersona, data.Kartings_idKartings
         );
         return await prisma.reservas.create({
-            data
+            data: {...data, fechaReserva: new Date(data.fechaReserva)}
         });
     }
 }

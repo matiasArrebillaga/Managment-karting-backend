@@ -1,26 +1,23 @@
 
-import { Request, Response } from "express";
+import { Request, Response, NextFunction} from "express";
 import ParticipacionesService from "./participacion.service";
 
 class ParticipacionesController {
 
     // Obtener todas las participaciones
-    async getAll(req: Request, res: Response) {
+    async getAll(req: Request, res: Response, next: NextFunction) {
         try {
             const participaciones = await ParticipacionesService.getAll();
 
             res.status(200).json(participaciones);
 
         } catch (error) {
-            console.error(error);
-            res.status(500).json({
-                message: "Error al obtener las participaciones"
-            });
+            next(error);
         }
     }
 
     // Obtener una participación por su clave primaria compuesta
-    async getById(req: Request, res: Response) {
+    async getById(req: Request, res: Response, next: NextFunction) {
         try {
             const Carrera_Kartings_idKartings =
                 Number(req.params.Carrera_Kartings_idKartings);
@@ -55,15 +52,12 @@ class ParticipacionesController {
             res.status(200).json(participacion);
 
         } catch (error) {
-            console.error(error);
-            res.status(500).json({
-                message: "Error al obtener la participación"
-            });
+            next(error);
         }
     }
 
     // Crear una participación
-    async create(req: Request, res: Response) {
+    async create(req: Request, res: Response, next: NextFunction) {
         try {
          const data = {
             Carrera_Kartings_idKartings: Number(req.body.Carrera_Kartings_idKartings),
@@ -81,15 +75,12 @@ class ParticipacionesController {
         res.status(201).json(participacion);
 
     } catch (error: any) {
-        console.error(error);
-        res.status(400).json({
-            message: error.message || "Error al crear la participación"
-        });
-    }
+            next(error);
+        }
 }
 
     // Actualizar una participación
-    async update(req: Request, res: Response) {
+    async update(req: Request, res: Response, next: NextFunction) {
         try {
             const Carrera_Kartings_idKartings =
                 Number(req.params.Carrera_Kartings_idKartings);
@@ -133,15 +124,12 @@ class ParticipacionesController {
             res.status(200).json(participacion);
 
         } catch (error) {
-            console.error(error);
-            res.status(500).json({
-                message: "Error al actualizar la participación"
-            });
+            next(error);
         }
     }
 
     // Eliminar una participación
-    async delete(req: Request, res: Response) {
+    async delete(req: Request, res: Response, next: NextFunction) {
         try {
             const Carrera_Kartings_idKartings =
                 Number(req.params.Carrera_Kartings_idKartings);
@@ -171,21 +159,17 @@ class ParticipacionesController {
             });
 
         } catch (error) {
-            console.error(error);
-            res.status(500).json({
-                message: "Error al eliminar la participación"
-            });
+            next(error);
         }
     }
-    async getTablaGeneral(req: Request, res: Response) {
+    async getTablaGeneral(req: Request, res: Response, next: NextFunction) {
     try {
         const idTorneo = Number(req.params.idTorneo);
         const tabla = await ParticipacionesService.getTablaGeneral(idTorneo);
         res.status(200).json(tabla);
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Error al obtener la tabla general" });
-    }
+            next(error);
+        }
 }
 }
 

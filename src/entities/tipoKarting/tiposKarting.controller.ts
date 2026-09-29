@@ -1,20 +1,18 @@
-import {Request , Response} from "express";
+import {Request , Response, NextFunction} from "express";
 import { ITiposKartings } from "./tiposKarting.interface";
 import TiposKartingsService from "./tiposKarting.service";
 
 
 class TiposKartingsController{
-    async getAll(req: Request, res: Response){
+    async getAll(req: Request, res: Response, next: NextFunction){
         try{
             const tiposKartings = await TiposKartingsService.getAll();
             res.json(tiposKartings);
         }catch (error){
-            res.status(500).json({
-                message: "Error al obtener los tipos de karting"
-            });
+            next(error);
         }
     }
-    async getById (req: Request, res: Response){
+    async getById (req: Request, res: Response, next: NextFunction){
         try{
             const id = Number(req.params.id)
             const tiposKartings = await TiposKartingsService.getById(id);
@@ -25,23 +23,19 @@ class TiposKartingsController{
             }
             res.json(tiposKartings);
         }catch(error){
-            res.status(500).json({
-               message: "Error al obtener los tipos de karting"
-            });
+            next(error);
         }
     }
-    async create (req: Request, res: Response){
+    async create (req: Request, res: Response, next: NextFunction){
         try {
             const data: ITiposKartings = req.body
             const nuevoTiposKartings= await TiposKartingsService.create(data);
             res.status(201).json(nuevoTiposKartings);
         }catch (error){
-        res.status(500).json({
-            message:"Error al crear los tipos de karting"
-        });
+        next(error);
     } 
     }
-    async update (req: Request, res:Response){
+    async update (req: Request, res:Response, next: NextFunction){
         try{
             const id = Number(req.params.id)
             const tiposKartingsActualizado = await TiposKartingsService.update(id,req.body)
@@ -52,12 +46,10 @@ class TiposKartingsController{
             }
             res.status(200).json(tiposKartingsActualizado)
         }catch(error){
-            res.status(500).json({
-                message:"Error al actualizar los tipos de karting"
-            });
+            next(error);
         }
     }
-        async delete (req: Request, res: Response){
+        async delete (req: Request, res: Response, next: NextFunction){
         try {
             const id = Number(req.params.id);
             const tiposKartingsEliminado = await TiposKartingsService.delete(id);
@@ -70,9 +62,7 @@ class TiposKartingsController{
                 message: "Tipo de karting eliminado correctamente"
             });
         }catch (error){
-            res.status(500).json ({
-                message:"Error al eliminar los tipos de karting"
-            });
+            next(error);
         }
     }
 }

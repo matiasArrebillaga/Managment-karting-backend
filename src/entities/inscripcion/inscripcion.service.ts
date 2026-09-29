@@ -7,6 +7,17 @@ import {
 } from "./inscripciones.interface.js";
 
 class PersonasTorneosService {
+    private validarId(id: number) {
+        if (!Number.isInteger(id)) throw new Error("El identificador debe ser un número entero");
+    }
+    private validarFecha(fecha: Date, nombre: string, noFutura = false) {
+        if (!(fecha instanceof Date) || Number.isNaN(fecha.getTime())) throw new Error(`La ${nombre} no es válida`);
+        if (noFutura && fecha > new Date()) throw new Error(`La ${nombre} no puede ser futura`);
+    }
+    private validarDatos(data: CreatePersonaTorneo | UpdatePersonaTorneo) {
+        if (data.fecha_inscipcion !== undefined) this.validarFecha(data.fecha_inscipcion, "fecha de inscripción", true);
+        if (data.hora_inscripcion !== undefined) this.validarFecha(data.hora_inscripcion, "hora de inscripción");
+    }
 
     async getAll() {
         return await prisma.personas_torneos.findMany();
@@ -16,6 +27,8 @@ class PersonasTorneosService {
         Torneos_idTorneos: number,
         Personas_idPersona: number
     ) {
+        this.validarId(Torneos_idTorneos);
+        this.validarId(Personas_idPersona);
         return await prisma.personas_torneos.findUnique({
             where: {
                 Torneos_idTorneos_Personas_idPersona: {
@@ -81,6 +94,9 @@ class PersonasTorneosService {
 }
 
     async create(data: CreatePersonaTorneo) {
+        this.validarId(data.Torneos_idTorneos);
+        this.validarId(data.Personas_idPersona);
+        this.validarDatos(data);
         await this.validarTorneo(
             data.Torneos_idTorneos,
             data.Personas_idPersona
@@ -107,6 +123,9 @@ class PersonasTorneosService {
         Personas_idPersona: number,
         data: UpdatePersonaTorneo
     ) {
+        this.validarId(Torneos_idTorneos);
+        this.validarId(Personas_idPersona);
+        this.validarDatos(data);
         return await prisma.personas_torneos.update({
             where: {
                 Torneos_idTorneos_Personas_idPersona: {
@@ -122,6 +141,8 @@ class PersonasTorneosService {
         Torneos_idTorneos: number,
         Personas_idPersona: number
     ) {
+        this.validarId(Torneos_idTorneos);
+        this.validarId(Personas_idPersona);
         return await prisma.personas_torneos.delete({
             where: {
                 Torneos_idTorneos_Personas_idPersona: {

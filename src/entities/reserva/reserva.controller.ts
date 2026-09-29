@@ -1,23 +1,21 @@
-import { Request, Response } from "express";
+import { Request, Response, NextFunction} from "express";
 
 import reservaService from "./reserva.service";
 
 import { IReserva } from "./reserva.interface";
 
 class ReservaController {
-    async getAll(req: Request, res: Response) {
+    async getAll(req: Request, res: Response, next: NextFunction) {
         try {
             const reservas = await reservaService.getAll();
 
             res.json(reservas);
         } catch (error) {
-            res.status(500).json({
-                message: "Error al obtener las reservas",
-            });
+            next(error);
         }
     }
 
-    async getById(req: Request, res: Response) {
+    async getById(req: Request, res: Response, next: NextFunction) {
         try {
             const id = Number(req.params.id);
 
@@ -32,25 +30,21 @@ class ReservaController {
 
             res.json(reserva);
         } catch (error) {
-            res.status(500).json({
-                message: "Error al obtener la reserva",
-            });
+            next(error);
         }
     }
 
-    async create(req: Request, res: Response) {
+    async create(req: Request, res: Response, next: NextFunction) {
         try {
             const data: IReserva = req.body;
             const nuevaReserva = await reservaService.realizarReserva(data);
             res.status(201).json(nuevaReserva);
         } catch (error: any) {
-            res.status(400).json({
-                message: error.message || "Error al crear la reserva",
-            });
+            next(error);
         }
     }
 
-    async update(req: Request, res: Response) {
+    async update(req: Request, res: Response, next: NextFunction) {
         try {
             const id = Number(req.params.id);
 
@@ -64,13 +58,11 @@ class ReservaController {
 
             res.status(200).json(reservaActualizada);
         } catch (error) {
-            res.status(500).json({
-                message: "Error al actualizar la reserva",
-            });
+            next(error);
         }
     }
 
-    async delete(req: Request, res: Response) {
+    async delete(req: Request, res: Response, next: NextFunction) {
         try {
             const id = Number(req.params.id);
 
@@ -84,9 +76,7 @@ class ReservaController {
 
             res.status(200).json(reservaEliminada);
         } catch (error) {
-            res.status(500).json({
-                message: "Error al eliminar la reserva",
-            });
+            next(error);
         }
     }
 }

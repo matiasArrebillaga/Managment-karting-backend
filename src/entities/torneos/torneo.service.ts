@@ -2,19 +2,22 @@ import {prisma} from "../../config/prisma.js";
 import { CreateTorneos, UpdateTorneos } from "./torneo.interface.js";
 
 class TorneosService {
+    private validarId(id: number) {
+        if (!Number.isInteger(id)) throw new Error("El identificador debe ser un número entero");
+    }
 
     private validarDatos(data: CreateTorneos | UpdateTorneos) {
         if (data.nombre !== undefined &&
             (typeof data.nombre !== "string" ||
                 data.nombre.trim().length === 0 ||
-                data.nombre.length > 45)) {
+                data.nombre.trim().length > 45)) {
             throw new Error("El nombre debe ser un texto de entre 1 y 45 caracteres");
         }
 
         if (data.descripcion !== undefined &&
             (typeof data.descripcion !== "string" ||
                 data.descripcion.trim().length === 0 ||
-                data.descripcion.length > 45)) {
+                data.descripcion.trim().length > 45)) {
             throw new Error("La descripción debe ser un texto de entre 1 y 45 caracteres");
         }
 
@@ -42,6 +45,7 @@ class TorneosService {
     }
 
     async getById(idTorneo: number) {
+        this.validarId(idTorneo);
         return await prisma.torneos.findUnique({
             where: { idTorneos: idTorneo }
         });
@@ -50,18 +54,30 @@ class TorneosService {
     async create(data: CreateTorneos) {
         this.validarDatos(data);
         return await prisma.torneos.create({
-            data
+            data: {...data, nombre: data.nombre.trim(), descripcion: data.descripcion.trim()}
         });
     }
 
     async update(idTorneo: number, data: UpdateTorneos) {
+        this.validarId(idTorneo);
+        this.validarDatos(data);
+        const actual = await prisma.torneos.findUnique({where: {idTorneos: idTorneo}});
+        if (!actual) throw new Error("El torneo indicado no existe");
+        const inicio = data.fechaInicio ?? actual.fechaInicio;
+        const fin = data.fechaFin ?? actual.fechaFin;
+        if (inicio >= fin) throw new Error("La fecha de inicio debe ser anterior a la fecha de fin");
         return await prisma.torneos.update({
             where: { idTorneos: idTorneo },
-            data
+            data: {
+                ...data,
+                ...(data.nombre === undefined ? {} : {nombre: data.nombre.trim()}),
+                ...(data.descripcion === undefined ? {} : {descripcion: data.descripcion.trim()})
+            }
         });
     }
 
     async delete(idTorneo: number) {
+        this.validarId(idTorneo);
         return await prisma.torneos.delete({
             where: { idTorneos: idTorneo }
         });

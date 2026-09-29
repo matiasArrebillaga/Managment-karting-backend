@@ -1,20 +1,18 @@
-import {Request , Response} from "express";
+import {Request, Response, NextFunction} from "express";
 import kartingService from "./karting.service";
 import { IKarting } from "./karting.interface";
 
 
 class KartingController{
-    async getAll(req: Request, res: Response){
+    async getAll(req: Request, res: Response, next: NextFunction){
         try{
             const kartings = await kartingService.getAll();
             res.json(kartings);
         }catch (error){
-            res.status(500).json({
-                message: "Error al obtener los kartings"
-            });
+            next(error);
         }
     }
-    async getById (req: Request, res: Response){
+    async getById (req: Request, res: Response, next: NextFunction){
         try{
             const id = Number(req.params.id)
             const karting= await kartingService.getById(id);
@@ -25,23 +23,19 @@ class KartingController{
             }
             res.json(karting);
         }catch(error){
-            res.status(500).json({
-               message: "Error al obtener el karting"
-            });
+            next(error);
         }
     }
-    async create (req: Request, res: Response){
+    async create (req: Request, res: Response, next: NextFunction){
         try {
             const data: IKarting = req.body
             const nuevoKarting= await kartingService.create(data);
             res.status(201).json(nuevoKarting);
         }catch (error){
-        res.status(500).json({
-            message:"Error al crear el karting"
-        });
+        next(error);
     } 
     }
-    async update (req: Request, res:Response){
+    async update (req: Request, res:Response, next: NextFunction){
         try{
             const id = Number(req.params.id)
             const kartingActualizado = await kartingService.update(id,req.body)
@@ -52,12 +46,10 @@ class KartingController{
             }
             res.status(200).json(kartingActualizado)
         }catch(error){
-            res.status(500).json({
-                message:"Error al Actualizar el karting"
-            });
+            next(error);
         }
     }
-        async delete (req: Request, res: Response){
+        async delete (req: Request, res: Response, next: NextFunction){
         try {
             const id = Number(req.params.id);
             const kartingEliminado = await kartingService.delete(id);
@@ -70,9 +62,7 @@ class KartingController{
                 message: "Karting eliminado correctamente"
             });            
         }catch (error){
-            res.status(500).json ({
-                message:"Error al eliminar el karting"
-            });
+            next(error);
         }
     }
 }

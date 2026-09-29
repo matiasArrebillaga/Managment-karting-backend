@@ -1,11 +1,11 @@
-import { Request, Response } from "express";
+import { Request, Response, NextFunction} from "express";
 import { CreateTorneos, UpdateTorneos } from "./torneo.interface";
 import TorneosService from "./torneo.service";
 
 
 class TorneosController {
 
-    async getAll(req: Request, res: Response) {
+    async getAll(req: Request, res: Response, next: NextFunction) {
         try {
 
             const torneos = await TorneosService.getAll();
@@ -15,19 +15,12 @@ class TorneosController {
         }
 
 catch (error) {
-
-    console.log(error);
-
-    res.status(500).json({
-        message: "Error al obtener el torneo",
-        error: error
-    });
-
-}
+            next(error);
+        }
 
     }
 
-    async getById(req: Request, res: Response) {
+    async getById(req: Request, res: Response, next: NextFunction) {
         try {
 
             const id = Number(req.params.id);
@@ -43,15 +36,11 @@ catch (error) {
             res.json(torneo);
 
         } catch (error) {
-
-            res.status(500).json({
-                message: "Error al obtener el torneo"
-            });
-
+            next(error);
         }
     }
 
-    async create(req: Request, res: Response) {
+    async create(req: Request, res: Response, next: NextFunction) {
         try {
             const data: CreateTorneos = {
                 nombre: req.body.nombre,
@@ -66,16 +55,11 @@ catch (error) {
             res.status(201).json(nuevoTorneo);
 
         } catch (error: any) {
-            console.log(error);
-
-            res.status(400).json({
-                message: error.message || "Error al crear el torneo"
-            });
-
+            next(error);
         }
     }
 
-    async update(req: Request, res: Response) {
+    async update(req: Request, res: Response, next: NextFunction) {
         try {
 
             const id = Number(req.params.id);
@@ -93,15 +77,11 @@ catch (error) {
             res.status(200).json(torneoActualizado);
 
         } catch (error: any) {
-
-            res.status(400).json({
-                message: error.message || "Error al actualizar el torneo"
-            });
-
+            next(error);
         }
     }
 
-    async delete(req: Request, res: Response) {
+    async delete(req: Request, res: Response, next: NextFunction) {
         try {
 
             const id = Number(req.params.id);
@@ -118,11 +98,7 @@ catch (error) {
             res.status(200).json(torneoEliminado);
 
         } catch (error) {
-
-            res.status(500).json({
-                message: "Error al eliminar el torneo"
-            });
-
+            next(error);
         }
     }
 
