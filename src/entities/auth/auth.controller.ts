@@ -1,6 +1,6 @@
 import {Request, Response, NextFunction} from "express";
 import authService from "./auth.service";
-
+// controller de autorizacion funciona igual que los otros 
 class AuthController {
     async register (req:Request , res: Response, next: NextFunction){
         try{

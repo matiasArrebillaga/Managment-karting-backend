@@ -1,3 +1,4 @@
+// interfaces de login y register, register es la encargada de crear personas
 export interface ILoginDTO {
     mail: string;
     contraseña:string;
