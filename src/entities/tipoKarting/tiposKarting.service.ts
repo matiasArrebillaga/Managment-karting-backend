@@ -18,6 +18,12 @@ class TiposKartingsService {
             !Number.isInteger(data.TiposLicencias_idTipoLicenciaMinima)) {
             throw new Error("La licencia mínima debe ser un identificador entero");
         }
+        // Es la base del monto de las reservas: un cero o un negativo haria que se
+        // cobre mal en silencio.
+        if (data.precioHora !== undefined &&
+            (typeof data.precioHora !== "number" || !Number.isFinite(data.precioHora) || data.precioHora <= 0)) {
+            throw new Error("El precio por hora debe ser un número mayor que cero");
+        }
     }
     async getAll(){
         return await prisma.tiposkarting.findMany();
