@@ -128,6 +128,8 @@ model personas_torneos {
 model reservas {
   idReservas            Int       @id @default(autoincrement())
   fechaReserva          DateTime  @db.Date
+  horaInicio            DateTime  @db.Time(0)
+  horaFin               DateTime  @db.Time(0)
   monto                 Decimal   @db.Decimal(10, 2)
   Personas_idPersona    Int
   Circuitos_idCircuitos Int
@@ -145,6 +147,7 @@ model tiposkarting {
   idTiposKarting                       Int            @id @default(autoincrement())
   nombre                               String         @db.VarChar(45)
   descripcion                          String         @db.VarChar(45)
+  precioHora                           Decimal        @db.Decimal(10, 2)
   TiposLicencias_idTipoLicenciaMinima  Int            @default(1)
   tiposlicencias                       tiposlicencias @relation(fields: [TiposLicencias_idTipoLicenciaMinima], references: [idTipoLicencia], onDelete: NoAction, onUpdate: NoAction, map: "fk_TiposKarting_TiposLicencias")
   kartings                             kartings[]
