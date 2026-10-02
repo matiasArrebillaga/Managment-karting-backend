@@ -69,7 +69,9 @@ beforeEach(() => {
     for (const service of services) {
         looseMock(service.getAll).mockResolvedValue([]);
         looseMock(service.getById).mockResolvedValue({});
-        looseMock(service.create).mockResolvedValue({});
+        // reserva ya no expone create(): su unica via de alta es realizarReserva(),
+        // que es la que valida y calcula el monto.
+        if (service.create) looseMock(service.create).mockResolvedValue({});
         looseMock(service.update).mockResolvedValue({});
         looseMock(service.delete).mockResolvedValue({});
     }
@@ -123,7 +125,8 @@ describe("CRUD de las entidades", () => {
         ["/api/tiposKartings", "/api/tiposKartings/1", "EMPLEADO", "EMPLEADO", "ADMIN", tipoKartingService, "create"],
         ["/api/torneos", "/api/torneos/1", "EMPLEADO", "EMPLEADO", "ADMIN", torneoService, "create"],
         ["/api/licencias", "/api/licencias/1", "EMPLEADO", "EMPLEADO", "ADMIN", licenciaService, "create"],
-        ["/api/reservas", "/api/reservas/1", "CLIENTE", "CLIENTE", "EMPLEADO", reservaService, "realizarReserva"],
+        // reservas queda fuera de esta tabla: su contrato ya no admite un body vacio
+        // ni pasa el body crudo al service. Tiene su propio describe mas abajo.
     ] as const;
 
     it.each(entities)("crea un recurso en %s", async (path, _idPath, role, _updateRole, _deleteRole, service, createMethod) => {
@@ -151,6 +154,89 @@ describe("CRUD de las entidades", () => {
 
         expect(deletion.status).toBe(200);
         expect((service.delete as unknown as jest.Mock)).toHaveBeenCalledWith(1);
+    });
+});
+
+describe("reservas", () => {
+    const bodyValido = {
+        fechaReserva: "2026-12-01",
+        horaInicio: "10:00",
+        horaFin: "12:00",
+        Personas_idPersona: 1,
+        Circuitos_idCircuitos: 1,
+        Kartings_idKartings: 4,
+    };
+
+    it("crea una reserva con una franja horaria valida", async () => {
+        const response = await request(app)
+            .post("/api/reservas")
+            .set("Authorization", `Bearer ${token("CLIENTE")}`)
+            .send(bodyValido);
+
+        expect(response.status).toBe(201);
+        expect(reservaService.realizarReserva as unknown as jest.Mock).toHaveBeenCalled();
+    });
+
+    // El controller no valida ni filtra: eso vive en el service (reserva.service.test.ts)
+    it("le pasa el body tal cual al service", async () => {
+        const response = await request(app)
+            .post("/api/reservas")
+            .set("Authorization", `Bearer ${token("CLIENTE")}`)
+            .send({ ...bodyValido, monto: 1 });
+
+        expect(response.status).toBe(201);
+        expect(reservaService.realizarReserva as unknown as jest.Mock)
+            .toHaveBeenCalledWith({ ...bodyValido, monto: 1 }, 1);
+    });
+
+    it("le pasa el patch tal cual al service", async () => {
+        const response = await request(app)
+            .patch("/api/reservas/1")
+            .set("Authorization", `Bearer ${token("CLIENTE")}`)
+            .send({ monto: 1, actualizado: true });
+
+        expect(response.status).toBe(200);
+        // el 1 final es la restriccion de pertenencia: el token de prueba es CLIENTE
+        expect(reservaService.update as unknown as jest.Mock)
+            .toHaveBeenCalledWith(1, { monto: 1, actualizado: true }, 1);
+    });
+
+    it("elimina una reserva", async () => {
+        const response = await request(app)
+            .delete("/api/reservas/1")
+            .set("Authorization", `Bearer ${token("EMPLEADO")}`);
+
+        expect(response.status).toBe(200);
+        // sin restriccion: un EMPLEADO opera sobre cualquier reserva
+        expect(reservaService.delete as unknown as jest.Mock).toHaveBeenCalledWith(1, undefined);
+    });
+
+    it("limita a las propias las operaciones de un CLIENTE", async () => {
+        // el token de prueba es de idPersona 1
+        await request(app)
+            .post("/api/reservas")
+            .set("Authorization", `Bearer ${token("CLIENTE")}`)
+            .send(bodyValido);
+        expect(reservaService.realizarReserva as unknown as jest.Mock)
+            .toHaveBeenCalledWith(expect.anything(), 1);
+
+        await request(app)
+            .delete("/api/reservas/5")
+            .set("Authorization", `Bearer ${token("CLIENTE")}`);
+        expect(reservaService.delete as unknown as jest.Mock).toHaveBeenCalledWith(5, 1);
+    });
+
+    it("/mias devuelve las reservas del token y no matchea como /:id", async () => {
+        looseMock(reservaService.getPorPersona).mockResolvedValue([{ idReservas: 7 }]);
+
+        const response = await request(app)
+            .get("/api/reservas/mias")
+            .set("Authorization", `Bearer ${token("CLIENTE")}`);
+
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual([{ idReservas: 7 }]);
+        expect(reservaService.getPorPersona as unknown as jest.Mock).toHaveBeenCalledWith(1);
+        expect(reservaService.getById as unknown as jest.Mock).not.toHaveBeenCalled();
     });
 });
 

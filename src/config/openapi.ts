@@ -370,6 +370,28 @@ paths["/api/carreras/torneo/{idTorneo}"] = {
     }
 };
 
+paths["/api/reservas/mias"] = {
+    get: {
+        tags: ["Reservas"],
+        summary: "Obtener las reservas de la persona autenticada",
+        description: "Devuelve solo las reservas del usuario del token. Es la vía para que un CLIENTE vea lo suyo sin poder listar las de todos.",
+        responses: {
+            "200": {
+                description: "Reservas propias obtenidas correctamente",
+                content: {
+                    "application/json": {
+                        schema: {
+                            type: "array",
+                            items: { $ref: "#/components/schemas/Reserva" }
+                        }
+                    }
+                }
+            },
+            "500": standardResponses("Reserva")["500"]
+        }
+    }
+};
+
 paths["/api/participaciones/torneo/{idTorneo}/tabla-general"] = {
     get: {
         tags: ["Participaciones"],
@@ -401,6 +423,7 @@ paths["/api/participaciones/torneo/{idTorneo}/tabla-general"] = {
 const integerId = { type: "integer", format: "int32" };
 const date = { type: "string", format: "date" };
 const dateTime = { type: "string", format: "date-time" };
+const hora = { type: "string", pattern: "^([01]\\d|2[0-3]):[0-5]\\d(:[0-5]\\d)?$", example: "14:00" };
 const objectSchema = (properties: Record<string, object>, required: string[] = []) => ({
     type: "object",
     properties,
@@ -447,14 +470,16 @@ const schemas = {
     Rol: objectSchema({ idRol: integerId, nombre: { type: "string" } }),
     TipoLicenciaRequest: objectSchema({ nombre: { type: "string" }, nivel: integerId }),
     TipoLicencia: objectSchema({ idTipoLicencia: integerId, nombre: { type: "string" }, nivel: integerId }),
-    TipoKartingRequest: objectSchema({ nombre: { type: "string" }, descripcion: { type: "string" }, TiposLicencias_idTipoLicenciaMinima: integerId }),
-    TipoKarting: objectSchema({ idTiposKarting: integerId, nombre: { type: "string" }, descripcion: { type: "string" }, TiposLicencias_idTipoLicenciaMinima: integerId }),
+    TipoKartingRequest: objectSchema({ nombre: { type: "string" }, descripcion: { type: "string" }, precioHora: { type: "number", example: 20000 }, TiposLicencias_idTipoLicenciaMinima: integerId }),
+    TipoKarting: objectSchema({ idTiposKarting: integerId, nombre: { type: "string" }, descripcion: { type: "string" }, precioHora: { type: "number", example: 20000 }, TiposLicencias_idTipoLicenciaMinima: integerId }),
     TorneoRequest: objectSchema({ nombre: { type: "string", maxLength: 45 }, descripcion: { type: "string", maxLength: 45 }, cupoMaximo: { type: "integer", minimum: 1 }, fechaInicio: date, fechaFin: date }),
     Torneo: objectSchema({ idTorneos: integerId, nombre: { type: "string" }, descripcion: { type: "string" }, cupoMaximo: { type: "integer" }, fechaInicio: date, fechaFin: date }),
     LicenciaRequest: objectSchema({ fechaEmision: date, fechaVencimiento: date, Personas_idPersona: integerId, TiposLicencias_idTipoLicencia: integerId }),
     Licencia: objectSchema({ idLicencias: integerId, fechaEmision: date, fechaVencimiento: date, Personas_idPersona: integerId, TiposLicencias_idTipoLicencia: integerId }),
-    ReservaRequest: objectSchema({ fechaReserva: date, monto: { type: "number" }, Personas_idPersona: integerId, Circuitos_idCircuitos: integerId, Kartings_idKartings: integerId }),
-    Reserva: objectSchema({ idReservas: integerId, fechaReserva: date, monto: { type: "number" }, Personas_idPersona: integerId, Circuitos_idCircuitos: integerId, Kartings_idKartings: integerId }),
+    // Personas_idPersona no es obligatorio: para un CLIENTE lo impone el servidor con
+    // el id del token, y lo que venga en el body se descarta.
+    ReservaRequest: objectSchema({ fechaReserva: date, horaInicio: hora, horaFin: hora, Personas_idPersona: integerId, Circuitos_idCircuitos: integerId, Kartings_idKartings: integerId }, ["fechaReserva", "horaInicio", "horaFin", "Circuitos_idCircuitos", "Kartings_idKartings"]),
+    Reserva: objectSchema({ idReservas: integerId, fechaReserva: date, horaInicio: hora, horaFin: hora, monto: { type: "number", description: "Calculado por el servidor: precioHora del tipo de karting por la cantidad de horas" }, Personas_idPersona: integerId, Circuitos_idCircuitos: integerId, Kartings_idKartings: integerId }),
     CarreraRequest: objectSchema({ fechaCarrera: date, horaInicio: dateTime, horaFin: dateTime, Kartings_idKartings: integerId, Torneos_idTorneos: integerId, Circuitos_idCircuitos: integerId }),
     Carrera: objectSchema({ fechaCarrera: date, horaInicio: dateTime, horaFin: dateTime, Kartings_idKartings: integerId, Torneos_idTorneos: integerId, Circuitos_idCircuitos: integerId }),
     ParticipacionRequest: objectSchema({ Carrera_Kartings_idKartings: integerId, Carrera_Torneos_idTorneos: integerId, Carrera_Circuitos_idCircuitos: integerId, Carrera_fecha: date, Personas_idPersona: integerId, puntos: integerId, tiempo: { type: "string" }, posicion_final: { type: "string" } }),

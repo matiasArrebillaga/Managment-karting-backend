@@ -7,3 +7,4 @@ dist/
 .windsurf/
 migrations/
 .prettierrc
+graphify-out/
