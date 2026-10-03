@@ -2,7 +2,7 @@ import { prisma } from "../../config/prisma";
 import { Prisma } from "../../generated/prisma/client";
 import { AppError } from "../../middleware/error.middleware";
 import { CreateReserva, CreateReservaInput, UpdateReservaInput } from "./reserva.interface";
-import { hoyUTC } from "../../utils/fecha";
+import { hoyUTC, normalizarHora } from "../../utils/fecha";
 
 const MS_POR_HORA = 60 * 60 * 1000;
 
@@ -23,16 +23,6 @@ class ReservaService {
         const valor = new Date(fecha);
         if (Number.isNaN(valor.getTime())) throw new Error("La fecha de reserva no es válida");
         return new Date(Date.UTC(valor.getUTCFullYear(), valor.getUTCMonth(), valor.getUTCDate()));
-    }
-
-    private normalizarHora(valor: unknown, campo: string): Date {
-        if (valor instanceof Date) return valor;
-        const partes = /^([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/.exec(String(valor ?? "").trim());
-        if (!partes) throw new Error(`El campo ${campo} debe tener formato HH:MM`);
-        return new Date(Date.UTC(
-            1970, 0, 1,
-            Number(partes[1]), Number(partes[2]), Number(partes[3] ?? 0)
-        ));
     }
 
     //  manda los ids como texto validarId es el que despues decide.
@@ -188,8 +178,8 @@ class ReservaService {
         // El monto que venga en el body se ignora: se calcula aca abajo.
         const entrada: CreateReserva = {
             fechaReserva: new Date(data.fechaReserva),
-            horaInicio: this.normalizarHora(data.horaInicio, "horaInicio"),
-            horaFin: this.normalizarHora(data.horaFin, "horaFin"),
+            horaInicio: normalizarHora(data.horaInicio, "horaInicio"),
+            horaFin: normalizarHora(data.horaFin, "horaFin"),
             Personas_idPersona: this.aEntero(data.Personas_idPersona),
             Circuitos_idCircuitos: this.aEntero(data.Circuitos_idCircuitos),
             Kartings_idKartings: this.aEntero(data.Kartings_idKartings)
@@ -232,10 +222,10 @@ class ReservaService {
                 ? new Date(data.fechaReserva)
                 : actual.fechaReserva,
             horaInicio: data.horaInicio !== undefined
-                ? this.normalizarHora(data.horaInicio, "horaInicio")
+                ? normalizarHora(data.horaInicio, "horaInicio")
                 : actual.horaInicio,
             horaFin: data.horaFin !== undefined
-                ? this.normalizarHora(data.horaFin, "horaFin")
+                ? normalizarHora(data.horaFin, "horaFin")
                 : actual.horaFin,
             // un cliente tampoco puede pasarle la reserva a otro
             Personas_idPersona: restringirAPersona
