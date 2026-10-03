@@ -29,12 +29,6 @@ class CarrerasController {
                 Circuitos_idCircuitos
             );
 
-            if (!carrera) {
-                return res.status(404).json({
-                    message: "Carrera no encontrada"
-                });
-            }
-
             res.status(200).json(carrera);
 
         } catch (error) {
@@ -46,8 +40,8 @@ async create(req: Request, res: Response, next: NextFunction) {
     try {
         const data = {
             fechaCarrera: new Date(req.body.fechaCarrera),
-            horaInicio: new Date(req.body.horaInicio),
-            horaFin: new Date(req.body.horaFin),
+            horaInicio: req.body.horaInicio,
+            horaFin: req.body.horaFin,
             Kartings_idKartings: Number(req.body.Kartings_idKartings),
             Torneos_idTorneos: Number(req.body.Torneos_idTorneos),
             Circuitos_idCircuitos: Number(req.body.Circuitos_idCircuitos)
@@ -70,10 +64,10 @@ async create(req: Request, res: Response, next: NextFunction) {
 
             const data = {
                 ...(req.body.horaInicio !== undefined && {
-                    horaInicio: new Date(req.body.horaInicio)
+                    horaInicio: req.body.horaInicio
                 }),
                 ...(req.body.horaFin !== undefined && {
-                    horaFin: new Date(req.body.horaFin)
+                    horaFin: req.body.horaFin
                 })
             };
 
