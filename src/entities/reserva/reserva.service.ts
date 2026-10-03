@@ -227,6 +227,7 @@ class ReservaService {
         if (!actual) throw new Error("La reserva indicada no existe");
         this.verificarPertenencia(actual.Personas_idPersona, restringirAPersona);
         const resultante: CreateReserva = {
+            // cambia solo los campos necesarios y deja los otros igual    
             fechaReserva: data.fechaReserva !== undefined
                 ? new Date(data.fechaReserva)
                 : actual.fechaReserva,
@@ -248,7 +249,7 @@ class ReservaService {
                 ? this.aEntero(data.Kartings_idKartings)
                 : actual.Kartings_idKartings
         };
-        // cambia solo los campos necesarios y deja los otros igual
+
         return await prisma.$transaction(async (db) => {
             const monto = await this.validarYCalcularMonto(db, resultante, {
                 idReservaExcluida: idReservas,

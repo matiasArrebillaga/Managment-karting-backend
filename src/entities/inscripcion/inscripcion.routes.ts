@@ -12,7 +12,7 @@ personasTorneos.get(
     PersonasTorneosController.getAll
 );
 
-// /mias va antes de la ruta con parametros o Express la matchea como Torneos_idTorneos = "mias"
+// /mias va antes de la ruta con parametros 
 personasTorneos.get(
     "/mias",
     verifyRoles("CLIENTE","EMPLEADO","ADMIN"),
@@ -31,11 +31,7 @@ personasTorneos.post(
     PersonasTorneosController.create
 );
 
-// no hay PUT: la fecha y la hora de inscripcion las pone el servidor, asi que una
-// inscripcion no tiene ningun campo modificable. Para cambiar de torneo se da de baja.
 
-// un CLIENTE puede darse de baja, pero el service lo limita a la propia y al torneo
-// que todavia no empezo
 personasTorneos.delete(
     "/:Torneos_idTorneos/:Personas_idPersona",
     verifyRoles("CLIENTE","EMPLEADO","ADMIN"),

@@ -6,17 +6,15 @@ import { hoyUTC } from "../../utils/fecha";
 import { CreatePersonaTorneo } from "./inscripciones.interface";
 
 class PersonasTorneosService {
+    // valida que el id sea entero como en los otros service importantes
     private validarId(id: number) {
         if (!Number.isInteger(id)) throw new Error("El identificador debe ser un número entero");
     }
 
-    // Un body form-encoded manda los ids como texto; validarId es el que despues decide.
     private aEntero(valor: unknown): number {
         return Number(valor);
     }
-
-    // La columna es TIME y Prisma guarda la hora del Date en UTC: pasarle new Date() dejaria
-    // la hora corrida tres horas en Argentina. Se arma la hora local sobre la epoch.
+    // da la hora actual
     private horaActual(): Date {
         const ahora = new Date();
         return new Date(Date.UTC(
@@ -24,15 +22,13 @@ class PersonasTorneosService {
             ahora.getHours(), ahora.getMinutes(), ahora.getSeconds()
         ));
     }
-
-    // Valida que el torneo y la persona existan, que el torneo no haya empezado, que quede
-    // cupo y que la persona no tenga otro torneo que se superponga con este.
+    //valida que el torneo exista, no haya empezado y tenga cupo
     private async validarTorneo(
         db: Prisma.TransactionClient,
         idTorneo: number,
         idPers: number
     ) {
-        const [torneo, persona] = await Promise.all([
+        const [torneo, persona] = await Promise.all([ // calida que el torneo y la persona existan
             db.torneos.findUnique({ where: { idTorneos: idTorneo } }),
             db.personas.findUnique({ where: { idPersona: idPers } })
         ]);
@@ -40,11 +36,11 @@ class PersonasTorneosService {
         if (!torneo) throw new AppError("El torneo ingresado no existe", 404);
         if (!persona) throw new AppError("La persona ingresada no existe", 404);
 
-        if (torneo.fechaInicio < hoyUTC()) {
+        if (torneo.fechaInicio < hoyUTC()) { // que el torneo no haya empezado
             throw new Error("El torneo ya comenzó: no se admiten inscripciones");
         }
 
-        const cantidadInscripciones = await db.personas_torneos.count({
+        const cantidadInscripciones = await db.personas_torneos.count({ // que haya cupo
             where: { Torneos_idTorneos: idTorneo }
         });
 
@@ -52,9 +48,7 @@ class PersonasTorneosService {
             throw new Error("El torneo alcanzó el cupo máximo de inscripciones");
         }
 
-        // Dos torneos se pisan si cada uno empieza antes de que el otro termine. Comparar
-        // solo la fecha de inicio dejaba pasar un torneo que arranca en medio de otro.
-        const solapada = await db.personas_torneos.findFirst({
+        const solapada = await db.personas_torneos.findFirst({ 
             where: {
                 Personas_idPersona: idPers,
                 torneos: {
@@ -76,9 +70,7 @@ class PersonasTorneosService {
         return await prisma.personas_torneos.findMany();
     }
 
-    // restringirAPersona: cuando viene, la operacion queda limitada a las inscripciones de
-    // esa persona. El controller lo manda para un CLIENTE y lo omite para EMPLEADO y ADMIN.
-    // Vive en el service para que ningun caller nuevo pueda saltearlo.
+
     async getById(
         Torneos_idTorneos: number,
         Personas_idPersona: number,
@@ -86,7 +78,7 @@ class PersonasTorneosService {
     ) {
         this.validarId(Torneos_idTorneos);
         this.validarId(Personas_idPersona);
-        // 404 y no 403: a un cliente no le decimos quien mas esta inscripto
+
         if (restringirAPersona !== undefined && Personas_idPersona !== restringirAPersona) {
             return null;
         }
@@ -99,9 +91,7 @@ class PersonasTorneosService {
             }
         });
     }
-
-    // Las inscripciones de una persona. Es lo que consume GET /api/inscripciones/mias, para
-    // que un cliente vea en que torneos esta anotado sin poder listar las de todos.
+    // lista las inscripciones de una persona
     async getPorPersona(Personas_idPersona: number) {
         this.validarId(Personas_idPersona);
         return await prisma.personas_torneos.findMany({
@@ -112,19 +102,16 @@ class PersonasTorneosService {
     }
 
     async create(data: CreatePersonaTorneo, restringirAPersona?: number) {
-        // Un CLIENTE no elige a nombre de quien se inscribe: se le impone su propio id.
+        // valida los id, restringir persona hace que un cliente se inscriba a si mismo (ADMIN podria inscribir a otra persona)
         const Personas_idPersona = restringirAPersona ?? this.aEntero(data.Personas_idPersona);
         const Torneos_idTorneos = this.aEntero(data.Torneos_idTorneos);
         this.validarId(Torneos_idTorneos);
         this.validarId(Personas_idPersona);
-
+        // comienza la transaccion, previene overbooking si queda un solo cupo
         return await prisma.$transaction(async (db) => {
-            // Sin el lock, dos inscripciones simultaneas leen el mismo cupo libre y entran
-            // las dos. Bloquear la fila del torneo serializa las inscripciones a ese torneo.
             await db.$queryRaw`SELECT idTorneos FROM torneos WHERE idTorneos = ${Torneos_idTorneos} FOR UPDATE`;
             await this.validarTorneo(db, Torneos_idTorneos, Personas_idPersona);
-
-            // La fecha y la hora salen del reloj del servidor, nunca de la request.
+            
             return await db.personas_torneos.create({
                 data: {
                     fecha_inscripcion: hoyUTC(),
@@ -143,13 +130,12 @@ class PersonasTorneosService {
     ) {
         this.validarId(Torneos_idTorneos);
         this.validarId(Personas_idPersona);
-
+        // solo podes borrar tu inscripcion igual que create
         if (restringirAPersona !== undefined) {
             if (Personas_idPersona !== restringirAPersona) {
                 throw new AppError("No podés dar de baja la inscripción de otra persona", 403);
             }
-            // Con el torneo empezado la baja la hace un ADMIN: ya puede haber carreras
-            // corridas y participaciones cargadas.
+
             const torneo = await prisma.torneos.findUnique({
                 where: { idTorneos: Torneos_idTorneos }
             });

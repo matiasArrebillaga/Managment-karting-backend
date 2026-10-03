@@ -5,8 +5,8 @@ export interface IInscripcion {
     hora_inscripcion: Date;
 }
 
-// Lo que llega por la request. La fecha y la hora no estan: las pone el servidor con su
-// propio reloj, no el cliente. Para un CLIENTE el Personas_idPersona tambien se ignora.
+
+// subconjunto de inscripcion para personaTorneo
 export type CreatePersonaTorneo = Pick<
     IInscripcion,
     "Torneos_idTorneos" | "Personas_idPersona"
