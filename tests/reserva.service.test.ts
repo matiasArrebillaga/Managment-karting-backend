@@ -37,6 +37,8 @@ const datosCreados = () => db.reservas.create.mock.calls[0][0].data;
 const filtroSolapes = () => db.reservas.findMany.mock.calls[0][0].where;
 
 beforeEach(() => {
+    db.$transaction.mockClear();
+    db.$queryRaw.mockClear();
     db.personas = { findUnique: jest.fn(async () => ({ idPersona: 1 })) };
     db.kartings = { findUnique: jest.fn(async () => KARTING_SENIOR) };
     db.circuitos = { findUnique: jest.fn(async () => ({ idCircuitos: 1, maximo: 8 })) };
@@ -278,6 +280,39 @@ describe("pertenencia", () => {
         await reservaService.realizarReserva({ ...reservaValida(), Personas_idPersona: 2 });
 
         expect(datosCreados().Personas_idPersona).toBe(2);
+    });
+
+    // 404 y no 403: el 403 le confirmaria al cliente que la reserva existe
+    it("getById no devuelve la reserva de otro cuando hay restriccion", async () => {
+        db.reservas.findUnique = jest.fn(async () => ({ idReservas: 50, Personas_idPersona: 2 }));
+
+        expect(await reservaService.getById(50, 7)).toBeNull();
+    });
+
+    it("getById devuelve la propia", async () => {
+        db.reservas.findUnique = jest.fn(async () => ({ idReservas: 50, Personas_idPersona: 7 }));
+
+        expect(await reservaService.getById(50, 7)).not.toBeNull();
+    });
+});
+
+describe("solapamiento y escritura en la misma transaccion", () => {
+    it("el alta valida y graba dentro de $transaction, con los recursos lockeados", async () => {
+        await reservaService.realizarReserva(reservaValida());
+
+        expect(db.$transaction).toHaveBeenCalledTimes(1);
+        // kart y circuito, en ese orden, para no cruzar locks entre requests
+        expect(db.$queryRaw).toHaveBeenCalledTimes(2);
+        expect(db.$queryRaw.mock.calls[0][0].join("?")).toContain("kartings");
+        expect(db.$queryRaw.mock.calls[1][0].join("?")).toContain("circuitos");
+    });
+
+    it("el patch tambien revalida y graba dentro de $transaction", async () => {
+        db.reservas.findUnique = jest.fn(async () => ({ ...reservaValida(), idReservas: 50, Personas_idPersona: 7 }));
+
+        await reservaService.update(50, { horaFin: hora("13:00") });
+
+        expect(db.$transaction).toHaveBeenCalledTimes(1);
     });
 });
 

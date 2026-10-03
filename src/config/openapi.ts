@@ -341,6 +341,32 @@ for (const resource of compositeResources) {
     };
 }
 
+// Las inscripciones son el unico recurso compuesto sin update: con la fecha y la hora puestas
+// por el servidor no queda ningun campo modificable.
+delete (paths["/api/inscripciones/{Torneos_idTorneos}/{Personas_idPersona}"] as Record<string, unknown>).put;
+
+paths["/api/inscripciones/mias"] = {
+    get: {
+        tags: ["Inscripciones"],
+        summary: "Obtener las inscripciones de la persona autenticada",
+        description: "Devuelve solo las inscripciones del usuario del token, con el torneo incluido. Es la vía para que un CLIENTE vea en qué torneos está anotado sin poder listar las de todos.",
+        responses: {
+            "200": {
+                description: "Inscripciones propias obtenidas correctamente",
+                content: {
+                    "application/json": {
+                        schema: {
+                            type: "array",
+                            items: { $ref: "#/components/schemas/Inscripcion" }
+                        }
+                    }
+                }
+            },
+            "500": standardResponses("Inscripción")["500"]
+        }
+    }
+};
+
 paths["/api/carreras/torneo/{idTorneo}"] = {
     get: {
         tags: ["Carreras"],
@@ -491,8 +517,10 @@ const schemas = {
         apellido: { type: "string", example: "Pérez" },
         puntosTotales: integerId
     }),
-    InscripcionRequest: objectSchema({ Torneos_idTorneos: integerId, Personas_idPersona: integerId, fecha_inscipcion: date, hora_inscripcion: dateTime }),
-    Inscripcion: objectSchema({ Torneos_idTorneos: integerId, Personas_idPersona: integerId, fecha_inscipcion: date, hora_inscripcion: dateTime })
+    // La fecha y la hora no se mandan: las pone el servidor. Para un CLIENTE el
+    // Personas_idPersona tambien se ignora y sale del token.
+    InscripcionRequest: objectSchema({ Torneos_idTorneos: integerId, Personas_idPersona: integerId }, ["Torneos_idTorneos"]),
+    Inscripcion: objectSchema({ Torneos_idTorneos: integerId, Personas_idPersona: integerId, fecha_inscripcion: date, hora_inscripcion: dateTime })
 };
 
 const options: swaggerJSDoc.Options = {

@@ -115,7 +115,7 @@ model personas {
 model personas_torneos {
   Torneos_idTorneos  Int
   Personas_idPersona Int
-  fecha_inscipcion   DateTime @db.Date
+  fecha_inscripcion  DateTime @db.Date
   hora_inscripcion   DateTime @db.Time(0)
   personas           personas @relation(fields: [Personas_idPersona], references: [idPersona], onDelete: NoAction, onUpdate: NoAction, map: "fk_Torneos_has_Personas_Personas1")
   torneos            torneos  @relation(fields: [Torneos_idTorneos], references: [idTorneos], onDelete: NoAction, onUpdate: NoAction, map: "fk_Torneos_has_Personas_Torneos1")

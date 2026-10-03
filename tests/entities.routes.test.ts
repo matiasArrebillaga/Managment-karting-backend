@@ -94,7 +94,8 @@ describe("rutas protegidas de todas las entidades", () => {
         ["/api/reservas", "EMPLEADO", reservaService],
         ["/api/carreras", "CLIENTE", carreraService],
         ["/api/participaciones", "EMPLEADO", participacionService],
-        ["/api/inscripciones", "CLIENTE", inscripcionService],
+        // el listado completo dejo de ser visible para un CLIENTE: ahora usa /mias
+        ["/api/inscripciones", "EMPLEADO", inscripcionService],
     ] as const;
 
     it.each(routes)("rechaza sin token la ruta %s", async (path, _role, service) => {
@@ -240,6 +241,73 @@ describe("reservas", () => {
     });
 });
 
+describe("inscripciones", () => {
+    // El controller no valida ni arma nada: eso vive en el service
+    // (inscripcion.service.test.ts). Aca solo se chequea el ruteo y la pertenencia.
+    it("le pasa el body tal cual al service y restringe a un CLIENTE", async () => {
+        const response = await request(app)
+            .post("/api/inscripciones")
+            .set("Authorization", `Bearer ${token("CLIENTE")}`)
+            .send({ Torneos_idTorneos: 1, Personas_idPersona: 9 });
+
+        expect(response.status).toBe(201);
+        // el 1 final es la restriccion de pertenencia: el token de prueba es CLIENTE
+        expect(inscripcionService.create as unknown as jest.Mock)
+            .toHaveBeenCalledWith({ Torneos_idTorneos: 1, Personas_idPersona: 9 }, 1);
+    });
+
+    it("no restringe el alta de un EMPLEADO", async () => {
+        await request(app)
+            .post("/api/inscripciones")
+            .set("Authorization", `Bearer ${token("EMPLEADO")}`)
+            .send({ Torneos_idTorneos: 1, Personas_idPersona: 9 });
+
+        expect(inscripcionService.create as unknown as jest.Mock)
+            .toHaveBeenCalledWith(expect.anything(), undefined);
+    });
+
+    it("un CLIENTE puede pedir la baja, limitada a la propia", async () => {
+        const response = await request(app)
+            .delete("/api/inscripciones/1/1")
+            .set("Authorization", `Bearer ${token("CLIENTE")}`);
+
+        expect(response.status).toBe(200);
+        expect(inscripcionService.delete as unknown as jest.Mock)
+            .toHaveBeenCalledWith(1, 1, 1);
+    });
+
+    it("un ADMIN da de baja cualquier inscripcion", async () => {
+        await request(app)
+            .delete("/api/inscripciones/1/9")
+            .set("Authorization", `Bearer ${token("ADMIN")}`);
+
+        expect(inscripcionService.delete as unknown as jest.Mock)
+            .toHaveBeenCalledWith(1, 9, undefined);
+    });
+
+    it("ya no expone PUT", async () => {
+        const response = await request(app)
+            .put("/api/inscripciones/1/1")
+            .set("Authorization", `Bearer ${token("ADMIN")}`)
+            .send({ actualizado: true });
+
+        expect(response.status).toBe(404);
+    });
+
+    it("/mias devuelve las del token y no matchea como /:Torneos_idTorneos", async () => {
+        looseMock(inscripcionService.getPorPersona).mockResolvedValue([{ Torneos_idTorneos: 7 }]);
+
+        const response = await request(app)
+            .get("/api/inscripciones/mias")
+            .set("Authorization", `Bearer ${token("CLIENTE")}`);
+
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual([{ Torneos_idTorneos: 7 }]);
+        expect(inscripcionService.getPorPersona as unknown as jest.Mock).toHaveBeenCalledWith(1);
+        expect(inscripcionService.getById as unknown as jest.Mock).not.toHaveBeenCalled();
+    });
+});
+
 describe("rutas con claves compuestas", () => {
     const compositeRoutes = [
         [
@@ -260,15 +328,7 @@ describe("rutas con claves compuestas", () => {
             "registrarParticipacion",
             "EMPLEADO",
         ],
-        [
-            "/api/inscripciones",
-            "/api/inscripciones/1/1",
-            "EMPLEADO",
-            inscripcionService,
-            "put",
-            "create",
-            "EMPLEADO",
-        ],
+        // inscripciones queda fuera de esta tabla: ya no tiene PUT. Tiene su propio describe.
     ] as const;
 
     it.each(compositeRoutes)("crea y actualiza recursos en %s", async (path, idPath, role, service, method, createMethod, updateRole) => {
