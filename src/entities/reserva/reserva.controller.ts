@@ -1,12 +1,8 @@
 import { Request, Response, NextFunction} from "express";
 
 import reservaService from "./reserva.service";
-import { AuthRequest } from "../../middleware/auth.middleware";
+import { AuthRequest, limitarAPropias } from "../../middleware/auth.middleware";
 
-
-function limitarAPropias(req: AuthRequest): number | undefined { // hace que el usuario solo pueda modificar sus propias reservas
-    return req.user?.rol === "CLIENTE" ? req.user.idPersona : undefined;
-}
 
 class ReservaController {
     async getAll(req: Request, res: Response, next: NextFunction) {
@@ -29,11 +25,11 @@ class ReservaController {
         }
     }
 
-    async getById(req: Request, res: Response, next: NextFunction) {
+    async getById(req: AuthRequest, res: Response, next: NextFunction) {
         try {
             const id = Number(req.params.id);
 
-            const reserva = await reservaService.getById(id);
+            const reserva = await reservaService.getById(id, limitarAPropias(req));
 
             if (!reserva) {
                 return res.status(404).json({
