@@ -1,6 +1,7 @@
 
 import { Request, Response, NextFunction} from "express";
 import PersonasTorneosService from "./inscripcion.service";
+import { AuthRequest, limitarAPropias } from "../../middleware/auth.middleware";
 
 class PersonasTorneosController {
 
@@ -16,7 +17,19 @@ class PersonasTorneosController {
         }
     }
 
-    async getById(req: Request, res: Response, next: NextFunction) {
+    async getMias(req: AuthRequest, res: Response, next: NextFunction) { // las inscripciones del usuario del token
+        try {
+            const inscripciones =
+                await PersonasTorneosService.getPorPersona(Number(req.user?.idPersona));
+
+            res.status(200).json(inscripciones);
+
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async getById(req: AuthRequest, res: Response, next: NextFunction) {
         try {
             const Torneos_idTorneos =
                 Number(req.params.Torneos_idTorneos);
@@ -27,7 +40,8 @@ class PersonasTorneosController {
             const inscripcion =
                 await PersonasTorneosService.getById(
                     Torneos_idTorneos,
-                    Personas_idPersona
+                    Personas_idPersona,
+                    limitarAPropias(req)
                 );
 
             if (!inscripcion) {
@@ -43,24 +57,12 @@ class PersonasTorneosController {
         }
     }
 
-    async create(req: Request, res: Response, next: NextFunction) {
+    async create(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const data = {
-                Torneos_idTorneos:
-                    Number(req.body.Torneos_idTorneos),
-
-                Personas_idPersona:
-                    Number(req.body.Personas_idPersona),
-
-                fecha_inscipcion:
-                    new Date(String(req.body.fecha_inscipcion)),
-
-                hora_inscripcion:
-                    new Date(String(req.body.hora_inscripcion))
-            };
-
             const inscripcion =
-                await PersonasTorneosService.create(data);
+                await PersonasTorneosService.create(
+                    req.body, limitarAPropias(req)
+                );
 
             res.status(201).json(inscripcion);
 
@@ -69,41 +71,7 @@ class PersonasTorneosController {
         }
     }
 
-    async update(req: Request, res: Response, next: NextFunction) {
-        try {
-            const Torneos_idTorneos =
-                Number(req.params.Torneos_idTorneos);
-
-            const Personas_idPersona =
-                Number(req.params.Personas_idPersona);
-
-            const data = {
-                ...(req.body.fecha_inscipcion !== undefined && {
-                    fecha_inscipcion:
-                        new Date(req.body.fecha_inscipcion)
-                }),
-
-                ...(req.body.hora_inscripcion !== undefined && {
-                    hora_inscripcion:
-                        new Date(req.body.hora_inscripcion)
-                })
-            };
-
-            const inscripcion =
-                await PersonasTorneosService.update(
-                    Torneos_idTorneos,
-                    Personas_idPersona,
-                    data
-                );
-
-            res.status(200).json(inscripcion);
-
-        } catch (error) {
-            next(error);
-        }
-    }
-
-    async delete(req: Request, res: Response, next: NextFunction) {
+    async delete(req: AuthRequest, res: Response, next: NextFunction) {
         try {
             const Torneos_idTorneos =
                 Number(req.params.Torneos_idTorneos);
@@ -113,7 +81,8 @@ class PersonasTorneosController {
 
             await PersonasTorneosService.delete(
                 Torneos_idTorneos,
-                Personas_idPersona
+                Personas_idPersona,
+                limitarAPropias(req)
             );
 
             res.status(200).json({
