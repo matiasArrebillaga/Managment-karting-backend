@@ -44,6 +44,13 @@ export function verifyToken(
         });
     }
 }
+// Para los services que restringen una operacion a los registros propios: devuelve el id
+// de la persona si quien llama es un CLIENTE, y undefined para EMPLEADO y ADMIN, que operan
+// sobre cualquier registro. El service es el que aplica la restriccion.
+export function limitarAPropias(req: AuthRequest): number | undefined {
+    return req.user?.rol === "CLIENTE" ? req.user.idPersona : undefined;
+}
+
 // funcion principal para verificar los roles, se usa en la ruta de cada entidad
 export function verifyRoles(...rolesPermitidos: string[]) {
     return (
