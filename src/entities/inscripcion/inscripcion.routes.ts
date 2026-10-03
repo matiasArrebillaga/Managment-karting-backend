@@ -8,31 +8,37 @@ const personasTorneos = Router();
 
 personasTorneos.get(
     "/",
-    verifyRoles("ADMIN","CLIENTE"),
+    verifyRoles("ADMIN","EMPLEADO"),
     PersonasTorneosController.getAll
+);
+
+// /mias va antes de la ruta con parametros o Express la matchea como Torneos_idTorneos = "mias"
+personasTorneos.get(
+    "/mias",
+    verifyRoles("CLIENTE","EMPLEADO","ADMIN"),
+    PersonasTorneosController.getMias
 );
 
 personasTorneos.get(
     "/:Torneos_idTorneos/:Personas_idPersona",
-    verifyRoles("EMPLEADO","ADMIN"),
+    verifyRoles("CLIENTE","EMPLEADO","ADMIN"),
     PersonasTorneosController.getById
 );
 
 personasTorneos.post(
     "/",
-    verifyRoles("EMPLEADO","CLIENTE"),
+    verifyRoles("CLIENTE","EMPLEADO","ADMIN"),
     PersonasTorneosController.create
 );
 
-personasTorneos.put(
-    "/:Torneos_idTorneos/:Personas_idPersona",
-    verifyRoles("EMPLEADO","ADMIN"),
-    PersonasTorneosController.update
-);
+// no hay PUT: la fecha y la hora de inscripcion las pone el servidor, asi que una
+// inscripcion no tiene ningun campo modificable. Para cambiar de torneo se da de baja.
 
+// un CLIENTE puede darse de baja, pero el service lo limita a la propia y al torneo
+// que todavia no empezo
 personasTorneos.delete(
     "/:Torneos_idTorneos/:Personas_idPersona",
-    verifyRoles("ADMIN"),
+    verifyRoles("CLIENTE","EMPLEADO","ADMIN"),
     PersonasTorneosController.delete
 );
 
