@@ -418,10 +418,69 @@ paths["/api/reservas/mias"] = {
     }
 };
 
+paths["/api/participaciones/carrera"] = {
+    post: {
+        tags: ["Participaciones"],
+        summary: "Cargar la clasificación completa de una carrera",
+        description: "EMPLEADO/ADMIN. Todo o nada: posiciones exactamente de 1 a N, todos inscriptos en el torneo y la carrera ya terminada. Los puntos los calcula el servidor (escala 25-18-15-12-10-8-6-4-2-1). Si la carrera ya tiene resultados responde 409.",
+        requestBody: jsonRequest("ResultadosCarreraRequest"),
+        responses: {
+            "201": {
+                description: "Clasificación cargada, ordenada por posición",
+                content: {
+                    "application/json": {
+                        schema: { type: "array", items: { $ref: "#/components/schemas/Participacion" } }
+                    }
+                }
+            },
+            "400": { description: "Datos inválidos", content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } } },
+            "404": standardResponses("Carrera")["404"],
+            "409": { description: "La carrera ya tiene resultados", content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } } },
+            "500": standardResponses("Participación")["500"]
+        }
+    }
+};
+
+// El listado de torneos generico + el filtro por estado derivado de las fechas
+(paths["/api/torneos"] as { get: { parameters?: object[] } }).get.parameters = [{
+    name: "estado",
+    in: "query",
+    required: false,
+    description: "Filtra por estado calculado contra el día de hoy",
+    schema: { type: "string", enum: ["proximo", "en_curso", "finalizado"] }
+}];
+
+paths["/api/participaciones/carrera/{Carrera_fecha}/{Carrera_Kartings_idKartings}/{Carrera_Torneos_idTorneos}/{Carrera_Circuitos_idCircuitos}"] = {
+    get: {
+        tags: ["Participaciones"],
+        summary: "Obtener la clasificación de una carrera",
+        description: "Cualquier usuario logueado. Ordenada por posición; sin resultados cargados devuelve una lista vacía.",
+        parameters: [
+            { name: "Carrera_fecha", in: "path", required: true, schema: { type: "string", format: "date" } },
+            idParameter("Carrera_Kartings_idKartings", "Karting de la carrera"),
+            idParameter("Carrera_Torneos_idTorneos", "Torneo de la carrera"),
+            idParameter("Carrera_Circuitos_idCircuitos", "Circuito de la carrera")
+        ],
+        responses: {
+            "200": {
+                description: "Clasificación obtenida correctamente",
+                content: {
+                    "application/json": {
+                        schema: { type: "array", items: { $ref: "#/components/schemas/ClasificacionCarreraItem" } }
+                    }
+                }
+            },
+            "404": standardResponses("Carrera")["404"],
+            "500": standardResponses("Participación")["500"]
+        }
+    }
+};
+
 paths["/api/participaciones/torneo/{idTorneo}/tabla-general"] = {
     get: {
         tags: ["Participaciones"],
         summary: "Obtener la tabla general de un torneo",
+        description: "Desempate F1: a igual puntaje gana quien tenga más 1° puestos, después más 2°, etc. Empate total comparte posición (1, 1, 3).",
         parameters: [{
             name: "idTorneo",
             in: "path",
@@ -441,6 +500,7 @@ paths["/api/participaciones/torneo/{idTorneo}/tabla-general"] = {
                     }
                 }
             },
+            "404": standardResponses("Torneo")["404"],
             "500": standardResponses("Participación")["500"]
         }
     }
@@ -449,6 +509,8 @@ paths["/api/participaciones/torneo/{idTorneo}/tabla-general"] = {
 const integerId = { type: "integer", format: "int32" };
 const date = { type: "string", format: "date" };
 const dateTime = { type: "string", format: "date-time" };
+const tiempo = { type: "string", pattern: "^\\d{2}:[0-5]\\d:[0-5]\\d$", example: "00:12:35" };
+const posicion = { type: "integer", minimum: 1 };
 const hora = { type: "string", pattern: "^([01]\\d|2[0-3]):[0-5]\\d(:[0-5]\\d)?$", example: "14:00" };
 const objectSchema = (properties: Record<string, object>, required: string[] = []) => ({
     type: "object",
@@ -499,24 +561,27 @@ const schemas = {
     TipoKartingRequest: objectSchema({ nombre: { type: "string" }, descripcion: { type: "string" }, precioHora: { type: "number", example: 20000 }, TiposLicencias_idTipoLicenciaMinima: integerId }),
     TipoKarting: objectSchema({ idTiposKarting: integerId, nombre: { type: "string" }, descripcion: { type: "string" }, precioHora: { type: "number", example: 20000 }, TiposLicencias_idTipoLicenciaMinima: integerId }),
     TorneoRequest: objectSchema({ nombre: { type: "string", maxLength: 45 }, descripcion: { type: "string", maxLength: 45 }, cupoMaximo: { type: "integer", minimum: 1 }, fechaInicio: date, fechaFin: date }),
-    Torneo: objectSchema({ idTorneos: integerId, nombre: { type: "string" }, descripcion: { type: "string" }, cupoMaximo: { type: "integer" }, fechaInicio: date, fechaFin: date }),
+    Torneo: objectSchema({ idTorneos: integerId, nombre: { type: "string" }, descripcion: { type: "string" }, cupoMaximo: { type: "integer" }, fechaInicio: date, fechaFin: date, estado: { type: "string", enum: ["proximo", "en_curso", "finalizado"], readOnly: true, description: "Calculado contra el día de hoy" } }),
     LicenciaRequest: objectSchema({ fechaEmision: date, fechaVencimiento: date, Personas_idPersona: integerId, TiposLicencias_idTipoLicencia: integerId }),
     Licencia: objectSchema({ idLicencias: integerId, fechaEmision: date, fechaVencimiento: date, Personas_idPersona: integerId, TiposLicencias_idTipoLicencia: integerId }),
     // Personas_idPersona no es obligatorio: para un CLIENTE lo impone el servidor con
     // el id del token, y lo que venga en el body se descarta.
     ReservaRequest: objectSchema({ fechaReserva: date, horaInicio: hora, horaFin: hora, Personas_idPersona: integerId, Circuitos_idCircuitos: integerId, Kartings_idKartings: integerId }, ["fechaReserva", "horaInicio", "horaFin", "Circuitos_idCircuitos", "Kartings_idKartings"]),
     Reserva: objectSchema({ idReservas: integerId, fechaReserva: date, horaInicio: hora, horaFin: hora, monto: { type: "number", description: "Calculado por el servidor: precioHora del tipo de karting por la cantidad de horas" }, Personas_idPersona: integerId, Circuitos_idCircuitos: integerId, Kartings_idKartings: integerId }),
-    CarreraRequest: objectSchema({ fechaCarrera: date, horaInicio: dateTime, horaFin: dateTime, Kartings_idKartings: integerId, Torneos_idTorneos: integerId, Circuitos_idCircuitos: integerId }),
-    Carrera: objectSchema({ fechaCarrera: date, horaInicio: dateTime, horaFin: dateTime, Kartings_idKartings: integerId, Torneos_idTorneos: integerId, Circuitos_idCircuitos: integerId }),
-    ParticipacionRequest: objectSchema({ Carrera_Kartings_idKartings: integerId, Carrera_Torneos_idTorneos: integerId, Carrera_Circuitos_idCircuitos: integerId, Carrera_fecha: date, Personas_idPersona: integerId, puntos: integerId, tiempo: { type: "string" }, posicion_final: { type: "string" } }),
-    Participacion: objectSchema({ Carrera_Kartings_idKartings: integerId, Carrera_Torneos_idTorneos: integerId, Carrera_Circuitos_idCircuitos: integerId, Carrera_fecha: date, Personas_idPersona: integerId, puntos: integerId, tiempo: { type: "string" }, posicion_final: { type: "string" } }),
+    CarreraRequest: objectSchema({ fechaCarrera: date, horaInicio: hora, horaFin: hora, Kartings_idKartings: integerId, Torneos_idTorneos: integerId, Circuitos_idCircuitos: integerId }),
+    Carrera: objectSchema({ fechaCarrera: date, horaInicio: hora, horaFin: hora, Kartings_idKartings: integerId, Torneos_idTorneos: integerId, Circuitos_idCircuitos: integerId }),
+    ParticipacionRequest: objectSchema({ Carrera_Kartings_idKartings: integerId, Carrera_Torneos_idTorneos: integerId, Carrera_Circuitos_idCircuitos: integerId, Carrera_fecha: date, Personas_idPersona: integerId, tiempo, posicion_final: posicion }),
+    ResultadosCarreraRequest: objectSchema({ Carrera_Kartings_idKartings: integerId, Carrera_Torneos_idTorneos: integerId, Carrera_Circuitos_idCircuitos: integerId, Carrera_fecha: date, resultados: { type: "array", minItems: 1, items: objectSchema({ Personas_idPersona: integerId, posicion_final: posicion, tiempo }) } }),
+    Participacion: objectSchema({ Carrera_Kartings_idKartings: integerId, Carrera_Torneos_idTorneos: integerId, Carrera_Circuitos_idCircuitos: integerId, Carrera_fecha: date, Personas_idPersona: integerId, puntos: { type: "integer", description: "Calculado por el servidor según la posición" }, tiempo, posicion_final: posicion }),
     TablaGeneralItem: objectSchema({
         posicion: integerId,
         idPersona: integerId,
         nombre: { type: "string", example: "Juan" },
         apellido: { type: "string", example: "Pérez" },
-        puntosTotales: integerId
+        puntosTotales: integerId,
+        victorias: { type: "integer", description: "Cantidad de 1° puestos (primer criterio de desempate)" }
     }),
+    ClasificacionCarreraItem: objectSchema({ posicion, idPersona: integerId, nombre: { type: "string" }, apellido: { type: "string" }, tiempo, puntos: { type: "integer" } }),
     // La fecha y la hora no se mandan: las pone el servidor. Para un CLIENTE el
     // Personas_idPersona tambien se ignora y sale del token.
     InscripcionRequest: objectSchema({ Torneos_idTorneos: integerId, Personas_idPersona: integerId }, ["Torneos_idTorneos"]),

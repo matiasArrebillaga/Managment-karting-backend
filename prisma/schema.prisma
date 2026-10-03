@@ -75,11 +75,12 @@ model participaciones {
   Personas_idPersona            Int
   puntos                        Int
   tiempo                        String   @db.VarChar(45)
-  posicion_final                String   @db.VarChar(45)
+  posicion_final                Int
   carreras                      carreras @relation(fields: [Carrera_Kartings_idKartings, Carrera_Torneos_idTorneos, Carrera_Circuitos_idCircuitos, Carrera_fecha], references: [Kartings_idKartings, Torneos_idTorneos, Circuitos_idCircuitos, fechaCarrera], onDelete: NoAction, onUpdate: NoAction, map: "fk_Carrera_has_Personas_Carrera1")
   personas                      personas @relation(fields: [Personas_idPersona], references: [idPersona], onDelete: NoAction, onUpdate: NoAction, map: "fk_Carrera_has_Personas_Personas1")
 
   @@id([Carrera_Kartings_idKartings, Carrera_Torneos_idTorneos, Carrera_Circuitos_idCircuitos, Carrera_fecha, Personas_idPersona])
+  @@unique([Carrera_Kartings_idKartings, Carrera_Torneos_idTorneos, Carrera_Circuitos_idCircuitos, Carrera_fecha, posicion_final], map: "uq_participacion_posicion")
   @@index([Carrera_Kartings_idKartings, Carrera_Torneos_idTorneos, Carrera_Circuitos_idCircuitos, Carrera_fecha], map: "fk_Carrera_has_Personas_Carrera1_idx")
   @@index([Personas_idPersona], map: "fk_Carrera_has_Personas_Personas1_idx")
 }

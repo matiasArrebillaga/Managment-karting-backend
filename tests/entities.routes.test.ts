@@ -78,6 +78,7 @@ beforeEach(() => {
     looseMock(reservaService.realizarReserva).mockResolvedValue({});
     looseMock(carreraService.crearCarrera).mockResolvedValue({});
     looseMock(participacionService.registrarParticipacion).mockResolvedValue({});
+    looseMock(participacionService.registrarResultadosCarrera).mockResolvedValue([]);
 });
 
 describe("rutas protegidas de todas las entidades", () => {
@@ -322,7 +323,7 @@ describe("rutas con claves compuestas", () => {
         [
             "/api/participaciones",
             "/api/participaciones/2026-01-01/1/1/1/1",
-            "CLIENTE",
+            "EMPLEADO",
             participacionService,
             "put",
             "registrarParticipacion",
@@ -335,7 +336,8 @@ describe("rutas con claves compuestas", () => {
         const create = await request(app)
             .post(path)
             .set("Authorization", `Bearer ${token(role)}`)
-            .send({});
+            // carreras parsea las horas "HH:MM" en el service
+            .send({ horaInicio: "10:00", horaFin: "11:00" });
 
         expect(create.status).toBe(201);
         expect((looseService(service)[createMethod] as unknown as jest.Mock)).toHaveBeenCalled();
@@ -347,6 +349,68 @@ describe("rutas con claves compuestas", () => {
 
         expect(update.status).toBe(200);
         expect((service.update as unknown as jest.Mock)).toHaveBeenCalled();
+    });
+});
+
+describe("resultados de carrera", () => {
+    it("un CLIENTE no puede cargarse resultados", async () => {
+        const response = await request(app)
+            .post("/api/participaciones")
+            .set("Authorization", `Bearer ${token("CLIENTE")}`)
+            .send({});
+
+        expect(response.status).toBe(403);
+        expect(participacionService.registrarParticipacion as unknown as jest.Mock).not.toHaveBeenCalled();
+    });
+
+    it("un EMPLEADO carga la clasificación completa de una carrera", async () => {
+        const response = await request(app)
+            .post("/api/participaciones/carrera")
+            .set("Authorization", `Bearer ${token("EMPLEADO")}`)
+            .send({
+                Carrera_Kartings_idKartings: 1, Carrera_Torneos_idTorneos: 1, Carrera_Circuitos_idCircuitos: 1,
+                Carrera_fecha: "2026-09-05",
+                resultados: [{ Personas_idPersona: "3", posicion_final: "1", tiempo: "00:12:35", puntos: 99 }]
+            });
+
+        expect(response.status).toBe(201);
+        const [claves, resultados] = (participacionService.registrarResultadosCarrera as unknown as jest.Mock).mock.calls[0] as any[];
+        expect(claves.Carrera_Torneos_idTorneos).toBe(1);
+        // los puntos del body no llegan al service
+        expect(resultados).toEqual([{ Personas_idPersona: 3, posicion_final: 1, tiempo: "00:12:35" }]);
+    });
+
+    it("un CLIENTE ve la clasificación de una carrera", async () => {
+        looseMock(participacionService.getClasificacionCarrera).mockResolvedValue([{ posicion: 1 }]);
+
+        const response = await request(app)
+            .get("/api/participaciones/carrera/2026-09-05/1/2/3")
+            .set("Authorization", `Bearer ${token("CLIENTE")}`);
+
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual([{ posicion: 1 }]);
+        const [claves] = (participacionService.getClasificacionCarrera as unknown as jest.Mock).mock.calls[0] as any[];
+        expect(claves).toMatchObject({ Carrera_Kartings_idKartings: 1, Carrera_Torneos_idTorneos: 2, Carrera_Circuitos_idCircuitos: 3 });
+        expect(participacionService.getById as unknown as jest.Mock).not.toHaveBeenCalled();
+    });
+
+    it("pasa el filtro de estado al listado de torneos", async () => {
+        const response = await request(app)
+            .get("/api/torneos?estado=proximo")
+            .set("Authorization", `Bearer ${token("CLIENTE")}`);
+
+        expect(response.status).toBe(200);
+        expect(torneoService.getAll as unknown as jest.Mock).toHaveBeenCalledWith("proximo");
+    });
+
+    it("rechaza una carga sin lista de resultados", async () => {
+        const response = await request(app)
+            .post("/api/participaciones/carrera")
+            .set("Authorization", `Bearer ${token("EMPLEADO")}`)
+            .send({ resultados: "nada" });
+
+        expect(response.status).toBe(400);
+        expect(participacionService.registrarResultadosCarrera as unknown as jest.Mock).not.toHaveBeenCalled();
     });
 });
 
