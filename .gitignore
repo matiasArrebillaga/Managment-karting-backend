@@ -8,3 +8,4 @@ dist/
 migrations/
 .prettierrc
 graphify-out/
+auditoria.txt
