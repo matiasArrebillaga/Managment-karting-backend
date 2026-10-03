@@ -7,8 +7,9 @@ class TorneosController {
 
     async getAll(req: Request, res: Response, next: NextFunction) {
         try {
-
-            const torneos = await TorneosService.getAll();
+            // permite buscar por estado
+            const estado = typeof req.query.estado === "string" ? req.query.estado : undefined;
+            const torneos = await TorneosService.getAll(estado);
 
             res.json(torneos);
 
