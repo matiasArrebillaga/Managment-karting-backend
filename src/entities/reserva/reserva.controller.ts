@@ -15,6 +15,17 @@ class ReservaController {
         }
     }
 
+    async getReservaFechas(req: Request, res: Response, next: NextFunction) {
+        try {
+            const { fechaInicio, fechaFin } = req.query;
+            const reservas = await reservaService.listarReservasRango(new Date(fechaInicio as string), new Date(fechaFin as string));
+
+            res.json(reservas);
+        } catch (error) {
+            next(error);
+        }
+    }
+
     async getMias(req: AuthRequest, res: Response, next: NextFunction) { // funcion para que el usuario pueda ver sus reservas
         try {
             const reservas = await reservaService.getPorPersona(Number(req.user?.idPersona));

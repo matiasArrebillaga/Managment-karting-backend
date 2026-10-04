@@ -65,6 +65,26 @@ class ReservaService {
         }
     }
   
+     async listarReservasRango(fechaInicio : Date , fechaFin : Date){
+        const reservas = await prisma.reservas.findMany({
+    where: {
+        fechaReserva: {
+            gte: fechaInicio,
+            lte: fechaFin
+        }
+    },
+    include: {
+        personas: true,
+        kartings: true
+    }
+});
+        return reservas.map(res => ({
+            reserva : res.idReservas,
+            karting : res.Kartings_idKartings,
+            persona : res.Personas_idPersona
+
+        }))
+    }
     
     // valida que el karting este disponible para el rango horario y el cupo maximo del circuito
     private async validarDisponibilidad(

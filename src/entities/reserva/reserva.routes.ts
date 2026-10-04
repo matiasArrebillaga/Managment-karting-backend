@@ -6,6 +6,8 @@ import { verifyRoles } from "../../middleware/auth.middleware";
 const router = Router();
 
 router.get("/", verifyRoles("ADMIN","EMPLEADO"), ReservaController.getAll);
+router.get("/fechas", verifyRoles("ADMIN","EMPLEADO"), ReservaController.getReservaFechas);
+
 // /mias va antes de /:id usa el token para saber el id
 router.get("/mias",verifyRoles("CLIENTE","EMPLEADO","ADMIN"),ReservaController.getMias);
 // un CLIENTE puede ver el detalle, pero el service le devuelve 404 si no es suya
