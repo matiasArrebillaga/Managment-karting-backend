@@ -69,13 +69,16 @@ beforeEach(() => {
     for (const service of services) {
         looseMock(service.getAll).mockResolvedValue([]);
         looseMock(service.getById).mockResolvedValue({});
-        looseMock(service.create).mockResolvedValue({});
+        // reserva ya no expone create(): su unica via de alta es realizarReserva(),
+        // que es la que valida y calcula el monto.
+        if (service.create) looseMock(service.create).mockResolvedValue({});
         looseMock(service.update).mockResolvedValue({});
         looseMock(service.delete).mockResolvedValue({});
     }
     looseMock(reservaService.realizarReserva).mockResolvedValue({});
     looseMock(carreraService.crearCarrera).mockResolvedValue({});
     looseMock(participacionService.registrarParticipacion).mockResolvedValue({});
+    looseMock(participacionService.registrarResultadosCarrera).mockResolvedValue([]);
 });
 
 describe("rutas protegidas de todas las entidades", () => {
@@ -92,7 +95,8 @@ describe("rutas protegidas de todas las entidades", () => {
         ["/api/reservas", "EMPLEADO", reservaService],
         ["/api/carreras", "CLIENTE", carreraService],
         ["/api/participaciones", "EMPLEADO", participacionService],
-        ["/api/inscripciones", "CLIENTE", inscripcionService],
+        // el listado completo dejo de ser visible para un CLIENTE: ahora usa /mias
+        ["/api/inscripciones", "EMPLEADO", inscripcionService],
     ] as const;
 
     it.each(routes)("rechaza sin token la ruta %s", async (path, _role, service) => {
@@ -123,7 +127,8 @@ describe("CRUD de las entidades", () => {
         ["/api/tiposKartings", "/api/tiposKartings/1", "EMPLEADO", "EMPLEADO", "ADMIN", tipoKartingService, "create"],
         ["/api/torneos", "/api/torneos/1", "EMPLEADO", "EMPLEADO", "ADMIN", torneoService, "create"],
         ["/api/licencias", "/api/licencias/1", "EMPLEADO", "EMPLEADO", "ADMIN", licenciaService, "create"],
-        ["/api/reservas", "/api/reservas/1", "CLIENTE", "CLIENTE", "EMPLEADO", reservaService, "realizarReserva"],
+        // reservas queda fuera de esta tabla: su contrato ya no admite un body vacio
+        // ni pasa el body crudo al service. Tiene su propio describe mas abajo.
     ] as const;
 
     it.each(entities)("crea un recurso en %s", async (path, _idPath, role, _updateRole, _deleteRole, service, createMethod) => {
@@ -154,6 +159,156 @@ describe("CRUD de las entidades", () => {
     });
 });
 
+describe("reservas", () => {
+    const bodyValido = {
+        fechaReserva: "2026-12-01",
+        horaInicio: "10:00",
+        horaFin: "12:00",
+        Personas_idPersona: 1,
+        Circuitos_idCircuitos: 1,
+        Kartings_idKartings: 4,
+    };
+
+    it("crea una reserva con una franja horaria valida", async () => {
+        const response = await request(app)
+            .post("/api/reservas")
+            .set("Authorization", `Bearer ${token("CLIENTE")}`)
+            .send(bodyValido);
+
+        expect(response.status).toBe(201);
+        expect(reservaService.realizarReserva as unknown as jest.Mock).toHaveBeenCalled();
+    });
+
+    // El controller no valida ni filtra: eso vive en el service (reserva.service.test.ts)
+    it("le pasa el body tal cual al service", async () => {
+        const response = await request(app)
+            .post("/api/reservas")
+            .set("Authorization", `Bearer ${token("CLIENTE")}`)
+            .send({ ...bodyValido, monto: 1 });
+
+        expect(response.status).toBe(201);
+        expect(reservaService.realizarReserva as unknown as jest.Mock)
+            .toHaveBeenCalledWith({ ...bodyValido, monto: 1 }, 1);
+    });
+
+    it("le pasa el patch tal cual al service", async () => {
+        const response = await request(app)
+            .patch("/api/reservas/1")
+            .set("Authorization", `Bearer ${token("CLIENTE")}`)
+            .send({ monto: 1, actualizado: true });
+
+        expect(response.status).toBe(200);
+        // el 1 final es la restriccion de pertenencia: el token de prueba es CLIENTE
+        expect(reservaService.update as unknown as jest.Mock)
+            .toHaveBeenCalledWith(1, { monto: 1, actualizado: true }, 1);
+    });
+
+    it("elimina una reserva", async () => {
+        const response = await request(app)
+            .delete("/api/reservas/1")
+            .set("Authorization", `Bearer ${token("EMPLEADO")}`);
+
+        expect(response.status).toBe(200);
+        // sin restriccion: un EMPLEADO opera sobre cualquier reserva
+        expect(reservaService.delete as unknown as jest.Mock).toHaveBeenCalledWith(1, undefined);
+    });
+
+    it("limita a las propias las operaciones de un CLIENTE", async () => {
+        // el token de prueba es de idPersona 1
+        await request(app)
+            .post("/api/reservas")
+            .set("Authorization", `Bearer ${token("CLIENTE")}`)
+            .send(bodyValido);
+        expect(reservaService.realizarReserva as unknown as jest.Mock)
+            .toHaveBeenCalledWith(expect.anything(), 1);
+
+        await request(app)
+            .delete("/api/reservas/5")
+            .set("Authorization", `Bearer ${token("CLIENTE")}`);
+        expect(reservaService.delete as unknown as jest.Mock).toHaveBeenCalledWith(5, 1);
+    });
+
+    it("/mias devuelve las reservas del token y no matchea como /:id", async () => {
+        looseMock(reservaService.getPorPersona).mockResolvedValue([{ idReservas: 7 }]);
+
+        const response = await request(app)
+            .get("/api/reservas/mias")
+            .set("Authorization", `Bearer ${token("CLIENTE")}`);
+
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual([{ idReservas: 7 }]);
+        expect(reservaService.getPorPersona as unknown as jest.Mock).toHaveBeenCalledWith(1);
+        expect(reservaService.getById as unknown as jest.Mock).not.toHaveBeenCalled();
+    });
+});
+
+describe("inscripciones", () => {
+    // El controller no valida ni arma nada: eso vive en el service
+    // (inscripcion.service.test.ts). Aca solo se chequea el ruteo y la pertenencia.
+    it("le pasa el body tal cual al service y restringe a un CLIENTE", async () => {
+        const response = await request(app)
+            .post("/api/inscripciones")
+            .set("Authorization", `Bearer ${token("CLIENTE")}`)
+            .send({ Torneos_idTorneos: 1, Personas_idPersona: 9 });
+
+        expect(response.status).toBe(201);
+        // el 1 final es la restriccion de pertenencia: el token de prueba es CLIENTE
+        expect(inscripcionService.create as unknown as jest.Mock)
+            .toHaveBeenCalledWith({ Torneos_idTorneos: 1, Personas_idPersona: 9 }, 1);
+    });
+
+    it("no restringe el alta de un EMPLEADO", async () => {
+        await request(app)
+            .post("/api/inscripciones")
+            .set("Authorization", `Bearer ${token("EMPLEADO")}`)
+            .send({ Torneos_idTorneos: 1, Personas_idPersona: 9 });
+
+        expect(inscripcionService.create as unknown as jest.Mock)
+            .toHaveBeenCalledWith(expect.anything(), undefined);
+    });
+
+    it("un CLIENTE puede pedir la baja, limitada a la propia", async () => {
+        const response = await request(app)
+            .delete("/api/inscripciones/1/1")
+            .set("Authorization", `Bearer ${token("CLIENTE")}`);
+
+        expect(response.status).toBe(200);
+        expect(inscripcionService.delete as unknown as jest.Mock)
+            .toHaveBeenCalledWith(1, 1, 1);
+    });
+
+    it("un ADMIN da de baja cualquier inscripcion", async () => {
+        await request(app)
+            .delete("/api/inscripciones/1/9")
+            .set("Authorization", `Bearer ${token("ADMIN")}`);
+
+        expect(inscripcionService.delete as unknown as jest.Mock)
+            .toHaveBeenCalledWith(1, 9, undefined);
+    });
+
+    it("ya no expone PUT", async () => {
+        const response = await request(app)
+            .put("/api/inscripciones/1/1")
+            .set("Authorization", `Bearer ${token("ADMIN")}`)
+            .send({ actualizado: true });
+
+        expect(response.status).toBe(404);
+    });
+
+    it("/mias devuelve las del token y no matchea como /:Torneos_idTorneos", async () => {
+        looseMock(inscripcionService.getPorPersona).mockResolvedValue([{ Torneos_idTorneos: 7 }]);
+
+        const response = await request(app)
+            .get("/api/inscripciones/mias")
+            .set("Authorization", `Bearer ${token("CLIENTE")}`);
+
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual([{ Torneos_idTorneos: 7 }]);
+        expect(inscripcionService.getPorPersona as unknown as jest.Mock).toHaveBeenCalledWith(1);
+        expect(inscripcionService.getById as unknown as jest.Mock).not.toHaveBeenCalled();
+    });
+});
+
 describe("rutas con claves compuestas", () => {
     const compositeRoutes = [
         [
@@ -168,28 +323,21 @@ describe("rutas con claves compuestas", () => {
         [
             "/api/participaciones",
             "/api/participaciones/2026-01-01/1/1/1/1",
-            "CLIENTE",
+            "EMPLEADO",
             participacionService,
             "put",
             "registrarParticipacion",
             "EMPLEADO",
         ],
-        [
-            "/api/inscripciones",
-            "/api/inscripciones/1/1",
-            "EMPLEADO",
-            inscripcionService,
-            "put",
-            "create",
-            "EMPLEADO",
-        ],
+        // inscripciones queda fuera de esta tabla: ya no tiene PUT. Tiene su propio describe.
     ] as const;
 
     it.each(compositeRoutes)("crea y actualiza recursos en %s", async (path, idPath, role, service, method, createMethod, updateRole) => {
         const create = await request(app)
             .post(path)
             .set("Authorization", `Bearer ${token(role)}`)
-            .send({});
+            // carreras parsea las horas "HH:MM" en el service
+            .send({ horaInicio: "10:00", horaFin: "11:00" });
 
         expect(create.status).toBe(201);
         expect((looseService(service)[createMethod] as unknown as jest.Mock)).toHaveBeenCalled();
@@ -201,6 +349,68 @@ describe("rutas con claves compuestas", () => {
 
         expect(update.status).toBe(200);
         expect((service.update as unknown as jest.Mock)).toHaveBeenCalled();
+    });
+});
+
+describe("resultados de carrera", () => {
+    it("un CLIENTE no puede cargarse resultados", async () => {
+        const response = await request(app)
+            .post("/api/participaciones")
+            .set("Authorization", `Bearer ${token("CLIENTE")}`)
+            .send({});
+
+        expect(response.status).toBe(403);
+        expect(participacionService.registrarParticipacion as unknown as jest.Mock).not.toHaveBeenCalled();
+    });
+
+    it("un EMPLEADO carga la clasificación completa de una carrera", async () => {
+        const response = await request(app)
+            .post("/api/participaciones/carrera")
+            .set("Authorization", `Bearer ${token("EMPLEADO")}`)
+            .send({
+                Carrera_Kartings_idKartings: 1, Carrera_Torneos_idTorneos: 1, Carrera_Circuitos_idCircuitos: 1,
+                Carrera_fecha: "2026-09-05",
+                resultados: [{ Personas_idPersona: "3", posicion_final: "1", tiempo: "00:12:35", puntos: 99 }]
+            });
+
+        expect(response.status).toBe(201);
+        const [claves, resultados] = (participacionService.registrarResultadosCarrera as unknown as jest.Mock).mock.calls[0] as any[];
+        expect(claves.Carrera_Torneos_idTorneos).toBe(1);
+        // los puntos del body no llegan al service
+        expect(resultados).toEqual([{ Personas_idPersona: 3, posicion_final: 1, tiempo: "00:12:35" }]);
+    });
+
+    it("un CLIENTE ve la clasificación de una carrera", async () => {
+        looseMock(participacionService.getClasificacionCarrera).mockResolvedValue([{ posicion: 1 }]);
+
+        const response = await request(app)
+            .get("/api/participaciones/carrera/2026-09-05/1/2/3")
+            .set("Authorization", `Bearer ${token("CLIENTE")}`);
+
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual([{ posicion: 1 }]);
+        const [claves] = (participacionService.getClasificacionCarrera as unknown as jest.Mock).mock.calls[0] as any[];
+        expect(claves).toMatchObject({ Carrera_Kartings_idKartings: 1, Carrera_Torneos_idTorneos: 2, Carrera_Circuitos_idCircuitos: 3 });
+        expect(participacionService.getById as unknown as jest.Mock).not.toHaveBeenCalled();
+    });
+
+    it("pasa el filtro de estado al listado de torneos", async () => {
+        const response = await request(app)
+            .get("/api/torneos?estado=proximo")
+            .set("Authorization", `Bearer ${token("CLIENTE")}`);
+
+        expect(response.status).toBe(200);
+        expect(torneoService.getAll as unknown as jest.Mock).toHaveBeenCalledWith("proximo");
+    });
+
+    it("rechaza una carga sin lista de resultados", async () => {
+        const response = await request(app)
+            .post("/api/participaciones/carrera")
+            .set("Authorization", `Bearer ${token("EMPLEADO")}`)
+            .send({ resultados: "nada" });
+
+        expect(response.status).toBe(400);
+        expect(participacionService.registrarResultadosCarrera as unknown as jest.Mock).not.toHaveBeenCalled();
     });
 });
 

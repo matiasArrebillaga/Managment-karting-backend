@@ -19,22 +19,25 @@ import swaggerUi from "swagger-ui-express";
 import openapiSpec from "./config/openapi";
 import { errorHandler, notFoundHandler } from "./middleware/error.middleware";
 
-const app = express();
+const app = express(); // declaracion de uso de express para el server
+
+// mecanismo de seguridad para controlar la conexion entre el cliente y el server
 app.use(cors({
     origin: process.env.FRONTEND_URL, 
     credentials: true
 }));
-app.use(express.json());
+app.use(express.json()); // middleware de express para usar json en los req.body
 
+// declaracion y uso para la documentacion con open api y swaggerui
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(openapiSpec));
 app.get("/api-docs.json", (req, res) => {
     res.json(openapiSpec);
 });
 
-// Ruta para obtener el token
+// ruta de login y registro, obtiene el token entonces no requiere verificacion
 app.use("/api/auth", authRoutes);
 
-// Rutas protegidas
+// todas las rutas protegidas cada una acorde al nivel de acceso en las rutas
 app.use("/api/kartings", verifyToken, kartingRoutes);
 app.use("/api/personas", verifyToken, personaRoutes);
 app.use("/api/localidades", verifyToken, localidadRoutes);
@@ -51,7 +54,7 @@ app.use("/api/inscripciones", verifyToken, inscripcionRoutes);
 app.get("/", (req, res) => {
     res.send("API funcionando");
 });
-
+// llamado al middleware para el manejo de errores
 app.use(notFoundHandler);
 app.use(errorHandler);
 

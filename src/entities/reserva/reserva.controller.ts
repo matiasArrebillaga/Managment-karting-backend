@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction} from "express";
 
 import reservaService from "./reserva.service";
+import { AuthRequest, limitarAPropias } from "../../middleware/auth.middleware";
 
-import { IReserva } from "./reserva.interface";
 
 class ReservaController {
     async getAll(req: Request, res: Response, next: NextFunction) {
@@ -15,12 +15,21 @@ class ReservaController {
         }
     }
 
-    async getById(req: Request, res: Response, next: NextFunction) {
+    async getMias(req: AuthRequest, res: Response, next: NextFunction) { // funcion para que el usuario pueda ver sus reservas
+        try {
+            const reservas = await reservaService.getPorPersona(Number(req.user?.idPersona));
+
+            res.json(reservas);
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async getById(req: AuthRequest, res: Response, next: NextFunction) {
         try {
             const id = Number(req.params.id);
 
-            //Falta validar el tipo de dato que tendra la variable reserva
-            const reserva = await reservaService.getById(id);
+            const reserva = await reservaService.getById(id, limitarAPropias(req));
 
             if (!reserva) {
                 return res.status(404).json({
@@ -34,21 +43,24 @@ class ReservaController {
         }
     }
 
-    async create(req: Request, res: Response, next: NextFunction) {
+    async create(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const data: IReserva = req.body;
-            const nuevaReserva = await reservaService.realizarReserva(data);
+            const nuevaReserva = await reservaService.realizarReserva(
+                req.body, limitarAPropias(req)
+            );
             res.status(201).json(nuevaReserva);
         } catch (error: any) {
             next(error);
         }
     }
 
-    async update(req: Request, res: Response, next: NextFunction) {
+    async update(req: AuthRequest, res: Response, next: NextFunction) {
         try {
             const id = Number(req.params.id);
 
-            const reservaActualizada = await reservaService.update(id, req.body);
+            const reservaActualizada = await reservaService.update(
+                id, req.body, limitarAPropias(req)
+            );
 
             if (!reservaActualizada) {
                 return res.status(404).json({
@@ -62,11 +74,11 @@ class ReservaController {
         }
     }
 
-    async delete(req: Request, res: Response, next: NextFunction) {
+    async delete(req: AuthRequest, res: Response, next: NextFunction) {
         try {
             const id = Number(req.params.id);
 
-            const reservaEliminada = await reservaService.delete(id);
+            const reservaEliminada = await reservaService.delete(id, limitarAPropias(req));
 
             if (!reservaEliminada) {
                 return res.status(404).json({

@@ -2,6 +2,7 @@ export interface ITiposKartings {
     idTipoKarting?: number;
     nombre: string;
     descripcion: string;
+    precioHora: number;
     TiposLicencias_idTipoLicenciaMinima: number;
 }
 

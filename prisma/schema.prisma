@@ -75,11 +75,12 @@ model participaciones {
   Personas_idPersona            Int
   puntos                        Int
   tiempo                        String   @db.VarChar(45)
-  posicion_final                String   @db.VarChar(45)
+  posicion_final                Int
   carreras                      carreras @relation(fields: [Carrera_Kartings_idKartings, Carrera_Torneos_idTorneos, Carrera_Circuitos_idCircuitos, Carrera_fecha], references: [Kartings_idKartings, Torneos_idTorneos, Circuitos_idCircuitos, fechaCarrera], onDelete: NoAction, onUpdate: NoAction, map: "fk_Carrera_has_Personas_Carrera1")
   personas                      personas @relation(fields: [Personas_idPersona], references: [idPersona], onDelete: NoAction, onUpdate: NoAction, map: "fk_Carrera_has_Personas_Personas1")
 
   @@id([Carrera_Kartings_idKartings, Carrera_Torneos_idTorneos, Carrera_Circuitos_idCircuitos, Carrera_fecha, Personas_idPersona])
+  @@unique([Carrera_Kartings_idKartings, Carrera_Torneos_idTorneos, Carrera_Circuitos_idCircuitos, Carrera_fecha, posicion_final], map: "uq_participacion_posicion")
   @@index([Carrera_Kartings_idKartings, Carrera_Torneos_idTorneos, Carrera_Circuitos_idCircuitos, Carrera_fecha], map: "fk_Carrera_has_Personas_Carrera1_idx")
   @@index([Personas_idPersona], map: "fk_Carrera_has_Personas_Personas1_idx")
 }
@@ -115,7 +116,7 @@ model personas {
 model personas_torneos {
   Torneos_idTorneos  Int
   Personas_idPersona Int
-  fecha_inscipcion   DateTime @db.Date
+  fecha_inscripcion  DateTime @db.Date
   hora_inscripcion   DateTime @db.Time(0)
   personas           personas @relation(fields: [Personas_idPersona], references: [idPersona], onDelete: NoAction, onUpdate: NoAction, map: "fk_Torneos_has_Personas_Personas1")
   torneos            torneos  @relation(fields: [Torneos_idTorneos], references: [idTorneos], onDelete: NoAction, onUpdate: NoAction, map: "fk_Torneos_has_Personas_Torneos1")
@@ -128,6 +129,8 @@ model personas_torneos {
 model reservas {
   idReservas            Int       @id @default(autoincrement())
   fechaReserva          DateTime  @db.Date
+  horaInicio            DateTime  @db.Time(0)
+  horaFin               DateTime  @db.Time(0)
   monto                 Decimal   @db.Decimal(10, 2)
   Personas_idPersona    Int
   Circuitos_idCircuitos Int
@@ -145,6 +148,7 @@ model tiposkarting {
   idTiposKarting                       Int            @id @default(autoincrement())
   nombre                               String         @db.VarChar(45)
   descripcion                          String         @db.VarChar(45)
+  precioHora                           Decimal        @db.Decimal(10, 2)
   TiposLicencias_idTipoLicenciaMinima  Int            @default(1)
   tiposlicencias                       tiposlicencias @relation(fields: [TiposLicencias_idTipoLicenciaMinima], references: [idTipoLicencia], onDelete: NoAction, onUpdate: NoAction, map: "fk_TiposKarting_TiposLicencias")
   kartings                             kartings[]

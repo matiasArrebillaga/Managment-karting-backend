@@ -8,7 +8,13 @@ export interface ICarrera {
     Circuitos_idCircuitos: number;
 }
 
-export type CreateCarrera = ICarrera;
+export type CreateCarrera = Omit<ICarrera, "horaInicio" | "horaFin"> & {
+    horaInicio: Date | string;
+    horaFin: Date | string;
+};
 
-export type UpdateCarrera = Partial<Pick<ICarrera, "horaInicio" | "horaFin">>;
+export type UpdateCarrera = Partial<Pick<ICarrera, "horaInicio" | "horaFin">> & {
+    horaInicio?: Date | string;
+    horaFin?: Date | string;
+};
 

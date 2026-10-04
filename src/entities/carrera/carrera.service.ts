@@ -1,5 +1,7 @@
 import {prisma} from "../../config/prisma.js";
 import { CreateCarrera, UpdateCarrera } from "../carrera/carrera.interface.js";
+import { normalizarHora } from "../../utils/fecha.js";
+import { AppError } from "../../middleware/error.middleware.js";
 
 class CarrerasService {
     private validarId(id: number) {
@@ -26,7 +28,7 @@ class CarrerasService {
     ) {
         this.validarClaves(Kartings_idKartings, Torneos_idTorneos, Circuitos_idCircuitos);
         this.validarFecha(fechaCarrera, "fecha de carrera");
-        return await prisma.carreras.findUnique({
+        const carrera = await prisma.carreras.findUnique({
             where: {
                 Kartings_idKartings_Torneos_idTorneos_Circuitos_idCircuitos_fechaCarrera: {
                     Kartings_idKartings,
@@ -36,40 +38,8 @@ class CarrerasService {
                 }
             }
         });
-    }
-
-    // Crear una carrera
-    async create(data: CreateCarrera) {
-        this.validarClaves(data.Kartings_idKartings, data.Torneos_idTorneos, data.Circuitos_idCircuitos);
-        this.validarFecha(data.fechaCarrera, "fecha de carrera");
-        await this.validarHorarios(data.horaInicio, data.horaFin);
-        const {torneo} = await this.validarEntidadesRelacionadas(data.Kartings_idKartings, data.Torneos_idTorneos, data.Circuitos_idCircuitos);
-        await this.validarFechaDentroDelTorneo(data.fechaCarrera, torneo);
-        return await prisma.carreras.create({
-            data: {
-                fechaCarrera: data.fechaCarrera,
-                horaInicio: data.horaInicio,
-                horaFin: data.horaFin,
-
-                kartings: {
-                    connect: {
-                        idKartings: data.Kartings_idKartings
-                    }
-                },
-
-                torneos: {
-                    connect: {
-                        idTorneos: data.Torneos_idTorneos
-                    }
-                },
-
-                circuitos: {
-                    connect: {
-                        idCircuitos: data.Circuitos_idCircuitos
-                    }
-                }
-            }
-        });
+        if (!carrera) throw new AppError("La carrera indicada no existe", 404);
+        return carrera;
     }
 
     // Actualizar una carrera
@@ -82,11 +52,20 @@ class CarrerasService {
     ) {
         this.validarClaves(Kartings_idKartings, Torneos_idTorneos, Circuitos_idCircuitos);
         this.validarFecha(fechaCarrera, "fecha de carrera");
-        if (data.horaInicio !== undefined || data.horaFin !== undefined) {
-            const actual = await this.getById(fechaCarrera, Kartings_idKartings, Torneos_idTorneos, Circuitos_idCircuitos);
-            if (!actual) throw new Error("La carrera indicada no existe");
-            await this.validarHorarios(data.horaInicio ?? actual.horaInicio, data.horaFin ?? actual.horaFin);
+
+        const normalizado: { horaInicio?: Date; horaFin?: Date } = {};
+        if (data.horaInicio !== undefined) {
+            normalizado.horaInicio = normalizarHora(data.horaInicio, "horaInicio");
         }
+        if (data.horaFin !== undefined) {
+            normalizado.horaFin = normalizarHora(data.horaFin, "horaFin");
+        }
+
+        if (normalizado.horaInicio !== undefined || normalizado.horaFin !== undefined) {
+            const actual = await this.getById(fechaCarrera, Kartings_idKartings, Torneos_idTorneos, Circuitos_idCircuitos);
+            await this.validarHorarios(normalizado.horaInicio ?? actual.horaInicio, normalizado.horaFin ?? actual.horaFin);
+        }
+
         return await prisma.carreras.update({
             where: {
                 Kartings_idKartings_Torneos_idTorneos_Circuitos_idCircuitos_fechaCarrera: {
@@ -96,7 +75,7 @@ class CarrerasService {
                     fechaCarrera
                 }
             },
-            data
+            data: normalizado
         });
     }
 
@@ -109,6 +88,9 @@ class CarrerasService {
     ) {
         this.validarClaves(Kartings_idKartings, Torneos_idTorneos, Circuitos_idCircuitos);
         this.validarFecha(fechaCarrera, "fecha de carrera");
+
+        await this.getById(fechaCarrera, Kartings_idKartings, Torneos_idTorneos, Circuitos_idCircuitos);
+
         return await prisma.carreras.delete({
             where: {
                 Kartings_idKartings_Torneos_idTorneos_Circuitos_idCircuitos_fechaCarrera: {
@@ -144,7 +126,7 @@ class CarrerasService {
             );
         }
         if (karting.estado?.toLowerCase() !== "disponible"){
-            throw new Error("El karting no esta disponible (estado: ${karting.estado})");
+            throw new Error(`El karting no esta disponible (estado: ${karting.estado})`);
         }
         return { torneo };
         }
@@ -173,18 +155,32 @@ class CarrerasService {
     async crearCarrera(data: CreateCarrera) {
         this.validarClaves(data.Kartings_idKartings, data.Torneos_idTorneos, data.Circuitos_idCircuitos);
         this.validarFecha(data.fechaCarrera, "fecha de carrera");
-        await this.validarHorarios(data.horaInicio, data.horaFin);
+
+        const horaInicio = normalizarHora(data.horaInicio, "horaInicio");
+        const horaFin = normalizarHora(data.horaFin, "horaFin");
+
+        await this.validarHorarios(horaInicio, horaFin);
         const { torneo } = await this.validarEntidadesRelacionadas(
             data.Kartings_idKartings, data.Torneos_idTorneos, data.Circuitos_idCircuitos
         );
         await this.validarFechaDentroDelTorneo(data.fechaCarrera, torneo);
         await this.validarDisponibilidadKarting(
-            data.Kartings_idKartings, data.fechaCarrera, data.horaInicio, data.horaFin
-     );
+            data.Kartings_idKartings, data.fechaCarrera, horaInicio, horaFin
+        );
 
-    return await this.create(data); 
-}
+        return await prisma.carreras.create({
+            data: {
+                fechaCarrera: data.fechaCarrera,
+                horaInicio,
+                horaFin,
+                kartings: { connect: { idKartings: data.Kartings_idKartings } },
+                torneos: { connect: { idTorneos: data.Torneos_idTorneos } },
+                circuitos: { connect: { idCircuitos: data.Circuitos_idCircuitos } }
+            }
+        });
+    }
     async getByTorneo(idTorneo: number) {
+    this.validarId(idTorneo);
     return await prisma.carreras.findMany({
         where: { Torneos_idTorneos: idTorneo },
         include: {

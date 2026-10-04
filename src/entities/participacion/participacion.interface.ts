@@ -7,11 +7,17 @@ export interface IParticipacion {
     Personas_idPersona: number;
     puntos: number;
     tiempo: string;
-    posicion_final: string;
+    posicion_final: number;
 }
 
-export type CreateParticipacion = IParticipacion;
-
-export type UpdateParticipacion = Partial<
-    Pick<IParticipacion, "puntos" | "tiempo" | "posicion_final">
+export type ClavesCarrera = Pick<
+    IParticipacion,
+    "Carrera_Kartings_idKartings" | "Carrera_Torneos_idTorneos" | "Carrera_Circuitos_idCircuitos" | "Carrera_fecha"
 >;
+
+// Una fila de la clasificacion: los puntos no entran, los calcula el servidor por la posicion
+export type ResultadoCarrera = Pick<IParticipacion, "Personas_idPersona" | "posicion_final" | "tiempo">;
+
+export type CreateParticipacion = ClavesCarrera & ResultadoCarrera;
+
+export type UpdateParticipacion = Partial<Pick<IParticipacion, "tiempo" | "posicion_final">>;

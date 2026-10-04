@@ -8,31 +8,33 @@ const personasTorneos = Router();
 
 personasTorneos.get(
     "/",
-    verifyRoles("ADMIN","CLIENTE"),
+    verifyRoles("ADMIN","EMPLEADO"),
     PersonasTorneosController.getAll
+);
+
+// /mias va antes de la ruta con parametros 
+personasTorneos.get(
+    "/mias",
+    verifyRoles("CLIENTE","EMPLEADO","ADMIN"),
+    PersonasTorneosController.getMias
 );
 
 personasTorneos.get(
     "/:Torneos_idTorneos/:Personas_idPersona",
-    verifyRoles("EMPLEADO","ADMIN"),
+    verifyRoles("CLIENTE","EMPLEADO","ADMIN"),
     PersonasTorneosController.getById
 );
 
 personasTorneos.post(
     "/",
-    verifyRoles("EMPLEADO","CLIENTE"),
+    verifyRoles("CLIENTE","EMPLEADO","ADMIN"),
     PersonasTorneosController.create
 );
 
-personasTorneos.put(
-    "/:Torneos_idTorneos/:Personas_idPersona",
-    verifyRoles("EMPLEADO","ADMIN"),
-    PersonasTorneosController.update
-);
 
 personasTorneos.delete(
     "/:Torneos_idTorneos/:Personas_idPersona",
-    verifyRoles("ADMIN"),
+    verifyRoles("CLIENTE","EMPLEADO","ADMIN"),
     PersonasTorneosController.delete
 );
 

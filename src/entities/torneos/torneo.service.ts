@@ -1,5 +1,9 @@
 import {prisma} from "../../config/prisma.js";
 import { CreateTorneos, UpdateTorneos } from "./torneo.interface.js";
+import { hoyUTC } from "../../utils/fecha.js";
+
+const ESTADOS = ["proximo", "en_curso", "finalizado"] as const;
+type EstadoTorneo = typeof ESTADOS[number];
 
 class TorneosService {
     private validarId(id: number) {
@@ -40,15 +44,39 @@ class TorneosService {
         }
     }
 
-    async getAll() {
-        return await prisma.torneos.findMany();
+    // Derivado de las fechas contra el dia calendario local, igual que reservas e inscripciones
+    private conEstado<T extends { fechaInicio: Date; fechaFin: Date }>(torneo: T) {
+        const hoy = hoyUTC();
+        const estado: EstadoTorneo = torneo.fechaFin < hoy ? "finalizado"
+            : torneo.fechaInicio > hoy ? "proximo"
+            : "en_curso";
+        return { ...torneo, estado };
+    }
+
+    private filtroEstado(estado: string) {
+        const hoy = hoyUTC();
+        switch (estado) {
+            case "proximo": return { fechaInicio: { gt: hoy } };
+            case "finalizado": return { fechaFin: { lt: hoy } };
+            case "en_curso": return { fechaInicio: { lte: hoy }, fechaFin: { gte: hoy } };
+            default: throw new Error(`El estado debe ser uno de: ${ESTADOS.join(", ")}`);
+        }
+    }
+
+    async getAll(estado?: string) {
+        const torneos = await prisma.torneos.findMany({
+            ...(estado !== undefined && { where: this.filtroEstado(estado) }),
+            orderBy: { fechaInicio: "asc" }
+        });
+        return torneos.map((t: { fechaInicio: Date; fechaFin: Date }) => this.conEstado(t));
     }
 
     async getById(idTorneo: number) {
         this.validarId(idTorneo);
-        return await prisma.torneos.findUnique({
+        const torneo = await prisma.torneos.findUnique({
             where: { idTorneos: idTorneo }
         });
+        return torneo && this.conEstado(torneo);
     }
 
     async create(data: CreateTorneos) {
