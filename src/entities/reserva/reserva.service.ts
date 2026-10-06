@@ -3,6 +3,7 @@ import { Prisma } from "../../generated/prisma/client";
 import { AppError } from "../../middleware/error.middleware";
 import { CreateReserva, CreateReservaInput, UpdateReservaInput } from "./reserva.interface";
 import { hoyUTC, normalizarHora } from "../../utils/fecha";
+import { franjaOcupada } from "../../utils/ocupacion";
 
 const MS_POR_HORA = 60 * 60 * 1000;
 
@@ -94,15 +95,10 @@ class ReservaService {
         maximoCircuito: number,
         idReservaExcluida?: number
     ) {
-        const solapadas = await db.reservas.findMany({
-            where: {
-                fechaReserva,
-                horaInicio: { lt: data.horaFin },
-                horaFin: { gt: data.horaInicio },
-                ...(idReservaExcluida === undefined ? {} : { NOT: { idReservas: idReservaExcluida } })
-            },
-            select: { Kartings_idKartings: true, Circuitos_idCircuitos: true }
-        });
+        // incluye las carreras: ocupan el kart y la pista igual que una reserva
+        const solapadas = await franjaOcupada(
+            db, fechaReserva, data.horaInicio, data.horaFin, { idReserva: idReservaExcluida }
+        );
 
         if (solapadas.some(r => r.Kartings_idKartings === data.Kartings_idKartings)) {
             throw new Error("El karting seleccionado ya está reservado en ese horario");
