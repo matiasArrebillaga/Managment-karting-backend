@@ -23,6 +23,7 @@ beforeEach(() => {
     db.torneos = {
         findMany: jest.fn(async () => TORNEOS),
         findUnique: jest.fn(async () => TORNEOS[3]),
+        update: jest.fn(async (args: any) => args.data),
     };
 });
 
@@ -46,5 +47,20 @@ describe("estado del torneo", () => {
     it("rechaza un estado desconocido", async () => {
         await expect(torneoService.getAll("xx")).rejects.toThrow("El estado debe ser uno de");
         expect(db.torneos.findMany).not.toHaveBeenCalled();
+    });
+});
+
+describe("update del torneo", () => {
+    it("convierte las fechas que llegan como string", async () => {
+        await torneoService.update(4, { fechaInicio: "2099-11-01", fechaFin: "2099-11-30" });
+
+        const data = db.torneos.update.mock.calls[0][0].data;
+        expect(data.fechaInicio).toEqual(new Date("2099-11-01"));
+        expect(data.fechaFin).toEqual(new Date("2099-11-30"));
+    });
+
+    it("rechaza una fecha invalida", async () => {
+        await expect(torneoService.update(4, { fechaInicio: "hola" })).rejects.toThrow("La fecha de inicio no es válida");
+        expect(db.torneos.update).not.toHaveBeenCalled();
     });
 });
