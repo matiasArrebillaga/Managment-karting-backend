@@ -1,5 +1,5 @@
 import {prisma} from "../../config/prisma.js";
-import { CreateTorneos, UpdateTorneos } from "./torneo.interface.js";
+import { CreateTorneos, ITorneos, UpdateTorneos } from "./torneo.interface.js";
 import { hoyUTC } from "../../utils/fecha.js";
 
 const ESTADOS = ["proximo", "en_curso", "finalizado"] as const;
@@ -10,7 +10,7 @@ class TorneosService {
         if (!Number.isInteger(id)) throw new Error("El identificador debe ser un número entero");
     }
 
-    private validarDatos(data: CreateTorneos | UpdateTorneos) {
+    private validarDatos(data: Partial<Omit<ITorneos, "idTorneos">>) {
         if (data.nombre !== undefined &&
             (typeof data.nombre !== "string" ||
                 data.nombre.trim().length === 0 ||
@@ -44,7 +44,7 @@ class TorneosService {
         }
     }
 
-    // Derivado de las fechas contra el dia calendario local, igual que reservas e inscripciones
+    // calcula el estado con la fecha de hoy
     private conEstado<T extends { fechaInicio: Date; fechaFin: Date }>(torneo: T) {
         const hoy = hoyUTC();
         const estado: EstadoTorneo = torneo.fechaFin < hoy ? "finalizado"
@@ -52,7 +52,7 @@ class TorneosService {
             : "en_curso";
         return { ...torneo, estado };
     }
-
+    // construye el filtro para prisma 
     private filtroEstado(estado: string) {
         const hoy = hoyUTC();
         switch (estado) {
@@ -80,26 +80,33 @@ class TorneosService {
     }
 
     async create(data: CreateTorneos) {
-        this.validarDatos(data);
+        const datos = {...data, fechaInicio: new Date(data.fechaInicio), fechaFin: new Date(data.fechaFin)};
+        this.validarDatos(datos);
         return await prisma.torneos.create({
-            data: {...data, nombre: data.nombre.trim(), descripcion: data.descripcion.trim()}
+            data: {...datos, nombre: datos.nombre.trim(), descripcion: datos.descripcion.trim()}
         });
     }
 
     async update(idTorneo: number, data: UpdateTorneos) {
         this.validarId(idTorneo);
-        this.validarDatos(data);
+        // solo convierte las fechas que vienen, el patch es parcial
+        const datos = {
+            ...data,
+            fechaInicio: data.fechaInicio === undefined ? undefined : new Date(data.fechaInicio),
+            fechaFin: data.fechaFin === undefined ? undefined : new Date(data.fechaFin)
+        };
+        this.validarDatos(datos);
         const actual = await prisma.torneos.findUnique({where: {idTorneos: idTorneo}});
         if (!actual) throw new Error("El torneo indicado no existe");
-        const inicio = data.fechaInicio ?? actual.fechaInicio;
-        const fin = data.fechaFin ?? actual.fechaFin;
+        const inicio = datos.fechaInicio ?? actual.fechaInicio;
+        const fin = datos.fechaFin ?? actual.fechaFin;
         if (inicio >= fin) throw new Error("La fecha de inicio debe ser anterior a la fecha de fin");
         return await prisma.torneos.update({
             where: { idTorneos: idTorneo },
             data: {
-                ...data,
-                ...(data.nombre === undefined ? {} : {nombre: data.nombre.trim()}),
-                ...(data.descripcion === undefined ? {} : {descripcion: data.descripcion.trim()})
+                ...datos,
+                ...(datos.nombre === undefined ? {} : {nombre: datos.nombre.trim()}),
+                ...(datos.descripcion === undefined ? {} : {descripcion: datos.descripcion.trim()})
             }
         });
     }
