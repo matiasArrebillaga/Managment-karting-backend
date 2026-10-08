@@ -101,6 +101,22 @@ class PersonasTorneosService {
         });
     }
 
+    //listar las personas que estan inscriptas a un torneo
+        async getListarPersonasInscriptas(idTorneo:number){
+            const torneo = await prisma.personas_torneos.findMany({
+                where: {Torneos_idTorneos:idTorneo},
+                include:{
+                    personas:true
+                }
+            })
+            return torneo.map(ins => ({
+                nombrePersona : ins.personas.nombre,
+                apellidoPersona : ins.personas.apellido,
+                
+            }))
+    
+        }
+
     async create(data: CreatePersonaTorneo, restringirAPersona?: number) {
         // valida los id, restringir persona hace que un cliente se inscriba a si mismo (ADMIN podria inscribir a otra persona)
         const Personas_idPersona = restringirAPersona ?? this.aEntero(data.Personas_idPersona);

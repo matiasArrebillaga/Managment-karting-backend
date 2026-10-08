@@ -13,5 +13,4 @@ export interface IRegisterDTO{
     telefono: string;
     contraseña: string;
     Localidades_idLocalidades: number;
-    idRol: number;
 }

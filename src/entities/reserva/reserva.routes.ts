@@ -6,7 +6,7 @@ import { verifyRoles } from "../../middleware/auth.middleware";
 const router = Router();
 
 router.get("/", verifyRoles("ADMIN","EMPLEADO"), ReservaController.getAll);
-router.get("/fechas", verifyRoles("ADMIN","EMPLEADO"), ReservaController.getReservaFechas);
+router.get("/fechas", verifyRoles("ADMIN","EMPLEADO","Cliente"), ReservaController.getReservaFechas);
 
 // /mias va antes de /:id usa el token para saber el id
 router.get("/mias",verifyRoles("CLIENTE","EMPLEADO","ADMIN"),ReservaController.getMias);

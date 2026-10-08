@@ -10,7 +10,7 @@ export interface IPersona {
     idRol: number;
 }
 
-export type CreatePersona = Omit<IPersona, "idPersona"> & {
+export type CreatePersona = Omit<IPersona, "idPersona" | "idRol"> & {
     contraseña: string;
 };
 export type UpdatePersona = Partial<CreatePersona>;

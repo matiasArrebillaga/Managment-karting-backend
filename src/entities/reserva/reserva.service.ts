@@ -80,8 +80,8 @@ class ReservaService {
 });
         return reservas.map(res => ({
             reserva : res.idReservas,
-            karting : res.Kartings_idKartings,
-            persona : res.Personas_idPersona
+            karting : res.kartings.categoria,
+            persona : res.personas.nombre
 
         }))
     }

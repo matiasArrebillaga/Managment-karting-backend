@@ -116,7 +116,7 @@ model personas {
 model personas_torneos {
   Torneos_idTorneos  Int
   Personas_idPersona Int
-  fecha_inscripcion  DateTime @db.Date
+  fecha_inscripcion DateTime? @db.Date
   hora_inscripcion   DateTime @db.Time(0)
   personas           personas @relation(fields: [Personas_idPersona], references: [idPersona], onDelete: NoAction, onUpdate: NoAction, map: "fk_Torneos_has_Personas_Personas1")
   torneos            torneos  @relation(fields: [Torneos_idTorneos], references: [idTorneos], onDelete: NoAction, onUpdate: NoAction, map: "fk_Torneos_has_Personas_Torneos1")
@@ -129,8 +129,8 @@ model personas_torneos {
 model reservas {
   idReservas            Int       @id @default(autoincrement())
   fechaReserva          DateTime  @db.Date
-  horaInicio            DateTime  @db.Time(0)
-  horaFin               DateTime  @db.Time(0)
+  horaInicio DateTime? @db.Time(0)
+  horaFin    DateTime? @db.Time(0)
   monto                 Decimal   @db.Decimal(10, 2)
   Personas_idPersona    Int
   Circuitos_idCircuitos Int
@@ -148,7 +148,7 @@ model tiposkarting {
   idTiposKarting                       Int            @id @default(autoincrement())
   nombre                               String         @db.VarChar(45)
   descripcion                          String         @db.VarChar(45)
-  precioHora                           Decimal        @db.Decimal(10, 2)
+  precioHora Decimal @db.Decimal(10, 2) @default(15000)
   TiposLicencias_idTipoLicenciaMinima  Int            @default(1)
   tiposlicencias                       tiposlicencias @relation(fields: [TiposLicencias_idTipoLicenciaMinima], references: [idTipoLicencia], onDelete: NoAction, onUpdate: NoAction, map: "fk_TiposKarting_TiposLicencias")
   kartings                             kartings[]
@@ -160,7 +160,7 @@ model tiposlicencias {
   idTipoLicencia Int            @id @default(autoincrement())
   nombre         String         @db.VarChar(45)
   descripcion    String         @db.VarChar(45)
-  nivel          Int
+  nivel Int @default(1)
   licencias      licencias[]
   tiposkarting   tiposkarting[]
 }
@@ -169,7 +169,7 @@ model torneos {
   idTorneos        Int                @id @default(autoincrement())
   nombre           String             @db.VarChar(45)
   descripcion      String             @db.VarChar(45)
-  cupoMaximo       Int
+  cupoMaximo Int @default(10)
   fechaInicio      DateTime           @db.Date
   fechaFin         DateTime           @db.Date
   carreras         carreras[]

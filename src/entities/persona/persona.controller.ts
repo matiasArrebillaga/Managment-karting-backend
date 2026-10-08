@@ -34,6 +34,32 @@ class PersonaController{
             next(error);
         }
     }
+
+    async crearEmpleado(req: Request, res: Response, next: NextFunction) {
+    try {
+        const persona = await personaService.crearEmpleado(req.body);
+
+        res.status(201).json(persona);
+    } catch (error) {
+        next(error);
+    }
+}
+
+     async asignarRol (req: Request, res:Response, next: NextFunction){
+        try{
+            const id = Number(req.params.id)
+            const { nombreRol } = req.body
+            const personaActualizado = await personaService.asignarRol(id, nombreRol)
+            if (!personaActualizado){
+                return res.status(404).json({
+                    message: "Persona no encontrada"
+                })
+            }
+            res.status(200).json(personaActualizado)
+        }catch(error){
+            next(error);
+        }
+    }
     async update (req: Request, res:Response, next: NextFunction){
         try{
             const id = Number(req.params.id)
