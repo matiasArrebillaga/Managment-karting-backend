@@ -27,65 +27,24 @@ class PersonaService {
             }
         }
     }
-    async create(data: CreatePersona) {
-        this.validarDatos(data);
-        const personaExistente = await prisma.personas.findFirst({
-            where: { mail: data.mail }
-        });
+   async create(data: CreatePersona) {
+    return this.crearPersonaConRol(data, "CLIENTE");
+}
 
-        if (personaExistente) {
-            throw new Error("El mail ya está registrado");
-        }
+async crearEmpleado(data: CreatePersona) {
+    return this.crearPersonaConRol(data, "EMPLEADO");
+}
 
-        const localidad = await prisma.localidades.findUnique({
-            where: {
-                idLocalidades: data.Localidades_idLocalidades
-            }
-        });
-
-        if (!localidad) {
-            throw new Error("La localidad ingresada no existe");
-        }
-
-        const rol = await prisma.roles.findFirst({
-            where: {
-                nombre : "CLIENTE"
-            }
-        });
-
-    if (!rol){
-        throw new Error("El rol ingresado no existe");
-    }
-        const fechaNacimiento = new Date(data.fechaNacimiento);
-
-        if (Number.isNaN(fechaNacimiento.getTime())) {
-            throw new Error("La fecha de nacimiento no es válida");
-        }
-
-        const contraseñaHasheada = await bcrypt.hash(data.contraseña, 10);
-
-        const persona = await prisma.personas.create({
-            data : {
-                ...data,
-                nombre: data.nombre.trim(), apellido: data.apellido.trim(), dni: data.dni.trim(),
-                mail: data.mail.trim(), telefono: data.telefono.trim(),
-                fechaNacimiento,
-                contraseña: contraseñaHasheada, idRol : rol.idRol
-            }
-        });
-
-        const { contraseña, ...personaSinContraseña } = persona;
-        return personaSinContraseña;
-    }
-    
-
-    async crearEmpleado(data: CreatePersona) {
+private async crearPersonaConRol(
+    data: CreatePersona,
+    nombreRol: string
+) {
     this.validarDatos(data);
 
+    const mail = data.mail.trim();
+
     const personaExistente = await prisma.personas.findFirst({
-        where: {
-            mail: data.mail
-        }
+        where: { mail }
     });
 
     if (personaExistente) {
@@ -103,13 +62,11 @@ class PersonaService {
     }
 
     const rol = await prisma.roles.findFirst({
-        where: {
-            nombre: "EMPLEADO"
-        }
+        where: { nombre: nombreRol }
     });
 
     if (!rol) {
-        throw new Error("El rol EMPLEADO no existe");
+        throw new Error(`El rol ${nombreRol} no existe`);
     }
 
     const fechaNacimiento = new Date(data.fechaNacimiento);
@@ -118,7 +75,10 @@ class PersonaService {
         throw new Error("La fecha de nacimiento no es válida");
     }
 
-    const contraseñaHasheada = await bcrypt.hash(data.contraseña, 10);
+    const contraseñaHasheada = await bcrypt.hash(
+        data.contraseña,
+        10
+    );
 
     const persona = await prisma.personas.create({
         data: {
@@ -126,7 +86,7 @@ class PersonaService {
             nombre: data.nombre.trim(),
             apellido: data.apellido.trim(),
             dni: data.dni.trim(),
-            mail: data.mail.trim(),
+            mail,
             telefono: data.telefono.trim(),
             fechaNacimiento,
             contraseña: contraseñaHasheada,
