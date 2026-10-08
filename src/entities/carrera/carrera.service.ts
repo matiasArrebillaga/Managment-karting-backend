@@ -1,6 +1,7 @@
 import {prisma} from "../../config/prisma.js";
 import { CreateCarrera, UpdateCarrera } from "../carrera/carrera.interface.js";
 import { normalizarHora } from "../../utils/fecha.js";
+import { franjaOcupada } from "../../utils/ocupacion.js";
 import { AppError } from "../../middleware/error.middleware.js";
 
 class CarrerasService {
@@ -63,7 +64,13 @@ class CarrerasService {
 
         if (normalizado.horaInicio !== undefined || normalizado.horaFin !== undefined) {
             const actual = await this.getById(fechaCarrera, Kartings_idKartings, Torneos_idTorneos, Circuitos_idCircuitos);
-            await this.validarHorarios(normalizado.horaInicio ?? actual.horaInicio, normalizado.horaFin ?? actual.horaFin);
+            const horaInicio = normalizado.horaInicio ?? actual.horaInicio;
+            const horaFin = normalizado.horaFin ?? actual.horaFin;
+            await this.validarHorarios(horaInicio, horaFin);
+            // se excluye a si misma del control de solape
+            await this.validarDisponibilidadKarting(
+                Kartings_idKartings, fechaCarrera, horaInicio, horaFin, { Torneos_idTorneos, Circuitos_idCircuitos }
+            );
         }
 
         return await prisma.carreras.update({
@@ -139,16 +146,12 @@ class CarrerasService {
         Kartings_idKartings: number,
         fechaCarrera: Date,
         horaInicio:Date,
-        horaFin:Date
+        horaFin:Date,
+        excluir?: { Torneos_idTorneos: number; Circuitos_idCircuitos: number }
     ){
-        const carrerasDelKarting = await prisma.carreras.findMany({
-            where: {Kartings_idKartings, fechaCarrera},
-        });
-        const haySolape = carrerasDelKarting.some(
-            (c: { horaInicio: Date; horaFin: Date }) =>
-                horaInicio < c.horaFin && horaFin > c.horaInicio
-        );
-        if (haySolape){
+        // mira carreras y reservas
+        const ocupadas = await franjaOcupada(prisma, fechaCarrera, horaInicio, horaFin, { carrera: excluir });
+        if (ocupadas.some(o => o.Kartings_idKartings === Kartings_idKartings)){
             throw new Error ("El karting ya esta asignado en ese horario");
         }
     }
