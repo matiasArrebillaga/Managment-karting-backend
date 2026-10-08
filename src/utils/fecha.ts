@@ -13,3 +13,20 @@ export function normalizarHora(valor: unknown, campo: string): Date {
         Number(partes[1]), Number(partes[2]), Number(partes[3] ?? 0)
     ));
 }
+
+
+export function normalizarFecha(fecha: Date | string): Date {
+    const valor = fecha instanceof Date ? fecha : new Date(fecha);
+
+    if (Number.isNaN(valor.getTime())) {
+        throw new Error("La fecha no es válida");
+    }
+
+    return new Date(
+        Date.UTC(
+            valor.getUTCFullYear(),
+            valor.getUTCMonth(),
+            valor.getUTCDate()
+        )
+    );
+}

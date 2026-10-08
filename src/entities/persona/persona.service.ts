@@ -65,6 +65,7 @@ private async crearPersonaConRol(
         where: { nombre: nombreRol }
     });
 
+    //Esto podria no estar , si estamos pasando un parametro fijo con ese nombre es porque el rol ya esta definido desde antes
     if (!rol) {
         throw new Error(`El rol ${nombreRol} no existe`);
     }
