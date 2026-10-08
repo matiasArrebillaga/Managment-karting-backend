@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { prisma } from "../src/config/prisma";
