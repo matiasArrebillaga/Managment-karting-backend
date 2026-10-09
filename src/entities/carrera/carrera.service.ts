@@ -244,38 +244,59 @@ async crearCarrera(data: CreateCarrera) {
     const horaInicio = normalizarHora(data.horaInicio, "horaInicio");
     const horaFin = normalizarHora(data.horaFin, "horaFin");
 
-    await this.validarHorarios(horaInicio, horaFin);
+    this.validarHorarios(horaInicio, horaFin);
 
-    const { torneo } = await this.validarEntidadesRelacionadas(
-        data.Kartings_idKartings,
-        data.Torneos_idTorneos,
-        data.Circuitos_idCircuitos
-    );
+    return await prisma.$transaction(async (db) => {
+        // 1. Bloquear la fila del karting.
+        const kartings = await db.$queryRaw<{ idKartings: number }[]>`
+            SELECT idKartings
+            FROM kartings
+            WHERE idKartings = ${data.Kartings_idKartings}
+            FOR UPDATE
+        `;
 
-    await this.validarFechaDentroDelTorneo(fechaCarrera, torneo);
+        if (kartings.length === 0) {
+            throw new Error("El karting indicado no existe");
+        }
 
-    await this.validarDisponibilidadKarting(
-        data.Kartings_idKartings,
-        fechaCarrera,
-        horaInicio,
-        horaFin
-    );
+        // 2. Validar las entidades relacionadas.
+        // Estas consultas también deben usar db, dentro
+        // de la transacción, no el cliente global prisma.
+        const { torneo } = await this.validarEntidadesRelacionadas(
+            data.Kartings_idKartings,
+            data.Torneos_idTorneos,
+            data.Circuitos_idCircuitos
+        );
 
-    return await prisma.carreras.create({
-        data: {
+        // 3. Comprobar que la fecha corresponda al torneo.
+        await this.validarFechaDentroDelTorneo(fechaCarrera, torneo);
+
+        // 4. Verificar solapamientos con carreras existentes.
+        // La función debe consultar mediante db también.
+        await this.validarDisponibilidadKarting(
+            data.Kartings_idKartings,
             fechaCarrera,
             horaInicio,
-            horaFin,
-            kartings: {
-                connect: { idKartings: data.Kartings_idKartings }
-            },
-            torneos: {
-                connect: { idTorneos: data.Torneos_idTorneos }
-            },
-            circuitos: {
-                connect: { idCircuitos: data.Circuitos_idCircuitos }
+            horaFin
+        );
+
+        // 5. Crear la carrera dentro de la misma transacción.
+        return await db.carreras.create({
+            data: {
+                fechaCarrera,
+                horaInicio,
+                horaFin,
+                kartings: {
+                    connect: { idKartings: data.Kartings_idKartings }
+                },
+                torneos: {
+                    connect: { idTorneos: data.Torneos_idTorneos }
+                },
+                circuitos: {
+                    connect: { idCircuitos: data.Circuitos_idCircuitos }
+                }
             }
-        }
+        });
     });
 }
 
