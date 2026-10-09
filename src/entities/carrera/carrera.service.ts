@@ -4,6 +4,8 @@ import { normalizarHora , normalizarFecha} from "../../utils/fecha.js";
 import { AppError } from "../../middleware/error.middleware.js";
 
 class CarrerasService {
+
+    //VALIDACIONES 
     private validarId(id: number) {
         if (!Number.isInteger(id)) throw new Error("El identificador debe ser un número entero");
     }
@@ -13,6 +15,77 @@ class CarrerasService {
     private validarClaves(...ids: number[]) {
         ids.forEach(id => this.validarId(id));
     }
+
+
+    private async validarDisponibilidadKarting(
+    Kartings_idKartings: number,
+    fechaCarrera: Date,
+    horaInicio: Date,
+    horaFin: Date,
+    excluir?: {
+        Torneos_idTorneos: number;
+        Circuitos_idCircuitos: number;
+    }
+) {
+    const fechaNormalizada = normalizarFecha(fechaCarrera);
+
+    const carrerasDelKarting = await prisma.carreras.findMany({
+        where: {
+            Kartings_idKartings,
+            fechaCarrera: fechaNormalizada
+        }
+    });
+
+    const haySolape = carrerasDelKarting.some((c) => {
+        if (
+            excluir &&
+            c.Torneos_idTorneos === excluir.Torneos_idTorneos &&
+            c.Circuitos_idCircuitos === excluir.Circuitos_idCircuitos
+        ) {
+            return false;
+        }
+
+        return horaInicio < c.horaFin && horaFin > c.horaInicio;
+    });
+
+    if (haySolape) {
+        throw new Error("El karting ya está asignado en ese horario");
+    }
+}
+private async validarHorarios (horaInicio: Date, horaFin:Date){
+        if (isNaN(horaInicio.getTime())|| isNaN(horaFin.getTime())){
+            throw new Error("Las horas de inicio y fin no son validas");
+        }
+        if (horaInicio >= horaFin){
+            throw new Error ("La hora de inicio debe ser anterior a la hora de fin");
+        }
+    }
+    private async validarEntidadesRelacionadas(Kartings_idKartings:number,Torneos_idTorneos: number,Circuitos_idCircuitos:number){
+        const [karting, torneo, circuito]= await Promise.all([
+            prisma.kartings.findUnique({where:{idKartings:Kartings_idKartings}}),
+            prisma.torneos.findUnique({where:{idTorneos:Torneos_idTorneos}}),
+            prisma.circuitos.findUnique({where:{idCircuitos:Circuitos_idCircuitos}})
+
+        ]);
+        if (!karting) throw new Error ("El karting indicado no existe")
+        if(!torneo) throw new Error ("El torneo indicado no existe")
+        if (!circuito) throw new Error ("El circuito indicado no existe");
+        if (circuito.maximo < torneo.cupoMaximo) {
+            throw new Error(
+                "El circuito no tiene capacidad suficiente para el cupo máximo del torneo"
+            );
+        }
+        if (karting.estado?.toLowerCase() !== "disponible"){
+            throw new Error(`El karting no esta disponible (estado: ${karting.estado})`);
+        }
+        return { torneo };
+        }
+    private async validarFechaDentroDelTorneo(fechaCarrera: Date, torneo: { fechaInicio: Date; fechaFin: Date }) {
+    if (fechaCarrera < torneo.fechaInicio || fechaCarrera > torneo.fechaFin) {
+        throw new Error("La fecha de la carrera está fuera del rango del torneo");
+        }
+    }
+
 
     // Obtener todas las carreras
     async getAll() {
@@ -49,41 +122,79 @@ class CarrerasService {
     }
 
     async update(
-        fechaCarrera: Date,
-        Kartings_idKartings: number,
-        Torneos_idTorneos: number,
-        Circuitos_idCircuitos: number,
-        data: UpdateCarrera
-    ) {
-        this.validarClaves(Kartings_idKartings, Torneos_idTorneos, Circuitos_idCircuitos);
-        this.validarFecha(fechaCarrera, "fecha de carrera");
-        fechaCarrera = normalizarFecha(fechaCarrera);
+    fechaCarrera: Date,
+    Kartings_idKartings: number,
+    Torneos_idTorneos: number,
+    Circuitos_idCircuitos: number,
+    data: UpdateCarrera
+) {
+    this.validarClaves(
+        Kartings_idKartings,
+        Torneos_idTorneos,
+        Circuitos_idCircuitos
+    );
 
-        const normalizado: { horaInicio?: Date; horaFin?: Date } = {};
-        if (data.horaInicio !== undefined) {
-            normalizado.horaInicio = normalizarHora(data.horaInicio, "horaInicio");
-        }
-        if (data.horaFin !== undefined) {
-            normalizado.horaFin = normalizarHora(data.horaFin, "horaFin");
-        }
+    this.validarFecha(fechaCarrera, "fecha de carrera");
+    fechaCarrera = normalizarFecha(fechaCarrera);
 
-        if (normalizado.horaInicio !== undefined || normalizado.horaFin !== undefined) {
-            const actual = await this.getById(fechaCarrera, Kartings_idKartings, Torneos_idTorneos, Circuitos_idCircuitos);
-            await this.validarHorarios(normalizado.horaInicio ?? actual.horaInicio, normalizado.horaFin ?? actual.horaFin);
-        }
+    const normalizado: {
+        horaInicio?: Date;
+        horaFin?: Date;
+    } = {};
 
-        return await prisma.carreras.update({
-            where: {
-                Kartings_idKartings_Torneos_idTorneos_Circuitos_idCircuitos_fechaCarrera: {
-                    Kartings_idKartings,
-                    Torneos_idTorneos,
-                    Circuitos_idCircuitos,
-                    fechaCarrera
-                }
-            },
-            data: normalizado
-        });
+    if (data.horaInicio !== undefined) {
+        normalizado.horaInicio = normalizarHora(
+            data.horaInicio,
+            "horaInicio"
+        );
     }
+
+    if (data.horaFin !== undefined) {
+        normalizado.horaFin = normalizarHora(
+            data.horaFin,
+            "horaFin"
+        );
+    }
+
+    const actual = await this.getById(
+        fechaCarrera,
+        Kartings_idKartings,
+        Torneos_idTorneos,
+        Circuitos_idCircuitos
+    );
+
+    const horaInicioFinal =
+        normalizado.horaInicio ?? actual.horaInicio;
+
+    const horaFinFinal =
+        normalizado.horaFin ?? actual.horaFin;
+
+    await this.validarHorarios(horaInicioFinal, horaFinFinal);
+
+    if (
+        normalizado.horaInicio !== undefined ||
+        normalizado.horaFin !== undefined
+    ) {
+        await this.validarDisponibilidadKarting(
+            Kartings_idKartings,
+            fechaCarrera,
+            horaInicioFinal,
+            horaFinFinal
+        );
+    }
+
+    return await prisma.carreras.update({
+        where: {
+            Kartings_idKartings_Torneos_idTorneos_Circuitos_idCircuitos_fechaCarrera: {
+                Kartings_idKartings,
+                Torneos_idTorneos,
+                Circuitos_idCircuitos,
+                fechaCarrera
+            }
+        },
+        data: normalizado
+    });
+}
 
     async delete(
     fechaCarrera: Date,
@@ -118,63 +229,7 @@ class CarrerasService {
             }
         });
     }
-    private async validarHorarios (horaInicio: Date, horaFin:Date){
-        if (isNaN(horaInicio.getTime())|| isNaN(horaFin.getTime())){
-            throw new Error("Las horas de inicio y fin no son validas");
-        }
-        if (horaInicio >= horaFin){
-            throw new Error ("La hora de inicio debe ser anterior a la hora de fin");
-        }
-    }
-    private async validarEntidadesRelacionadas(Kartings_idKartings:number,Torneos_idTorneos: number,Circuitos_idCircuitos:number){
-        const [karting, torneo, circuito]= await Promise.all([
-            prisma.kartings.findUnique({where:{idKartings:Kartings_idKartings}}),
-            prisma.torneos.findUnique({where:{idTorneos:Torneos_idTorneos}}),
-            prisma.circuitos.findUnique({where:{idCircuitos:Circuitos_idCircuitos}})
-
-        ]);
-        if (!karting) throw new Error ("El karting indicado no existe")
-        if(!torneo) throw new Error ("El torneo indicado no existe")
-        if (!circuito) throw new Error ("El circuito indicado no existe");
-        if (circuito.maximo < torneo.cupoMaximo) {
-            throw new Error(
-                "El circuito no tiene capacidad suficiente para el cupo máximo del torneo"
-            );
-        }
-        if (karting.estado?.toLowerCase() !== "disponible"){
-            throw new Error(`El karting no esta disponible (estado: ${karting.estado})`);
-        }
-        return { torneo };
-        }
-    private async validarFechaDentroDelTorneo(fechaCarrera: Date, torneo: { fechaInicio: Date; fechaFin: Date }) {
-    if (fechaCarrera < torneo.fechaInicio || fechaCarrera > torneo.fechaFin) {
-        throw new Error("La fecha de la carrera está fuera del rango del torneo");
-        }
-    }
-   private async validarDisponibilidadKarting(
-    Kartings_idKartings: number,
-    fechaCarrera: Date,
-    horaInicio: Date,
-    horaFin: Date
-) {
-    const fechaNormalizada = normalizarFecha(fechaCarrera);
-
-    const carrerasDelKarting = await prisma.carreras.findMany({
-        where: {
-            Kartings_idKartings,
-            fechaCarrera: fechaNormalizada
-        }
-    });
-
-    const haySolape = carrerasDelKarting.some(
-        (c: { horaInicio: Date; horaFin: Date }) =>
-            horaInicio < c.horaFin && horaFin > c.horaInicio
-    );
-
-    if (haySolape) {
-        throw new Error("El karting ya está asignado en ese horario");
-    }
-}
+    
     
 async crearCarrera(data: CreateCarrera) {
     this.validarClaves(
