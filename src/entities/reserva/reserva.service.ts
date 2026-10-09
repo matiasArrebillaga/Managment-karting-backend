@@ -15,6 +15,15 @@ type OpcionesValidacion = {
 };
 
 class ReservaService {
+
+    private async validarHorarios (horaInicio: Date, horaFin:Date){
+        if (isNaN(horaInicio.getTime())|| isNaN(horaFin.getTime())){
+            throw new Error("Las horas de inicio y fin no son validas");
+        }
+        if (horaInicio >= horaFin){
+            throw new Error ("La hora de inicio debe ser anterior a la hora de fin");
+        }
+    }
     private validarId(id: number) {
         if (!Number.isInteger(id)) throw new Error("El identificador debe ser un número entero");
     }
@@ -230,52 +239,101 @@ class ReservaService {
             });
         });
     }
-    // tiene las mismas validacion que create 
-    async update(idReservas: number, data: UpdateReservaInput, restringirAPersona?: number) {
-        this.validarId(idReservas);
-        const actual = await prisma.reservas.findUnique({ where: { idReservas } });
-        if (!actual) throw new Error("La reserva indicada no existe");
-        this.verificarPertenencia(actual.Personas_idPersona, restringirAPersona);
-        const resultante: CreateReserva = {
-            // cambia solo los campos necesarios y deja los otros igual    
-            fechaReserva: data.fechaReserva !== undefined
+   
+async update(
+    idReservas: number,
+    data: UpdateReservaInput,
+    restringirAPersona?: number
+) {
+    this.validarId(idReservas);
+
+    const actual = await prisma.reservas.findUnique({
+        where: { idReservas }
+    });
+
+    if (!actual) {
+        throw new Error("La reserva indicada no existe");
+    }
+
+    this.verificarPertenencia(
+        actual.Personas_idPersona,
+        restringirAPersona
+    );
+
+    // Determinar las horas definitivas de la reserva.
+    const horaInicio =
+        data.horaInicio !== undefined
+            ? normalizarHora(data.horaInicio, "horaInicio")
+            : actual.horaInicio;
+
+    const horaFin =
+        data.horaFin !== undefined
+            ? normalizarHora(data.horaFin, "horaFin")
+            : actual.horaFin;
+
+    // Comprobar que ambas horas existan.
+    if (horaInicio == null || horaFin == null) {
+        throw new Error("La reserva debe tener ambas horas");
+    }
+
+    // Construir la reserva combinando datos nuevos y actuales.
+    const resultante: CreateReserva = {
+        fechaReserva:
+            data.fechaReserva !== undefined
                 ? new Date(data.fechaReserva)
                 : actual.fechaReserva,
-            horaInicio: data.horaInicio !== undefined
-                ? normalizarHora(data.horaInicio, "horaInicio")
-                : actual.horaInicio,
-            horaFin: data.horaFin !== undefined
-                ? normalizarHora(data.horaFin, "horaFin")
-                : actual.horaFin,
-            // un cliente tampoco puede pasarle la reserva a otro
-            Personas_idPersona: restringirAPersona
-                ?? (data.Personas_idPersona !== undefined
-                    ? this.aEntero(data.Personas_idPersona)
-                    : actual.Personas_idPersona),
-            Circuitos_idCircuitos: data.Circuitos_idCircuitos !== undefined
+
+        horaInicio,
+        horaFin,
+
+        // Un cliente no puede transferir la reserva a otra persona.
+        Personas_idPersona:
+            restringirAPersona ??
+            (data.Personas_idPersona !== undefined
+                ? this.aEntero(data.Personas_idPersona)
+                : actual.Personas_idPersona),
+
+        Circuitos_idCircuitos:
+            data.Circuitos_idCircuitos !== undefined
                 ? this.aEntero(data.Circuitos_idCircuitos)
                 : actual.Circuitos_idCircuitos,
-            Kartings_idKartings: data.Kartings_idKartings !== undefined
+
+        Kartings_idKartings:
+            data.Kartings_idKartings !== undefined
                 ? this.aEntero(data.Kartings_idKartings)
                 : actual.Kartings_idKartings
-        };
+    };
 
-        return await prisma.$transaction(async (db) => {
-            const monto = await this.validarYCalcularMonto(db, resultante, {
+    // Validar el intervalo final, no solamente los campos recibidos.
+    this.validarHorarios(
+        resultante.horaInicio,
+        resultante.horaFin
+    );
+
+    // Calcular el monto y actualizar dentro de una transacción.
+    return await prisma.$transaction(async (db) => {
+        const monto = await this.validarYCalcularMonto(
+            db,
+            resultante,
+            {
                 idReservaExcluida: idReservas,
                 fechaEsNueva: data.fechaReserva !== undefined,
                 kartingEsNuevo: data.Kartings_idKartings !== undefined
-            });
-            return await db.reservas.update({
-                where: { idReservas },
-                data: {
-                    ...resultante,
-                    fechaReserva: this.normalizarFecha(resultante.fechaReserva),
-                    monto
-                }
-            });
+            }
+        );
+
+        return await db.reservas.update({
+            where: { idReservas },
+            data: {
+                ...resultante,
+                fechaReserva: this.normalizarFecha(
+                    resultante.fechaReserva
+                ),
+                monto
+            }
         });
-    }
+    });
+}
 
     async delete(idReservas: number, restringirAPersona?: number) {
         this.validarId(idReservas);
