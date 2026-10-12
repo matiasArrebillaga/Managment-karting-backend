@@ -148,7 +148,9 @@ private async crearPersonaConRol(
     // Asignar un rol a una persona (update tira P2025 -> 404 si la persona no existe)
     async asignarRol(idPersona: number, nombreRol: string) {
         this.validarId(idPersona);
-        const rol = await prisma.roles.findFirst({ where: { nombre: nombreRol } });
+        // sin esto un nombreRol undefined hace que findFirst ignore el filtro y devuelva el primer rol
+        if (typeof nombreRol !== "string" || nombreRol.trim() === "") throw new Error("nombreRol es obligatorio");
+        const rol = await prisma.roles.findFirst({ where: { nombre: nombreRol.trim() } });
         if (!rol) throw new Error(`El rol ${nombreRol} no existe`);
         return await prisma.personas.update({
             where: { idPersona },
