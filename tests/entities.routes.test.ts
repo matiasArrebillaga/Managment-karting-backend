@@ -313,7 +313,7 @@ describe("rutas con claves compuestas", () => {
     const compositeRoutes = [
         [
             "/api/carreras",
-            "/api/carreras/2026-01-01/1/1/1",
+            "/api/carreras/2026-01-01/1/1",
             "EMPLEADO",
             carreraService,
             "put",
@@ -322,7 +322,7 @@ describe("rutas con claves compuestas", () => {
         ],
         [
             "/api/participaciones",
-            "/api/participaciones/2026-01-01/1/1/1/1",
+            "/api/participaciones/2026-01-01/1/1/1",
             "EMPLEADO",
             participacionService,
             "put",
@@ -368,7 +368,7 @@ describe("resultados de carrera", () => {
             .post("/api/participaciones/carrera")
             .set("Authorization", `Bearer ${token("EMPLEADO")}`)
             .send({
-                Carrera_Kartings_idKartings: 1, Carrera_Torneos_idTorneos: 1, Carrera_Circuitos_idCircuitos: 1,
+                Carrera_Torneos_idTorneos: 1, Carrera_Circuitos_idCircuitos: 1,
                 Carrera_fecha: "2026-09-05",
                 resultados: [{ Personas_idPersona: "3", posicion_final: "1", tiempo: "00:12:35", puntos: 99 }]
             });
@@ -384,13 +384,13 @@ describe("resultados de carrera", () => {
         looseMock(participacionService.getClasificacionCarrera).mockResolvedValue([{ posicion: 1 }]);
 
         const response = await request(app)
-            .get("/api/participaciones/carrera/2026-09-05/1/2/3")
+            .get("/api/participaciones/carrera/2026-09-05/2/3")
             .set("Authorization", `Bearer ${token("CLIENTE")}`);
 
         expect(response.status).toBe(200);
         expect(response.body).toEqual([{ posicion: 1 }]);
         const [claves] = (participacionService.getClasificacionCarrera as unknown as jest.Mock).mock.calls[0] as any[];
-        expect(claves).toMatchObject({ Carrera_Kartings_idKartings: 1, Carrera_Torneos_idTorneos: 2, Carrera_Circuitos_idCircuitos: 3 });
+        expect(claves).toMatchObject({ Carrera_Torneos_idTorneos: 2, Carrera_Circuitos_idCircuitos: 3 });
         expect(participacionService.getById as unknown as jest.Mock).not.toHaveBeenCalled();
     });
 

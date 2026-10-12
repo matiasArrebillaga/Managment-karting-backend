@@ -3,15 +3,15 @@ import { Router } from "express";
 import ParticipacionesController from "./participacion.controller";
 import { verifyRoles } from "../../middleware/auth.middleware";
 
-const PK = "/:Carrera_fecha/:Carrera_Kartings_idKartings/:Carrera_Torneos_idTorneos/:Carrera_Circuitos_idCircuitos/:Personas_idPersona";
+const PK = "/:Carrera_fecha/:Carrera_Torneos_idTorneos/:Carrera_Circuitos_idCircuitos/:Personas_idPersona";
 
 const participacion = Router();
 
 // Los resultados los carga el personal; un CLIENTE solo ve la tabla general
 participacion.get("/", verifyRoles("EMPLEADO", "ADMIN"), ParticipacionesController.getAll);
-// Antes del GET por PK: los dos tienen 5 segmentos y el de PK tomaria "carrera" como fecha
+// Antes del GET por PK: los dos tienen 4 segmentos y el de PK tomaria "carrera" como fecha
 participacion.get(
-    "/carrera/:Carrera_fecha/:Carrera_Kartings_idKartings/:Carrera_Torneos_idTorneos/:Carrera_Circuitos_idCircuitos",
+    "/carrera/:Carrera_fecha/:Carrera_Torneos_idTorneos/:Carrera_Circuitos_idCircuitos",
     verifyRoles("ADMIN", "EMPLEADO", "CLIENTE"),
     ParticipacionesController.getClasificacionCarrera
 );

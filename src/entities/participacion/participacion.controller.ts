@@ -3,7 +3,6 @@ import { Request, Response, NextFunction} from "express";
 import ParticipacionesService from "./participacion.service";
 
 const clavesCarrera = (body: any) => ({
-    Carrera_Kartings_idKartings: Number(body.Carrera_Kartings_idKartings),
     Carrera_Torneos_idTorneos: Number(body.Carrera_Torneos_idTorneos),
     Carrera_Circuitos_idCircuitos: Number(body.Carrera_Circuitos_idCircuitos),
     Carrera_fecha: new Date(String(body.Carrera_fecha))
@@ -32,9 +31,6 @@ class ParticipacionesController {
     // Obtener una participación por su clave primaria compuesta
     async getById(req: Request, res: Response, next: NextFunction) {
         try {
-            const Carrera_Kartings_idKartings =
-                Number(req.params.Carrera_Kartings_idKartings);
-
             const Carrera_Torneos_idTorneos =
                 Number(req.params.Carrera_Torneos_idTorneos);
 
@@ -49,7 +45,6 @@ class ParticipacionesController {
 
             const participacion =
                 await ParticipacionesService.getById(
-                    Carrera_Kartings_idKartings,
                     Carrera_Torneos_idTorneos,
                     Carrera_Circuitos_idCircuitos,
                     Carrera_fecha,
@@ -104,9 +99,6 @@ class ParticipacionesController {
     // Actualizar una participación
     async update(req: Request, res: Response, next: NextFunction) {
         try {
-            const Carrera_Kartings_idKartings =
-                Number(req.params.Carrera_Kartings_idKartings);
-
             const Carrera_Torneos_idTorneos =
                 Number(req.params.Carrera_Torneos_idTorneos);
 
@@ -131,7 +123,6 @@ class ParticipacionesController {
 
             const participacion =
                 await ParticipacionesService.update(
-                    Carrera_Kartings_idKartings,
                     Carrera_Torneos_idTorneos,
                     Carrera_Circuitos_idCircuitos,
                     Carrera_fecha,
@@ -149,9 +140,6 @@ class ParticipacionesController {
     // Eliminar una participación
     async delete(req: Request, res: Response, next: NextFunction) {
         try {
-            const Carrera_Kartings_idKartings =
-                Number(req.params.Carrera_Kartings_idKartings);
-
             const Carrera_Torneos_idTorneos =
                 Number(req.params.Carrera_Torneos_idTorneos);
 
@@ -165,7 +153,6 @@ class ParticipacionesController {
                 Number(req.params.Personas_idPersona);
 
             await ParticipacionesService.delete(
-                Carrera_Kartings_idKartings,
                 Carrera_Torneos_idTorneos,
                 Carrera_Circuitos_idCircuitos,
                 Carrera_fecha,

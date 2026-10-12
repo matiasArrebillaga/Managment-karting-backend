@@ -49,7 +49,7 @@ beforeEach(() => {
         create: jest.fn(async ({ data }: any) => ({ idReservas: 99, ...data })),
         update: jest.fn(async ({ data }: any) => ({ idReservas: 99, ...data }))
     };
-    db.carreras = { findMany: jest.fn(async () => [] as unknown[]) };
+    db.carreras_kartings = { findMany: jest.fn(async () => [] as unknown[]) };
 });
 
 describe("calculo del monto", () => {
@@ -133,8 +133,8 @@ describe("controles de disponibilidad", () => {
     });
 
     it("rechaza si el karting corre una carrera en esa franja", async () => {
-        db.carreras.findMany = jest.fn(async () => [
-            { Kartings_idKartings: 4, Circuitos_idCircuitos: 2 }
+        db.carreras_kartings.findMany = jest.fn(async () => [
+            { Kartings_idKartings: 4, Carrera_Circuitos_idCircuitos: 2 }
         ]);
 
         await expect(reservaService.realizarReserva(reservaValida()))
@@ -146,8 +146,8 @@ describe("controles de disponibilidad", () => {
         db.reservas.findMany = jest.fn(async () => [
             { Kartings_idKartings: 7, Circuitos_idCircuitos: 1 }
         ]);
-        db.carreras.findMany = jest.fn(async () => [
-            { Kartings_idKartings: 8, Circuitos_idCircuitos: 1 }
+        db.carreras_kartings.findMany = jest.fn(async () => [
+            { Kartings_idKartings: 8, Carrera_Circuitos_idCircuitos: 1 }
         ]);
 
         await expect(reservaService.realizarReserva(reservaValida()))

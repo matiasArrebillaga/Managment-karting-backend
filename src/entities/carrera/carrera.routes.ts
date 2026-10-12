@@ -9,7 +9,7 @@ const carrera = Router();
 carrera.get("/", verifyRoles("EMPLEADO","CLIENTE","ADMIN"),CarrerasController.getAll);
 
 carrera.get(
-    "/:fechaCarrera/:Kartings_idKartings/:Torneos_idTorneos/:Circuitos_idCircuitos",
+    "/:fechaCarrera/:Torneos_idTorneos/:Circuitos_idCircuitos",
     verifyRoles("EMPLEADO","CLIENTE","ADMIN"),
     CarrerasController.getById
 );
@@ -17,13 +17,13 @@ carrera.get(
 carrera.post("/",verifyRoles("EMPLEADO","ADMIN"), CarrerasController.create);
 
 carrera.put(
-    "/:fechaCarrera/:Kartings_idKartings/:Torneos_idTorneos/:Circuitos_idCircuitos",
+    "/:fechaCarrera/:Torneos_idTorneos/:Circuitos_idCircuitos",
     verifyRoles("EMPLEADO","ADMIN"),
     CarrerasController.update
 );
 
 carrera.delete(
-    "/:fechaCarrera/:Kartings_idKartings/:Torneos_idTorneos/:Circuitos_idCircuitos",
+    "/:fechaCarrera/:Torneos_idTorneos/:Circuitos_idCircuitos",
     verifyRoles("ADMIN"),
     CarrerasController.delete
 );

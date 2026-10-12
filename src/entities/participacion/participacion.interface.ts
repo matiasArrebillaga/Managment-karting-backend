@@ -1,6 +1,5 @@
 
 export interface IParticipacion {
-    Carrera_Kartings_idKartings: number;
     Carrera_Torneos_idTorneos: number;
     Carrera_Circuitos_idCircuitos: number;
     Carrera_fecha: Date;
@@ -12,7 +11,7 @@ export interface IParticipacion {
 
 export type ClavesCarrera = Pick<
     IParticipacion,
-    "Carrera_Kartings_idKartings" | "Carrera_Torneos_idTorneos" | "Carrera_Circuitos_idCircuitos" | "Carrera_fecha"
+    "Carrera_Torneos_idTorneos" | "Carrera_Circuitos_idCircuitos" | "Carrera_fecha"
 >;
 
 // Una fila de la clasificacion: los puntos no entran, los calcula el servidor por la posicion

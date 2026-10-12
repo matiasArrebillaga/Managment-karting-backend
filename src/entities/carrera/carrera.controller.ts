@@ -18,13 +18,11 @@ class CarrerasController {
     async getById(req: Request, res: Response, next: NextFunction) {
         try {
             const fechaCarrera = new Date(String(req.params.fechaCarrera));
-            const Kartings_idKartings = Number(req.params.Kartings_idKartings);
             const Torneos_idTorneos = Number(req.params.Torneos_idTorneos);
             const Circuitos_idCircuitos = Number(req.params.Circuitos_idCircuitos);
 
             const carrera = await CarrerasService.getById(
                 fechaCarrera,
-                Kartings_idKartings,
                 Torneos_idTorneos,
                 Circuitos_idCircuitos
             );
@@ -42,7 +40,7 @@ async create(req: Request, res: Response, next: NextFunction) {
             fechaCarrera: new Date(req.body.fechaCarrera),
             horaInicio: req.body.horaInicio,
             horaFin: req.body.horaFin,
-            Kartings_idKartings: Number(req.body.Kartings_idKartings),
+            kartings: req.body.kartings,
             Torneos_idTorneos: Number(req.body.Torneos_idTorneos),
             Circuitos_idCircuitos: Number(req.body.Circuitos_idCircuitos)
         };
@@ -58,7 +56,6 @@ async create(req: Request, res: Response, next: NextFunction) {
     async update(req: Request, res: Response, next: NextFunction) {
         try {
             const fechaCarrera = new Date(String(req.params.fechaCarrera));
-            const Kartings_idKartings = Number(req.params.Kartings_idKartings);
             const Torneos_idTorneos = Number(req.params.Torneos_idTorneos);
             const Circuitos_idCircuitos = Number(req.params.Circuitos_idCircuitos);
 
@@ -68,12 +65,14 @@ async create(req: Request, res: Response, next: NextFunction) {
                 }),
                 ...(req.body.horaFin !== undefined && {
                     horaFin: req.body.horaFin
+                }),
+                ...(req.body.kartings !== undefined && {
+                    kartings: req.body.kartings
                 })
             };
 
             const carrera = await CarrerasService.update(
                 fechaCarrera,
-                Kartings_idKartings,
                 Torneos_idTorneos,
                 Circuitos_idCircuitos,
                 data
@@ -89,13 +88,11 @@ async create(req: Request, res: Response, next: NextFunction) {
     async delete(req: Request, res: Response, next: NextFunction) {
         try {
             const fechaCarrera = new Date(String(req.params.fechaCarrera));
-            const Kartings_idKartings = Number(req.params.Kartings_idKartings);
             const Torneos_idTorneos = Number(req.params.Torneos_idTorneos);
             const Circuitos_idCircuitos = Number(req.params.Circuitos_idCircuitos);
 
             await CarrerasService.delete(
                 fechaCarrera,
-                Kartings_idKartings,
                 Torneos_idTorneos,
                 Circuitos_idCircuitos
             );

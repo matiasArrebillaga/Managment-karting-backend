@@ -17,6 +17,7 @@ export const prisma = {
     torneos: {},
     reservas: {},
     carreras: {},
+    carreras_kartings: {},
     participaciones: {},
     personas_torneos: {},
 };

@@ -18,7 +18,6 @@ const carreraQueTermina = (instante: Date) => ({
 const HORA = 60 * 60 * 1000;
 
 const CLAVES = {
-    Carrera_Kartings_idKartings: 1,
     Carrera_Torneos_idTorneos: 1,
     Carrera_Circuitos_idCircuitos: 1,
     Carrera_fecha: new Date("2026-09-05"),
@@ -135,7 +134,7 @@ describe("alta individual", () => {
 });
 
 describe("PUT", () => {
-    const actualizar = (data: any) => participacionService.update(1, 1, 1, CLAVES.Carrera_fecha, 1, data);
+    const actualizar = (data: any) => participacionService.update(1, 1, CLAVES.Carrera_fecha, 1, data);
 
     it.each([
         [{ tiempo: "" }, "HH:MM:SS"],
