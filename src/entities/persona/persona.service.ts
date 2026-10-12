@@ -13,8 +13,12 @@ class PersonaService {
                 throw new Error(`El campo ${campo} debe ser un texto de entre 1 y 45 caracteres`);
             }
         }
-        if (data.contraseña !== undefined && (typeof data.contraseña !== "string" || data.contraseña.length === 0 || data.contraseña.length > 255)) {
-            throw new Error("La contraseña debe tener entre 1 y 255 caracteres");
+        // algo@algo.algo, sin espacios
+        if (data.mail !== undefined && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.mail.trim())) {
+            throw new Error("El mail no tiene un formato válido");
+        }
+        if (data.contraseña !== undefined && (typeof data.contraseña !== "string" || data.contraseña.length < 8 || data.contraseña.length > 255)) {
+            throw new Error("La contraseña debe tener entre 8 y 255 caracteres");
         }
         if (data.fechaNacimiento !== undefined) {
             const fecha = new Date(data.fechaNacimiento);
