@@ -531,7 +531,7 @@ const schemas = {
         fechaNacimiento: date,
         mail: { type: "string", format: "email" },
         telefono: { type: "string" },
-        contraseña: { type: "string", format: "password" },
+        contraseña: { type: "string", format: "password", minLength: 8 },
         Localidades_idLocalidades: integerId
     }, ["nombre", "apellido", "dni", "fechaNacimiento", "mail", "telefono", "contraseña", "Localidades_idLocalidades"]),
     AuthResponse: objectSchema({
@@ -546,7 +546,7 @@ const schemas = {
         TiposKarting_idTiposKarting: integerId
     }),
     Karting: objectSchema({ idKartings: integerId, categoria: { type: "string" }, modelo: { type: "string" }, estado: { type: "string" }, fechaAdquisicion: date, TiposKarting_idTiposKarting: integerId }),
-    PersonaRequest: objectSchema({ nombre: { type: "string" }, apellido: { type: "string" }, dni: { type: "string" }, fechaNacimiento: date, mail: { type: "string", format: "email" }, telefono: { type: "string" }, contraseña: { type: "string", format: "password" }, Localidades_idLocalidades: integerId }),
+    PersonaRequest: objectSchema({ nombre: { type: "string" }, apellido: { type: "string" }, dni: { type: "string" }, fechaNacimiento: date, mail: { type: "string", format: "email" }, telefono: { type: "string" }, contraseña: { type: "string", format: "password", minLength: 8 }, Localidades_idLocalidades: integerId }),
     Persona: objectSchema({ idPersona: integerId, nombre: { type: "string" }, apellido: { type: "string" }, dni: { type: "string" }, fechaNacimiento: date, mail: { type: "string", format: "email" }, telefono: { type: "string" }, Localidades_idLocalidades: integerId, idRol: integerId }),
     LocalidadRequest: objectSchema({ nombre: { type: "string" } }),
     Localidad: objectSchema({ idLocalidades: integerId, nombre: { type: "string" } }),

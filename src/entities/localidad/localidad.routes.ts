@@ -9,8 +9,8 @@ const router = Router();
 // tienen el prefijo api/localidad ej api/localidad/id
 
 //READ
-router.get("/",verifyRoles("CLIENTE","EMPLEADO"), localidadController.getAll);
-router.get("/:id",verifyRoles("CLIENTE","EMPLEADO"), localidadController.getById);
+router.get("/",verifyRoles("CLIENTE","EMPLEADO","ADMIN"), localidadController.getAll);
+router.get("/:id",verifyRoles("CLIENTE","EMPLEADO","ADMIN"), localidadController.getById);
 
 //CREATE
 router.post("/",verifyRoles("ADMIN","EMPLEADO"), localidadController.create);

@@ -7,7 +7,7 @@ const router = Router();
 
 router.get("/",verifyRoles("EMPLEADO","ADMIN"), LicenciaController.getAll);
 router.get("/:id",verifyRoles("ADMIN","EMPLEADO"), LicenciaController.getById);
-router.post("/",verifyRoles("EMPLEADO"), LicenciaController.create);
-router.patch("/:id", verifyRoles("EMPLEADO"),LicenciaController.update);
+router.post("/",verifyRoles("EMPLEADO","ADMIN"), LicenciaController.create);
+router.patch("/:id", verifyRoles("EMPLEADO","ADMIN"),LicenciaController.update);
 router.delete("/:id",verifyRoles("ADMIN"),LicenciaController.delete);
 export default router;

@@ -41,6 +41,9 @@ async function asegurarAdmin(idRol: number, idLocalidad: number) {
             "Falta SEED_ADMIN_PASSWORD en .env para crear el ADMIN inicial"
         );
     }
+    if (contraseña.length < 8) {
+        throw new Error("SEED_ADMIN_PASSWORD debe tener al menos 8 caracteres");
+    }
 
     return await prisma.personas.create({
         data: {

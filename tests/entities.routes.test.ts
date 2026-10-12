@@ -116,6 +116,47 @@ describe("rutas protegidas de todas las entidades", () => {
     });
 });
 
+describe("roles de localidades, tiposKartings y licencias", () => {
+    it.each([
+        // el ADMIN da de alta personas y necesita listar las localidades
+        ["/api/localidades", "ADMIN"],
+        ["/api/localidades/1", "ADMIN"],
+        // el CLIENTE tiene que ver el precioHora antes de reservar
+        ["/api/tiposKartings", "CLIENTE"],
+        ["/api/tiposKartings/1", "CLIENTE"],
+    ] as const)("permite GET %s a un %s", async (path, role) => {
+        const response = await request(app)
+            .get(path)
+            .set("Authorization", `Bearer ${token(role)}`);
+
+        expect(response.status).toBe(200);
+    });
+
+    it("un ADMIN emite y corrige una licencia", async () => {
+        const alta = await request(app)
+            .post("/api/licencias")
+            .set("Authorization", `Bearer ${token("ADMIN")}`)
+            .send({});
+        expect(alta.status).toBe(201);
+
+        const cambio = await request(app)
+            .patch("/api/licencias/1")
+            .set("Authorization", `Bearer ${token("ADMIN")}`)
+            .send({ actualizado: true });
+        expect(cambio.status).toBe(200);
+    });
+
+    it("un CLIENTE sigue sin poder emitir licencias", async () => {
+        const response = await request(app)
+            .post("/api/licencias")
+            .set("Authorization", `Bearer ${token("CLIENTE")}`)
+            .send({});
+
+        expect(response.status).toBe(403);
+        expect((licenciaService.create as unknown as jest.Mock)).not.toHaveBeenCalled();
+    });
+});
+
 describe("CRUD de las entidades", () => {
     const entities = [
         ["/api/kartings", "/api/kartings/1", "EMPLEADO", "EMPLEADO", "EMPLEADO", kartingService, "create"],
