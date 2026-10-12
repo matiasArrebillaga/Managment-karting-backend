@@ -48,7 +48,8 @@ catch (error) {
                 descripcion: req.body.descripcion,
                 cupoMaximo: Number(req.body.cupoMaximo),
                 fechaInicio: req.body.fechaInicio,
-                fechaFin: req.body.fechaFin
+                fechaFin: req.body.fechaFin,
+                TiposLicencias_idTipoLicencia: Number(req.body.TiposLicencias_idTipoLicencia)
             };
 
             const nuevoTorneo = await TorneosService.create(data);

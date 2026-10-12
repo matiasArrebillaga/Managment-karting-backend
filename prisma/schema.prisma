@@ -173,15 +173,21 @@ model tiposlicencias {
   nivel          Int
   licencias      licencias[]
   tiposkarting   tiposkarting[]
+  torneos        torneos[]
 }
 
 model torneos {
-  idTorneos        Int                @id @default(autoincrement())
-  nombre           String             @db.VarChar(45)
-  descripcion      String             @db.VarChar(45)
-  cupoMaximo       Int
-  fechaInicio      DateTime           @db.Date
-  fechaFin         DateTime           @db.Date
-  carreras         carreras[]
-  personas_torneos personas_torneos[]
+  idTorneos                     Int                @id @default(autoincrement())
+  nombre                        String             @db.VarChar(45)
+  descripcion                   String             @db.VarChar(45)
+  cupoMaximo                    Int
+  fechaInicio                   DateTime           @db.Date
+  fechaFin                      DateTime           @db.Date
+  // los karts de sus carreras tienen que ser de esta licencia
+  TiposLicencias_idTipoLicencia Int                @default(1)
+  tiposlicencias                tiposlicencias     @relation(fields: [TiposLicencias_idTipoLicencia], references: [idTipoLicencia], onDelete: NoAction, onUpdate: NoAction, map: "fk_Torneos_TiposLicencias")
+  carreras                      carreras[]
+  personas_torneos              personas_torneos[]
+
+  @@index([TiposLicencias_idTipoLicencia], map: "fk_Torneos_TiposLicencias_idx")
 }

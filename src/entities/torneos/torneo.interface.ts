@@ -5,6 +5,7 @@ export interface ITorneos {
     cupoMaximo: number;
     fechaInicio: Date;
     fechaFin: Date;
+    TiposLicencias_idTipoLicencia: number;
 }
 
 // las fechas pueden llegar como string desde el body, el service las convierte
