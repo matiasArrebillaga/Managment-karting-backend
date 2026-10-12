@@ -2,7 +2,7 @@ import { Prisma } from "../generated/prisma/client";
 
 type Excluir = {
     idReserva?: number; // reserva en edicion
-    // carrera en edicion: kart y fecha ya van en el filtro, con esto queda su clave completa
+    // carrera en edicion: la fecha ya va en el filtro, con esto queda su clave completa
     carrera?: { Torneos_idTorneos: number; Circuitos_idCircuitos: number };
 };
 
@@ -25,14 +25,20 @@ export async function franjaOcupada(
             },
             select
         }),
-        db.carreras.findMany({
+        // una fila por kart de cada carrera, asi el cupo del circuito cuenta todos sus karts
+        db.carreras_kartings.findMany({
             where: {
-                fechaCarrera: fecha,
-                ...solape,
-                ...(excluir.carrera === undefined ? {} : { NOT: excluir.carrera })
+                carreras: {
+                    fechaCarrera: fecha,
+                    ...solape,
+                    ...(excluir.carrera === undefined ? {} : { NOT: excluir.carrera })
+                }
             },
-            select
+            select: { Kartings_idKartings: true, Carrera_Circuitos_idCircuitos: true }
         })
     ]);
-    return [...reservas, ...carreras];
+    return [
+        ...reservas,
+        ...carreras.map(c => ({ Kartings_idKartings: c.Kartings_idKartings, Circuitos_idCircuitos: c.Carrera_Circuitos_idCircuitos }))
+    ];
 }

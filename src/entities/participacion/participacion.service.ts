@@ -21,7 +21,7 @@ class ParticipacionesService {
     private validarClaves(...ids: number[]) { ids.forEach(id => this.validarId(id)); }
 
     private validarClavesCarrera(claves: ClavesCarrera) {
-        this.validarClaves(claves.Carrera_Kartings_idKartings, claves.Carrera_Torneos_idTorneos, claves.Carrera_Circuitos_idCircuitos);
+        this.validarClaves(claves.Carrera_Torneos_idTorneos, claves.Carrera_Circuitos_idCircuitos);
         this.validarFecha(claves.Carrera_fecha);
     }
 
@@ -50,8 +50,7 @@ class ParticipacionesService {
     private async obtenerCarrera(claves: ClavesCarrera) {
         const carrera = await prisma.carreras.findUnique({
             where: {
-                Kartings_idKartings_Torneos_idTorneos_Circuitos_idCircuitos_fechaCarrera: {
-                    Kartings_idKartings: claves.Carrera_Kartings_idKartings,
+                Torneos_idTorneos_Circuitos_idCircuitos_fechaCarrera: {
                     Torneos_idTorneos: claves.Carrera_Torneos_idTorneos,
                     Circuitos_idCircuitos: claves.Carrera_Circuitos_idCircuitos,
                     fechaCarrera: claves.Carrera_fecha
@@ -90,7 +89,6 @@ class ParticipacionesService {
 
     private aFila(claves: ClavesCarrera, resultado: ResultadoCarrera) {
         return {
-            Carrera_Kartings_idKartings: claves.Carrera_Kartings_idKartings,
             Carrera_Torneos_idTorneos: claves.Carrera_Torneos_idTorneos,
             Carrera_Circuitos_idCircuitos: claves.Carrera_Circuitos_idCircuitos,
             Carrera_fecha: claves.Carrera_fecha,
@@ -102,17 +100,15 @@ class ParticipacionesService {
     }
 
     private whereClave(
-        Carrera_Kartings_idKartings: number,
         Carrera_Torneos_idTorneos: number,
         Carrera_Circuitos_idCircuitos: number,
         Carrera_fecha: Date,
         Personas_idPersona: number
     ) {
-        this.validarClaves(Carrera_Kartings_idKartings, Carrera_Torneos_idTorneos, Carrera_Circuitos_idCircuitos, Personas_idPersona);
+        this.validarClaves(Carrera_Torneos_idTorneos, Carrera_Circuitos_idCircuitos, Personas_idPersona);
         this.validarFecha(Carrera_fecha);
         return {
-            Carrera_Kartings_idKartings_Carrera_Torneos_idTorneos_Carrera_Circuitos_idCircuitos_Carrera_fecha_Personas_idPersona: {
-                Carrera_Kartings_idKartings,
+            Carrera_Torneos_idTorneos_Carrera_Circuitos_idCircuitos_Carrera_fecha_Personas_idPersona: {
                 Carrera_Torneos_idTorneos,
                 Carrera_Circuitos_idCircuitos,
                 Carrera_fecha,
@@ -128,14 +124,13 @@ class ParticipacionesService {
 
     // Obtener una participación por su clave primaria compuesta
     async getById(
-        Carrera_Kartings_idKartings: number,
         Carrera_Torneos_idTorneos: number,
         Carrera_Circuitos_idCircuitos: number,
         Carrera_fecha: Date,
         Personas_idPersona: number
     ) {
         return await prisma.participaciones.findUnique({
-            where: this.whereClave(Carrera_Kartings_idKartings, Carrera_Torneos_idTorneos, Carrera_Circuitos_idCircuitos, Carrera_fecha, Personas_idPersona)
+            where: this.whereClave(Carrera_Torneos_idTorneos, Carrera_Circuitos_idCircuitos, Carrera_fecha, Personas_idPersona)
         });
     }
 
@@ -170,7 +165,6 @@ class ParticipacionesService {
         await this.validarInscriptos(claves.Carrera_Torneos_idTorneos, ids);
 
         const whereCarrera = {
-            Carrera_Kartings_idKartings: claves.Carrera_Kartings_idKartings,
             Carrera_Torneos_idTorneos: claves.Carrera_Torneos_idTorneos,
             Carrera_Circuitos_idCircuitos: claves.Carrera_Circuitos_idCircuitos,
             Carrera_fecha: claves.Carrera_fecha
@@ -188,14 +182,13 @@ class ParticipacionesService {
     // Actualizar una participación: se valida solo lo que viene y la posicion arrastra los puntos.
     // ponytail: intercambiar dos posiciones choca con el unique; hoy es DELETE + POST. Agregar swap si molesta.
     async update(
-        Carrera_Kartings_idKartings: number,
         Carrera_Torneos_idTorneos: number,
         Carrera_Circuitos_idCircuitos: number,
         Carrera_fecha: Date,
         Personas_idPersona: number,
         data: UpdateParticipacion
     ) {
-        const where = this.whereClave(Carrera_Kartings_idKartings, Carrera_Torneos_idTorneos, Carrera_Circuitos_idCircuitos, Carrera_fecha, Personas_idPersona);
+        const where = this.whereClave(Carrera_Torneos_idTorneos, Carrera_Circuitos_idCircuitos, Carrera_fecha, Personas_idPersona);
         if (data.tiempo !== undefined) this.validarTiempo(data.tiempo);
         if (data.posicion_final !== undefined) this.validarPosicion(data.posicion_final);
 
@@ -213,14 +206,13 @@ class ParticipacionesService {
 
     // Eliminar una participación
     async delete(
-        Carrera_Kartings_idKartings: number,
         Carrera_Torneos_idTorneos: number,
         Carrera_Circuitos_idCircuitos: number,
         Carrera_fecha: Date,
         Personas_idPersona: number
     ) {
         return await prisma.participaciones.delete({
-            where: this.whereClave(Carrera_Kartings_idKartings, Carrera_Torneos_idTorneos, Carrera_Circuitos_idCircuitos, Carrera_fecha, Personas_idPersona)
+            where: this.whereClave(Carrera_Torneos_idTorneos, Carrera_Circuitos_idCircuitos, Carrera_fecha, Personas_idPersona)
         });
     }
 
@@ -230,7 +222,6 @@ class ParticipacionesService {
         await this.obtenerCarrera(claves);
         const filas = await prisma.participaciones.findMany({
             where: {
-                Carrera_Kartings_idKartings: claves.Carrera_Kartings_idKartings,
                 Carrera_Torneos_idTorneos: claves.Carrera_Torneos_idTorneos,
                 Carrera_Circuitos_idCircuitos: claves.Carrera_Circuitos_idCircuitos,
                 Carrera_fecha: claves.Carrera_fecha
