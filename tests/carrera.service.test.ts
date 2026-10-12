@@ -16,16 +16,23 @@ const FECHA = new Date(Date.UTC(2099, 5, 1));
 
 // karts que existen en la base, por id
 let kartsEnBase: Record<number, string>;
+// licencia del tipo de cada kart; el 7 es de otra licencia que el torneo
+const LICENCIA_DEL_KART: Record<number, number> = { 4: 1, 5: 1, 6: 1, 7: 2 };
 
 beforeEach(() => {
-    kartsEnBase = { 4: "Disponible", 5: "Disponible", 6: "Mantenimiento" };
+    kartsEnBase = { 4: "Disponible", 5: "Disponible", 6: "Mantenimiento", 7: "Disponible" };
     db.kartings = {
         findMany: jest.fn(async ({ where }: any) => where.idKartings.in
             .filter((id: number) => kartsEnBase[id] !== undefined)
-            .map((id: number) => ({ idKartings: id, estado: kartsEnBase[id] })))
+            .map((id: number) => ({
+                idKartings: id,
+                estado: kartsEnBase[id],
+                tiposkarting: { TiposLicencias_idTipoLicenciaMinima: LICENCIA_DEL_KART[id] }
+            })))
     };
     db.torneos = { findUnique: jest.fn(async () => ({
-        idTorneos: 1, cupoMaximo: 8, fechaInicio: new Date(Date.UTC(2099, 0, 1)), fechaFin: new Date(Date.UTC(2099, 11, 31))
+        idTorneos: 1, cupoMaximo: 2, TiposLicencias_idTipoLicencia: 1,
+        fechaInicio: new Date(Date.UTC(2099, 0, 1)), fechaFin: new Date(Date.UTC(2099, 11, 31))
     })) };
     db.circuitos = { findUnique: jest.fn(async () => ({ idCircuitos: 1, maximo: 8 })) };
     db.reservas = { findMany: jest.fn(async () => [] as unknown[]) };
@@ -102,6 +109,18 @@ describe("alta de una carrera con varios kartings", () => {
         await expect(carreraService.crearCarrera(carreraValida()))
             .rejects.toThrow(/no tiene lugar/);
     });
+
+    it("rechaza si no hay kartings para todo el cupo del torneo", async () => {
+        await expect(carreraService.crearCarrera(carreraValida([4])))
+            .rejects.toThrow(/al menos 2 kartings/);
+        expect(db.carreras.create).not.toHaveBeenCalled();
+    });
+
+    it("rechaza kartings de otra licencia que la del torneo", async () => {
+        await expect(carreraService.crearCarrera(carreraValida([4, 7])))
+            .rejects.toThrow(/kartings 7 no son del tipo de licencia del torneo/);
+        expect(db.carreras.create).not.toHaveBeenCalled();
+    });
 });
 
 describe("update de una carrera", () => {
@@ -126,6 +145,14 @@ describe("update de una carrera", () => {
     it("exige que los kartings nuevos esten disponibles", async () => {
         await expect(carreraService.update(FECHA, 1, 1, { kartings: [6] }))
             .rejects.toThrow(/no estan disponibles/);
+        expect(db.carreras.update).not.toHaveBeenCalled();
+    });
+
+    it("al cambiar los kartings exige cupo y licencia del torneo", async () => {
+        await expect(carreraService.update(FECHA, 1, 1, { kartings: [4] }))
+            .rejects.toThrow(/al menos 2 kartings/);
+        await expect(carreraService.update(FECHA, 1, 1, { kartings: [4, 7] }))
+            .rejects.toThrow(/kartings 7 no son del tipo de licencia/);
         expect(db.carreras.update).not.toHaveBeenCalled();
     });
 

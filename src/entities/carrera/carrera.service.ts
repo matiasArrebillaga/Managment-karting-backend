@@ -74,6 +74,27 @@ class CarrerasService {
         }
     }
 
+    // Un kart por piloto para todo el cupo, y todos de la licencia que pide el torneo
+    private async validarKartingsDelTorneo(
+        db: Prisma.TransactionClient,
+        kartings: number[],
+        torneo: { cupoMaximo: number; TiposLicencias_idTipoLicencia: number }
+    ) {
+        if (kartings.length < torneo.cupoMaximo) {
+            throw new Error(`La carrera necesita al menos ${torneo.cupoMaximo} kartings (cupo máximo del torneo); se asignaron ${kartings.length}`);
+        }
+        const conLicencia = await db.kartings.findMany({
+            where: { idKartings: { in: kartings } },
+            include: { tiposkarting: true }
+        });
+        const deOtraLicencia = conLicencia
+            .filter(k => k.tiposkarting.TiposLicencias_idTipoLicenciaMinima !== torneo.TiposLicencias_idTipoLicencia)
+            .map(k => k.idKartings);
+        if (deOtraLicencia.length > 0) {
+            throw new Error(`Los kartings ${deOtraLicencia.join(", ")} no son del tipo de licencia del torneo`);
+        }
+    }
+
     // Valida que los karts existan, esten libres en la franja (carreras y reservas) y entren
     // en el circuito. Bloquea karts y circuito igual que reserva.service para que dos altas
     // simultaneas no se pisen. estado solo se exige a karts nuevos, como en reservas.
@@ -159,6 +180,12 @@ class CarrerasService {
                     { exigirDisponibles: nuevosKartings !== undefined, excluir: { Torneos_idTorneos, Circuitos_idCircuitos } }
                 );
             }
+            // solo cuando cambian los karts: cambiar el horario no cambia cuantos ni cuales son
+            if (nuevosKartings !== undefined) {
+                const torneo = await db.torneos.findUnique({ where: { idTorneos: Torneos_idTorneos } });
+                if (!torneo) throw new Error("El torneo indicado no existe");
+                await this.validarKartingsDelTorneo(db, nuevosKartings, torneo);
+            }
 
             const actualizada = await db.carreras.update({
                 where,
@@ -199,6 +226,7 @@ class CarrerasService {
             );
             this.validarFechaDentroDelTorneo(fechaCarrera, torneo);
             await this.validarAsignacion(db, kartings, circuito, fechaCarrera, horaInicio, horaFin, { exigirDisponibles: true });
+            await this.validarKartingsDelTorneo(db, kartings, torneo);
 
             const carrera = await db.carreras.create({
                 data: {

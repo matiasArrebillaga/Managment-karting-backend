@@ -30,6 +30,11 @@ class TorneosService {
             throw new Error("El cupo máximo debe ser un número entero mayor que cero");
         }
 
+        if (data.TiposLicencias_idTipoLicencia !== undefined &&
+            !Number.isInteger(data.TiposLicencias_idTipoLicencia)) {
+            throw new Error("El tipo de licencia debe ser un identificador entero");
+        }
+
         if (data.fechaInicio !== undefined && isNaN(data.fechaInicio.getTime())) {
             throw new Error("La fecha de inicio no es válida");
         }
@@ -42,6 +47,11 @@ class TorneosService {
             data.fechaInicio >= data.fechaFin) {
             throw new Error("La fecha de inicio debe ser anterior a la fecha de fin");
         }
+    }
+
+    private async validarLicenciaExiste(idTipoLicencia: number) {
+        const licencia = await prisma.tiposlicencias.findUnique({ where: { idTipoLicencia } });
+        if (!licencia) throw new Error("El tipo de licencia ingresado no existe");
     }
 
     // calcula el estado con la fecha de hoy
@@ -82,6 +92,7 @@ class TorneosService {
     async create(data: CreateTorneos) {
         const datos = {...data, fechaInicio: new Date(data.fechaInicio), fechaFin: new Date(data.fechaFin)};
         this.validarDatos(datos);
+        await this.validarLicenciaExiste(datos.TiposLicencias_idTipoLicencia);
         return await prisma.torneos.create({
             data: {...datos, nombre: datos.nombre.trim(), descripcion: datos.descripcion.trim()}
         });
@@ -101,6 +112,14 @@ class TorneosService {
         const inicio = datos.fechaInicio ?? actual.fechaInicio;
         const fin = datos.fechaFin ?? actual.fechaFin;
         if (inicio >= fin) throw new Error("La fecha de inicio debe ser anterior a la fecha de fin");
+        // cambiar la licencia dejaria a las carreras ya armadas con karts de otra licencia
+        if (datos.TiposLicencias_idTipoLicencia !== undefined &&
+            datos.TiposLicencias_idTipoLicencia !== actual.TiposLicencias_idTipoLicencia) {
+            await this.validarLicenciaExiste(datos.TiposLicencias_idTipoLicencia);
+            if (await prisma.carreras.count({ where: { Torneos_idTorneos: idTorneo } }) > 0) {
+                throw new Error("No se puede cambiar el tipo de licencia: el torneo ya tiene carreras");
+            }
+        }
         return await prisma.torneos.update({
             where: { idTorneos: idTorneo },
             data: {

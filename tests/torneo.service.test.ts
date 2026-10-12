@@ -16,15 +16,53 @@ const TORNEOS = [
     { idTorneos: 1, fechaInicio: enDias(-30), fechaFin: enDias(-1) },
     { idTorneos: 2, fechaInicio: enDias(-1), fechaFin: hoy },      // termina hoy: sigue en curso
     { idTorneos: 3, fechaInicio: hoy, fechaFin: enDias(10) },     // empieza hoy: ya en curso
-    { idTorneos: 4, fechaInicio: enDias(1), fechaFin: enDias(30) },
+    { idTorneos: 4, fechaInicio: enDias(1), fechaFin: enDias(30), TiposLicencias_idTipoLicencia: 1 },
 ];
 
 beforeEach(() => {
     db.torneos = {
         findMany: jest.fn(async () => TORNEOS),
         findUnique: jest.fn(async () => TORNEOS[3]),
+        create: jest.fn(async (args: any) => args.data),
         update: jest.fn(async (args: any) => args.data),
     };
+    // existen las licencias 1 y 2
+    db.tiposlicencias = {
+        findUnique: jest.fn(async ({ where }: any) => [1, 2].includes(where.idTipoLicencia) ? { idTipoLicencia: where.idTipoLicencia } : null),
+    };
+    db.carreras = { count: jest.fn(async () => 0) };
+});
+
+const torneoNuevo = (licencia: number) => ({
+    nombre: "Copa", descripcion: "Abierta", cupoMaximo: 8,
+    fechaInicio: "2099-11-01", fechaFin: "2099-11-30", TiposLicencias_idTipoLicencia: licencia
+});
+
+describe("tipo de licencia del torneo", () => {
+    it("crea el torneo con su licencia", async () => {
+        await torneoService.create(torneoNuevo(2));
+
+        expect(db.torneos.create.mock.calls[0][0].data.TiposLicencias_idTipoLicencia).toBe(2);
+    });
+
+    it("rechaza una licencia que no existe", async () => {
+        await expect(torneoService.create(torneoNuevo(99))).rejects.toThrow("El tipo de licencia ingresado no existe");
+        expect(db.torneos.create).not.toHaveBeenCalled();
+    });
+
+    it("permite cambiar la licencia si el torneo no tiene carreras", async () => {
+        await torneoService.update(4, { TiposLicencias_idTipoLicencia: 2 });
+
+        expect(db.torneos.update.mock.calls[0][0].data.TiposLicencias_idTipoLicencia).toBe(2);
+    });
+
+    it("no permite cambiar la licencia si el torneo ya tiene carreras", async () => {
+        db.carreras.count = jest.fn(async () => 3);
+
+        await expect(torneoService.update(4, { TiposLicencias_idTipoLicencia: 2 }))
+            .rejects.toThrow("el torneo ya tiene carreras");
+        expect(db.torneos.update).not.toHaveBeenCalled();
+    });
 });
 
 describe("estado del torneo", () => {
