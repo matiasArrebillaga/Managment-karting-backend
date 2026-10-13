@@ -1,12 +1,21 @@
 import LicenciaService from "./licencia.service";
 import {Request , Response, NextFunction} from "express";
 import {ILicencia} from "./licencia.interface"
+import { AuthRequest } from "../../middleware/auth.middleware";
 
 
 class LicenciaController{
     async getAll(req: Request, res: Response, next: NextFunction){
         try{
             const licencias  = await LicenciaService.getAll();
+            res.json(licencias);
+        }catch (error){
+            next(error);
+        }
+    }
+    async getMias(req: AuthRequest, res: Response, next: NextFunction){ // las licencias del usuario del token
+        try{
+            const licencias = await LicenciaService.getPorPersona(Number(req.user?.idPersona));
             res.json(licencias);
         }catch (error){
             next(error);

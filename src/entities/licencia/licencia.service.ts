@@ -21,6 +21,15 @@ class LicenciaService {
         return await prisma.licencias.findMany();
     }
 
+    async getPorPersona(Personas_idPersona: number) {
+        this.validarId(Personas_idPersona);
+        return await prisma.licencias.findMany({
+            where: { Personas_idPersona },
+            include: { tiposlicencias: true },
+            orderBy: { fechaVencimiento: "desc" }
+        });
+    }
+
     async getById(idLicencias: number) {
         this.validarId(idLicencias);
         return await prisma.licencias.findUnique({
