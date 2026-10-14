@@ -8,7 +8,7 @@ import { CreatePersonaTorneo } from "./inscripciones.interface";
 class PersonasTorneosService {
     // valida que el id sea entero como en los otros service importantes
     private validarId(id: number) {
-        if (!Number.isInteger(id)) throw new Error("El identificador debe ser un número entero");
+        if (!Number.isInteger(id)) throw new AppError("El identificador debe ser un número entero");
     }
 
     private aEntero(valor: unknown): number {
@@ -37,7 +37,7 @@ class PersonasTorneosService {
         if (!persona) throw new AppError("La persona ingresada no existe", 404);
 
         if (torneo.fechaInicio < hoyUTC()) { // que el torneo no haya empezado
-            throw new Error("El torneo ya comenzó: no se admiten inscripciones");
+            throw new AppError("El torneo ya comenzó: no se admiten inscripciones");
         }
 
         const cantidadInscripciones = await db.personas_torneos.count({ // que haya cupo
@@ -45,7 +45,7 @@ class PersonasTorneosService {
         });
 
         if (cantidadInscripciones >= torneo.cupoMaximo) {
-            throw new Error("El torneo alcanzó el cupo máximo de inscripciones");
+            throw new AppError("El torneo alcanzó el cupo máximo de inscripciones");
         }
 
         const solapada = await db.personas_torneos.findFirst({ 
@@ -60,7 +60,7 @@ class PersonasTorneosService {
         });
 
         if (solapada) {
-            throw new Error(
+            throw new AppError(
                 `La persona ya está inscripta en ${solapada.torneos.nombre}, que se superpone con este torneo`
             );
         }

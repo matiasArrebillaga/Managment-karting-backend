@@ -13,10 +13,10 @@ const PUNTOS_POR_POSICION = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1];
 
 class ParticipacionesService {
     private validarId(id: number) {
-        if (!Number.isInteger(id)) throw new Error("El identificador debe ser un número entero");
+        if (!Number.isInteger(id)) throw new AppError("El identificador debe ser un número entero");
     }
     private validarFecha(fecha: Date) {
-        if (!(fecha instanceof Date) || Number.isNaN(fecha.getTime())) throw new Error("La fecha de carrera no es válida");
+        if (!(fecha instanceof Date) || Number.isNaN(fecha.getTime())) throw new AppError("La fecha de carrera no es válida");
     }
     private validarClaves(...ids: number[]) { ids.forEach(id => this.validarId(id)); }
 
@@ -31,13 +31,13 @@ class ParticipacionesService {
 
     private validarPosicion(posicion: number) {
         if (!Number.isInteger(posicion) || posicion < 1) {
-            throw new Error("La posición final debe ser un número entero mayor o igual a 1");
+            throw new AppError("La posición final debe ser un número entero mayor o igual a 1");
         }
     }
 
     private validarTiempo(tiempo: string) {
         if (typeof tiempo !== "string" || !/^\d{2}:[0-5]\d:[0-5]\d$/.test(tiempo.trim())) {
-            throw new Error("El tiempo debe tener formato HH:MM:SS");
+            throw new AppError("El tiempo debe tener formato HH:MM:SS");
         }
     }
 
@@ -69,7 +69,7 @@ class ParticipacionesService {
         const h = carrera.horaFin;
         const fin = new Date(f.getUTCFullYear(), f.getUTCMonth(), f.getUTCDate(), h.getUTCHours(), h.getUTCMinutes());
         if (fin > new Date()) {
-            throw new Error("No se puede registrar el resultado de una carrera que aun no paso");
+            throw new AppError("No se puede registrar el resultado de una carrera que aun no paso");
         }
         return carrera;
     }
@@ -83,7 +83,7 @@ class ParticipacionesService {
         const encontrados = new Set(inscriptos.map((i: { Personas_idPersona: number }) => i.Personas_idPersona));
         const faltantes = idsPersonas.filter(id => !encontrados.has(id));
         if (faltantes.length > 0) {
-            throw new Error(`Las personas ${faltantes.join(", ")} no están inscriptas en el torneo de esa carrera`);
+            throw new AppError(`Las personas ${faltantes.join(", ")} no están inscriptas en el torneo de esa carrera`);
         }
     }
 
@@ -148,17 +148,17 @@ class ParticipacionesService {
     async registrarResultadosCarrera(claves: ClavesCarrera, resultados: ResultadoCarrera[]) {
         this.validarClavesCarrera(claves);
         if (!Array.isArray(resultados) || resultados.length === 0) {
-            throw new Error("Hay que cargar al menos un resultado");
+            throw new AppError("Hay que cargar al menos un resultado");
         }
         resultados.forEach(r => this.validarResultado(r));
 
         const ids = resultados.map(r => r.Personas_idPersona);
         if (new Set(ids).size !== ids.length) {
-            throw new Error("Una persona aparece más de una vez en la clasificación");
+            throw new AppError("Una persona aparece más de una vez en la clasificación");
         }
         const posiciones = resultados.map(r => r.posicion_final).sort((a, b) => a - b);
         if (!posiciones.every((p, i) => p === i + 1)) {
-            throw new Error(`Las posiciones deben ser exactamente de 1 a ${resultados.length}, sin repetir ni saltear`);
+            throw new AppError(`Las posiciones deben ser exactamente de 1 a ${resultados.length}, sin repetir ni saltear`);
         }
 
         await this.obtenerCarreraFinalizada(claves);

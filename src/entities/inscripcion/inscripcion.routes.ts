@@ -1,4 +1,5 @@
 
+import { requireFields } from "../../middleware/error.middleware";
 import { Router } from "express";
 import PersonasTorneosController from "./inscripcion.controller";
 import { verifyRoles } from "../../middleware/auth.middleware";
@@ -28,6 +29,7 @@ personasTorneos.get(
 personasTorneos.post(
     "/",
     verifyRoles("CLIENTE","EMPLEADO","ADMIN"),
+    requireFields("Torneos_idTorneos"),
     PersonasTorneosController.create
 );
 

@@ -44,6 +44,7 @@ const paths: Record<string, object> = {
         get: {
             tags: ["Sistema"],
             summary: "Verificar disponibilidad de la API",
+            security: [],
             responses: {
                 "200": {
                     description: "API disponible",
@@ -60,6 +61,7 @@ const paths: Record<string, object> = {
         post: {
             tags: ["Autenticación"],
             summary: "Registrar una persona",
+            security: [],
             requestBody: jsonRequest("RegisterRequest"),
             responses: {
                 "201": {
@@ -85,6 +87,7 @@ const paths: Record<string, object> = {
         post: {
             tags: ["Autenticación"],
             summary: "Iniciar sesión",
+            security: [],
             requestBody: jsonRequest("LoginRequest"),
             responses: {
                 "200": {
@@ -511,6 +514,86 @@ paths["/api/participaciones/torneo/{idTorneo}/tabla-general"] = {
     }
 };
 
+paths["/api/auth/localidades"] = {
+    get: {
+        tags: ["Autenticación"],
+        summary: "Listar localidades (pública)",
+        description: "Sin token: el formulario de registro necesita las localidades antes de que la persona tenga sesión.",
+        security: [],
+        responses: {
+            "200": {
+                description: "Localidades obtenidas correctamente",
+                content: { "application/json": { schema: { type: "array", items: { $ref: "#/components/schemas/Localidad" } } } }
+            },
+            "500": standardResponses("Localidad")["500"]
+        }
+    }
+};
+
+paths["/api/personas/empleado"] = {
+    post: {
+        tags: ["Personas"],
+        summary: "Crear un empleado",
+        description: "ADMIN. Igual que crear una persona, pero con el rol EMPLEADO ya asignado.",
+        requestBody: jsonRequest("PersonaRequest"),
+        responses: {
+            "201": { description: "Empleado creado correctamente", content: { "application/json": { schema: { $ref: "#/components/schemas/Persona" } } } },
+            "400": { description: "Datos inválidos", content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } } },
+            "500": standardResponses("Persona")["500"]
+        }
+    }
+};
+
+paths["/api/personas/{id}/rol"] = {
+    parameters: [idParameter("id", "Identificador de la persona")],
+    post: {
+        tags: ["Personas"],
+        summary: "Asignar un rol a una persona",
+        description: "ADMIN. El rol se indica por nombre (CLIENTE, EMPLEADO o ADMIN).",
+        requestBody: jsonRequest("AsignarRolRequest"),
+        responses: {
+            "200": { description: "Rol asignado correctamente", content: { "application/json": { schema: { $ref: "#/components/schemas/Persona" } } } },
+            "400": { description: "El rol no existe o falta nombreRol", content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } } },
+            "404": standardResponses("Persona")["404"],
+            "500": standardResponses("Persona")["500"]
+        }
+    }
+};
+
+paths["/api/reservas/fechas"] = {
+    get: {
+        tags: ["Reservas"],
+        summary: "Obtener las reservas de un rango de fechas",
+        description: "EMPLEADO/ADMIN. Devuelve las reservas completas cuya fecha cae entre fechaInicio y fechaFin.",
+        parameters: [
+            { name: "fechaInicio", in: "query", required: true, schema: { type: "string", format: "date" } },
+            { name: "fechaFin", in: "query", required: true, schema: { type: "string", format: "date" } }
+        ],
+        responses: {
+            "200": {
+                description: "Reservas del rango obtenidas correctamente",
+                content: { "application/json": { schema: { type: "array", items: { $ref: "#/components/schemas/Reserva" } } } }
+            },
+            "500": standardResponses("Reserva")["500"]
+        }
+    }
+};
+
+paths["/api/licencias/mias"] = {
+    get: {
+        tags: ["Licencias"],
+        summary: "Obtener las licencias de la persona autenticada",
+        description: "Devuelve solo las licencias del usuario del token. Es la vía para que un CLIENTE vea las suyas.",
+        responses: {
+            "200": {
+                description: "Licencias propias obtenidas correctamente",
+                content: { "application/json": { schema: { type: "array", items: { $ref: "#/components/schemas/Licencia" } } } }
+            },
+            "500": standardResponses("Licencia")["500"]
+        }
+    }
+};
+
 const integerId = { type: "integer", format: "int32" };
 const date = { type: "string", format: "date" };
 const dateTime = { type: "string", format: "date-time" };
@@ -550,31 +633,32 @@ const schemas = {
         estado: { type: "string" },
         fechaAdquisicion: date,
         TiposKarting_idTiposKarting: integerId
-    }),
+    }, ["categoria", "modelo", "estado", "fechaAdquisicion", "TiposKarting_idTiposKarting"]),
     Karting: objectSchema({ idKartings: integerId, categoria: { type: "string" }, modelo: { type: "string" }, estado: { type: "string" }, fechaAdquisicion: date, TiposKarting_idTiposKarting: integerId }),
-    PersonaRequest: objectSchema({ nombre: { type: "string" }, apellido: { type: "string" }, dni: { type: "string" }, fechaNacimiento: date, mail: { type: "string", format: "email" }, telefono: { type: "string" }, contraseña: { type: "string", format: "password", minLength: 8 }, Localidades_idLocalidades: integerId }),
+    PersonaRequest: objectSchema({ nombre: { type: "string" }, apellido: { type: "string" }, dni: { type: "string" }, fechaNacimiento: date, mail: { type: "string", format: "email" }, telefono: { type: "string" }, contraseña: { type: "string", format: "password", minLength: 8 }, Localidades_idLocalidades: integerId }, ["nombre", "apellido", "dni", "fechaNacimiento", "mail", "telefono", "contraseña", "Localidades_idLocalidades"]),
+    AsignarRolRequest: objectSchema({ nombreRol: { type: "string", enum: ["CLIENTE", "EMPLEADO", "ADMIN"] } }, ["nombreRol"]),
     Persona: objectSchema({ idPersona: integerId, nombre: { type: "string" }, apellido: { type: "string" }, dni: { type: "string" }, fechaNacimiento: date, mail: { type: "string", format: "email" }, telefono: { type: "string" }, Localidades_idLocalidades: integerId, idRol: integerId }),
-    LocalidadRequest: objectSchema({ nombre: { type: "string" } }),
+    LocalidadRequest: objectSchema({ nombre: { type: "string" } }, ["nombre"]),
     Localidad: objectSchema({ idLocalidades: integerId, nombre: { type: "string" } }),
-    CircuitoRequest: objectSchema({ distancia: integerId, dificultad: { type: "string" }, maximo: integerId }),
+    CircuitoRequest: objectSchema({ distancia: integerId, dificultad: { type: "string" }, maximo: integerId }, ["distancia", "dificultad", "maximo"]),
     Circuito: objectSchema({ idCircuitos: integerId, distancia: integerId, dificultad: { type: "string" }, maximo: integerId }),
-    RolRequest: objectSchema({ nombre: { type: "string" } }),
+    RolRequest: objectSchema({ nombre: { type: "string" } }, ["nombre"]),
     Rol: objectSchema({ idRol: integerId, nombre: { type: "string" } }),
-    TipoLicenciaRequest: objectSchema({ nombre: { type: "string" }, nivel: integerId }),
-    TipoLicencia: objectSchema({ idTipoLicencia: integerId, nombre: { type: "string" }, nivel: integerId }),
-    TipoKartingRequest: objectSchema({ nombre: { type: "string" }, descripcion: { type: "string" }, precioHora: { type: "number", example: 20000 }, TiposLicencias_idTipoLicenciaMinima: integerId }),
+    TipoLicenciaRequest: objectSchema({ nombre: { type: "string" }, descripcion: { type: "string" }, nivel: integerId }, ["nombre", "descripcion", "nivel"]),
+    TipoLicencia: objectSchema({ idTipoLicencia: integerId, nombre: { type: "string" }, descripcion: { type: "string" }, nivel: integerId }),
+    TipoKartingRequest: objectSchema({ nombre: { type: "string" }, descripcion: { type: "string" }, precioHora: { type: "number", example: 20000 }, TiposLicencias_idTipoLicenciaMinima: integerId }, ["nombre", "descripcion", "precioHora", "TiposLicencias_idTipoLicenciaMinima"]),
     TipoKarting: objectSchema({ idTiposKarting: integerId, nombre: { type: "string" }, descripcion: { type: "string" }, precioHora: { type: "number", example: 20000 }, TiposLicencias_idTipoLicenciaMinima: integerId }),
-    TorneoRequest: objectSchema({ nombre: { type: "string", maxLength: 45 }, descripcion: { type: "string", maxLength: 45 }, cupoMaximo: { type: "integer", minimum: 1 }, fechaInicio: date, fechaFin: date }),
+    TorneoRequest: objectSchema({ nombre: { type: "string", maxLength: 45 }, descripcion: { type: "string", maxLength: 45 }, cupoMaximo: { type: "integer", minimum: 1 }, fechaInicio: date, fechaFin: date, TiposLicencias_idTipoLicencia: integerId }, ["nombre", "descripcion", "cupoMaximo", "fechaInicio", "fechaFin", "TiposLicencias_idTipoLicencia"]),
     Torneo: objectSchema({ idTorneos: integerId, nombre: { type: "string" }, descripcion: { type: "string" }, cupoMaximo: { type: "integer" }, fechaInicio: date, fechaFin: date, TiposLicencias_idTipoLicencia: integerId, tiposlicencias: { $ref: "#/components/schemas/TipoLicencia" }, estado: { type: "string", enum: ["proximo", "en_curso", "finalizado"], readOnly: true, description: "Calculado contra el día de hoy" } }),
-    LicenciaRequest: objectSchema({ fechaEmision: date, fechaVencimiento: date, Personas_idPersona: integerId, TiposLicencias_idTipoLicencia: integerId }),
+    LicenciaRequest: objectSchema({ fechaEmision: date, fechaVencimiento: date, Personas_idPersona: integerId, TiposLicencias_idTipoLicencia: integerId }, ["fechaEmision", "fechaVencimiento", "Personas_idPersona", "TiposLicencias_idTipoLicencia"]),
     Licencia: objectSchema({ idLicencias: integerId, fechaEmision: date, fechaVencimiento: date, Personas_idPersona: integerId, TiposLicencias_idTipoLicencia: integerId }),
     // Personas_idPersona no es obligatorio: para un CLIENTE lo impone el servidor con
     // el id del token, y lo que venga en el body se descarta.
     ReservaRequest: objectSchema({ fechaReserva: date, horaInicio: hora, horaFin: hora, Personas_idPersona: integerId, Circuitos_idCircuitos: integerId, Kartings_idKartings: integerId }, ["fechaReserva", "horaInicio", "horaFin", "Circuitos_idCircuitos", "Kartings_idKartings"]),
     Reserva: objectSchema({ idReservas: integerId, fechaReserva: date, horaInicio: hora, horaFin: hora, monto: { type: "number", description: "Calculado por el servidor: precioHora del tipo de karting por la cantidad de horas" }, Personas_idPersona: integerId, Circuitos_idCircuitos: integerId, Kartings_idKartings: integerId }),
-    CarreraRequest: objectSchema({ fechaCarrera: date, horaInicio: hora, horaFin: hora, kartings: { type: "array", minItems: 1, items: integerId, description: "Ids de los karts que corren la carrera" }, Torneos_idTorneos: integerId, Circuitos_idCircuitos: integerId }),
+    CarreraRequest: objectSchema({ fechaCarrera: date, horaInicio: hora, horaFin: hora, kartings: { type: "array", minItems: 1, items: integerId, description: "Ids de los karts que corren la carrera" }, Torneos_idTorneos: integerId, Circuitos_idCircuitos: integerId }, ["fechaCarrera", "horaInicio", "horaFin", "kartings", "Torneos_idTorneos", "Circuitos_idCircuitos"]),
     Carrera: objectSchema({ fechaCarrera: date, horaInicio: hora, horaFin: hora, kartings: { type: "array", items: { $ref: "#/components/schemas/Karting" } }, Torneos_idTorneos: integerId, Circuitos_idCircuitos: integerId }),
-    ParticipacionRequest: objectSchema({ Carrera_Torneos_idTorneos: integerId, Carrera_Circuitos_idCircuitos: integerId, Carrera_fecha: date, Personas_idPersona: integerId, tiempo, posicion_final: posicion }),
+    ParticipacionRequest: objectSchema({ Carrera_Torneos_idTorneos: integerId, Carrera_Circuitos_idCircuitos: integerId, Carrera_fecha: date, Personas_idPersona: integerId, tiempo, posicion_final: posicion }, ["Carrera_Torneos_idTorneos", "Carrera_Circuitos_idCircuitos", "Carrera_fecha", "Personas_idPersona", "tiempo", "posicion_final"]),
     ResultadosCarreraRequest: objectSchema({ Carrera_Torneos_idTorneos: integerId, Carrera_Circuitos_idCircuitos: integerId, Carrera_fecha: date, resultados: { type: "array", minItems: 1, items: objectSchema({ Personas_idPersona: integerId, posicion_final: posicion, tiempo }) } }),
     Participacion: objectSchema({ Carrera_Torneos_idTorneos: integerId, Carrera_Circuitos_idCircuitos: integerId, Carrera_fecha: date, Personas_idPersona: integerId, puntos: { type: "integer", description: "Calculado por el servidor según la posición" }, tiempo, posicion_final: posicion }),
     TablaGeneralItem: objectSchema({
@@ -618,6 +702,7 @@ const options: swaggerJSDoc.Options = {
             },
             schemas
         },
+        security: [{ bearerAuth: [] }],
         paths
     },
     apis: []

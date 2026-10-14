@@ -1,32 +1,33 @@
+import { AppError } from "../../middleware/error.middleware";
 import { CreateKarting, IKarting, UpdateKarting } from "./karting.interface";
 import { prisma } from "../../config/prisma";
 
 class KartingService {
     private validarId(id: number) {
-        if (!Number.isInteger(id)) throw new Error("El identificador debe ser un número entero");
+        if (!Number.isInteger(id)) throw new AppError("El identificador debe ser un número entero");
     }
 
     private validarDatos(data: CreateKarting | UpdateKarting) {
         for (const campo of ["categoria", "modelo", "estado"] as const) {
             const valor = data[campo];
             if (valor !== undefined && (typeof valor !== "string" || valor.trim().length === 0 || valor.trim().length > 45)) {
-                throw new Error(`El campo ${campo} debe ser un texto de entre 1 y 45 caracteres`);
+                throw new AppError(`El campo ${campo} debe ser un texto de entre 1 y 45 caracteres`);
             }
         }
 
         if (data.fechaAdquisicion !== undefined) {
             const fecha = new Date(data.fechaAdquisicion);
             if (Number.isNaN(fecha.getTime())) {
-                throw new Error("La fecha de adquisición no es válida");
+                throw new AppError("La fecha de adquisición no es válida");
             }
             if (fecha > new Date()) {
-                throw new Error("La fecha de adquisición no puede ser futura");
+                throw new AppError("La fecha de adquisición no puede ser futura");
             }
         }
 
         if (data.TiposKarting_idTiposKarting !== undefined &&
             !Number.isInteger(data.TiposKarting_idTiposKarting)) {
-            throw new Error("El tipo de karting debe ser un identificador entero");
+            throw new AppError("El tipo de karting debe ser un identificador entero");
         }
     }
 
@@ -50,7 +51,7 @@ class KartingService {
         });
 
         if (!tipoKarting) {
-            throw new Error("El tipo de karting ingresado no existe");
+            throw new AppError("El tipo de karting ingresado no existe");
         }
 
         return await prisma.kartings.create({
@@ -72,7 +73,7 @@ class KartingService {
                 where: { idTiposKarting: data.TiposKarting_idTiposKarting }
             });
             if (!tipoKarting) {
-                throw new Error("El tipo de karting ingresado no existe");
+                throw new AppError("El tipo de karting ingresado no existe");
             }
         }
         return await prisma.kartings.update({

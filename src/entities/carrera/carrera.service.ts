@@ -12,7 +12,7 @@ type CarreraConKartings = Prisma.carrerasGetPayload<{ include: typeof conKarting
 
 class CarrerasService {
     private validarId(id: number) {
-        if (!Number.isInteger(id)) throw new Error("El identificador debe ser un número entero");
+        if (!Number.isInteger(id)) throw new AppError("El identificador debe ser un número entero");
     }
     private validarClaves(...ids: number[]) {
         ids.forEach(id => this.validarId(id));
@@ -37,21 +37,21 @@ class CarrerasService {
 
     private validarKartings(kartings: unknown): number[] {
         if (!Array.isArray(kartings) || kartings.length === 0) {
-            throw new Error("La carrera debe tener al menos un karting");
+            throw new AppError("La carrera debe tener al menos un karting");
         }
         kartings.forEach(id => this.validarId(id));
         if (new Set(kartings).size !== kartings.length) {
-            throw new Error("Hay kartings repetidos en la carrera");
+            throw new AppError("Hay kartings repetidos en la carrera");
         }
         return kartings;
     }
 
     private validarHorarios(horaInicio: Date, horaFin: Date) {
         if (isNaN(horaInicio.getTime()) || isNaN(horaFin.getTime())) {
-            throw new Error("Las horas de inicio y fin no son validas");
+            throw new AppError("Las horas de inicio y fin no son validas");
         }
         if (horaInicio >= horaFin) {
-            throw new Error("La hora de inicio debe ser anterior a la hora de fin");
+            throw new AppError("La hora de inicio debe ser anterior a la hora de fin");
         }
     }
 
@@ -60,17 +60,17 @@ class CarrerasService {
             db.torneos.findUnique({ where: { idTorneos: Torneos_idTorneos } }),
             db.circuitos.findUnique({ where: { idCircuitos: Circuitos_idCircuitos } })
         ]);
-        if (!torneo) throw new Error("El torneo indicado no existe");
-        if (!circuito) throw new Error("El circuito indicado no existe");
+        if (!torneo) throw new AppError("El torneo indicado no existe");
+        if (!circuito) throw new AppError("El circuito indicado no existe");
         if (circuito.maximo < torneo.cupoMaximo) {
-            throw new Error("El circuito no tiene capacidad suficiente para el cupo máximo del torneo");
+            throw new AppError("El circuito no tiene capacidad suficiente para el cupo máximo del torneo");
         }
         return { torneo, circuito };
     }
 
     private validarFechaDentroDelTorneo(fechaCarrera: Date, torneo: { fechaInicio: Date; fechaFin: Date }) {
         if (fechaCarrera < torneo.fechaInicio || fechaCarrera > torneo.fechaFin) {
-            throw new Error("La fecha de la carrera está fuera del rango del torneo");
+            throw new AppError("La fecha de la carrera está fuera del rango del torneo");
         }
     }
 
@@ -81,7 +81,7 @@ class CarrerasService {
         torneo: { cupoMaximo: number; TiposLicencias_idTipoLicencia: number }
     ) {
         if (kartings.length < torneo.cupoMaximo) {
-            throw new Error(`La carrera necesita al menos ${torneo.cupoMaximo} kartings (cupo máximo del torneo); se asignaron ${kartings.length}`);
+            throw new AppError(`La carrera necesita al menos ${torneo.cupoMaximo} kartings (cupo máximo del torneo); se asignaron ${kartings.length}`);
         }
         const conLicencia = await db.kartings.findMany({
             where: { idKartings: { in: kartings } },
@@ -91,7 +91,7 @@ class CarrerasService {
             .filter(k => k.tiposkarting.TiposLicencias_idTipoLicenciaMinima !== torneo.TiposLicencias_idTipoLicencia)
             .map(k => k.idKartings);
         if (deOtraLicencia.length > 0) {
-            throw new Error(`Los kartings ${deOtraLicencia.join(", ")} no son del tipo de licencia del torneo`);
+            throw new AppError(`Los kartings ${deOtraLicencia.join(", ")} no son del tipo de licencia del torneo`);
         }
     }
 
@@ -112,23 +112,23 @@ class CarrerasService {
 
         const encontrados = await db.kartings.findMany({ where: { idKartings: { in: kartings } } });
         const faltantes = kartings.filter(id => !encontrados.some(k => k.idKartings === id));
-        if (faltantes.length > 0) throw new Error(`Los kartings ${faltantes.join(", ")} no existen`);
+        if (faltantes.length > 0) throw new AppError(`Los kartings ${faltantes.join(", ")} no existen`);
 
         if (opciones.exigirDisponibles) {
             const noDisponibles = encontrados.filter(k => k.estado?.toLowerCase() !== "disponible");
             if (noDisponibles.length > 0) {
-                throw new Error(`Los kartings ${noDisponibles.map(k => k.idKartings).join(", ")} no estan disponibles`);
+                throw new AppError(`Los kartings ${noDisponibles.map(k => k.idKartings).join(", ")} no estan disponibles`);
             }
         }
 
         const ocupadas = await franjaOcupada(db, fechaCarrera, horaInicio, horaFin, { carrera: opciones.excluir });
         const enUso = kartings.filter(id => ocupadas.some(o => o.Kartings_idKartings === id));
         if (enUso.length > 0) {
-            throw new Error(`Los kartings ${enUso.join(", ")} ya estan asignados en ese horario`);
+            throw new AppError(`Los kartings ${enUso.join(", ")} ya estan asignados en ese horario`);
         }
         const enElCircuito = ocupadas.filter(o => o.Circuitos_idCircuitos === circuito.idCircuitos).length;
         if (enElCircuito + kartings.length > circuito.maximo) {
-            throw new Error("El circuito no tiene lugar para todos los kartings en ese horario");
+            throw new AppError("El circuito no tiene lugar para todos los kartings en ese horario");
         }
     }
 
@@ -172,7 +172,7 @@ class CarrerasService {
                 const horaFin = horas.horaFin ?? actual.horaFin;
                 this.validarHorarios(horaInicio, horaFin);
                 const circuito = await db.circuitos.findUnique({ where: { idCircuitos: Circuitos_idCircuitos } });
-                if (!circuito) throw new Error("El circuito indicado no existe");
+                if (!circuito) throw new AppError("El circuito indicado no existe");
                 // se excluye a si misma del control de solape
                 await this.validarAsignacion(
                     db, nuevosKartings ?? actual.kartings.map(k => k.Kartings_idKartings), circuito,
@@ -183,7 +183,7 @@ class CarrerasService {
             // solo cuando cambian los karts: cambiar el horario no cambia cuantos ni cuales son
             if (nuevosKartings !== undefined) {
                 const torneo = await db.torneos.findUnique({ where: { idTorneos: Torneos_idTorneos } });
-                if (!torneo) throw new Error("El torneo indicado no existe");
+                if (!torneo) throw new AppError("El torneo indicado no existe");
                 await this.validarKartingsDelTorneo(db, nuevosKartings, torneo);
             }
 

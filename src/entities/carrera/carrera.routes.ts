@@ -1,4 +1,5 @@
 
+import { requireFields } from "../../middleware/error.middleware";
 import { Router } from "express";
 import CarrerasController from "./carrera.controller";
 import { verifyRoles } from "../../middleware/auth.middleware";
@@ -14,7 +15,7 @@ carrera.get(
     CarrerasController.getById
 );
 
-carrera.post("/",verifyRoles("EMPLEADO","ADMIN"), CarrerasController.create);
+carrera.post("/",verifyRoles("EMPLEADO","ADMIN"), requireFields("fechaCarrera", "horaInicio", "horaFin", "Torneos_idTorneos", "Circuitos_idCircuitos", "kartings"), CarrerasController.create);
 
 carrera.put(
     "/:fechaCarrera/:Torneos_idTorneos/:Circuitos_idCircuitos",

@@ -1,20 +1,21 @@
+import { AppError } from "../../middleware/error.middleware";
 import { type CreateLicencia, type UpdateLicencia } from "./licencia.interface";
 import { prisma } from "../../config/prisma";
 
 class LicenciaService {
     private validarId(id: number) {
-        if (!Number.isInteger(id)) throw new Error("El identificador debe ser un número entero");
+        if (!Number.isInteger(id)) throw new AppError("El identificador debe ser un número entero");
     }
     private validarDatos(data: CreateLicencia | UpdateLicencia) {
         for (const campo of ["Personas_idPersona", "TiposLicencias_idTipoLicencia"] as const) {
-            if (data[campo] !== undefined && !Number.isInteger(data[campo])) throw new Error(`El campo ${campo} debe ser un identificador entero`);
+            if (data[campo] !== undefined && !Number.isInteger(data[campo])) throw new AppError(`El campo ${campo} debe ser un identificador entero`);
         }
         const emision = data.fechaEmision === undefined ? undefined : new Date(data.fechaEmision);
         const vencimiento = data.fechaVencimiento === undefined ? undefined : new Date(data.fechaVencimiento);
-        if (emision && Number.isNaN(emision.getTime())) throw new Error("La fecha de emisión no es válida");
-        if (vencimiento && Number.isNaN(vencimiento.getTime())) throw new Error("La fecha de vencimiento no es válida");
-        if (emision && emision > new Date()) throw new Error("La fecha de emisión no puede ser futura");
-        if (emision && vencimiento && vencimiento <= emision) throw new Error("El vencimiento debe ser posterior a la emisión");
+        if (emision && Number.isNaN(emision.getTime())) throw new AppError("La fecha de emisión no es válida");
+        if (vencimiento && Number.isNaN(vencimiento.getTime())) throw new AppError("La fecha de vencimiento no es válida");
+        if (emision && emision > new Date()) throw new AppError("La fecha de emisión no puede ser futura");
+        if (emision && vencimiento && vencimiento <= emision) throw new AppError("El vencimiento debe ser posterior a la emisión");
     }
 
     async getAll() {
@@ -49,7 +50,7 @@ class LicenciaService {
         });
 
         if (!persona) {
-            throw new Error("La persona ingresada no existe");
+            throw new AppError("La persona ingresada no existe");
         }
 
         // Validar que exista el tipo de licencia
@@ -60,7 +61,7 @@ class LicenciaService {
         });
 
         if (!tipoLicencia) {
-            throw new Error("El tipo de licencia ingresado no existe");
+            throw new AppError("El tipo de licencia ingresado no existe");
         }
 
         return await prisma.licencias.create({
@@ -74,14 +75,14 @@ class LicenciaService {
         this.validarId(idLicencias);
         this.validarDatos(data);
         const actual = await prisma.licencias.findUnique({where: {idLicencias}});
-        if (!actual) throw new Error("La licencia ingresada no existe");
+        if (!actual) throw new AppError("La licencia ingresada no existe");
         if (data.Personas_idPersona !== undefined &&
             !await prisma.personas.findUnique({where: {idPersona: data.Personas_idPersona}})) {
-            throw new Error("La persona ingresada no existe");
+            throw new AppError("La persona ingresada no existe");
         }
         if (data.TiposLicencias_idTipoLicencia !== undefined &&
             !await prisma.tiposlicencias.findUnique({where: {idTipoLicencia: data.TiposLicencias_idTipoLicencia}})) {
-            throw new Error("El tipo de licencia ingresado no existe");
+            throw new AppError("El tipo de licencia ingresado no existe");
         }
         const emision = data.fechaEmision === undefined ? actual.fechaEmision : new Date(data.fechaEmision);
         const vencimiento = data.fechaVencimiento === undefined ? actual.fechaVencimiento : new Date(data.fechaVencimiento);

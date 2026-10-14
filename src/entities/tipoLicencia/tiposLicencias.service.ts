@@ -1,20 +1,21 @@
+import { AppError } from "../../middleware/error.middleware";
 import {prisma} from "../../config/prisma"
 import { CreateTiposLicencias, ITiposLicencias, UpdateTiposLicencias } from "./tiposLicencias.interface"
 
 class TiposLicenciasService {
     private validarId(id: number) {
-        if (!Number.isInteger(id)) throw new Error("El identificador debe ser un número entero");
+        if (!Number.isInteger(id)) throw new AppError("El identificador debe ser un número entero");
     }
 
     private validarDatos(data: CreateTiposLicencias | UpdateTiposLicencias) {
         for (const campo of ["nombre", "descripcion"] as const) {
             const valor = data[campo];
             if (valor !== undefined && (typeof valor !== "string" || valor.trim().length === 0 || valor.trim().length > 45)) {
-                throw new Error(`El campo ${campo} debe ser un texto de entre 1 y 45 caracteres`);
+                throw new AppError(`El campo ${campo} debe ser un texto de entre 1 y 45 caracteres`);
             }
         }
         if (data.nivel !== undefined && (!Number.isInteger(data.nivel) || data.nivel <= 0)) {
-            throw new Error("El nivel debe ser un número entero positivo");
+            throw new AppError("El nivel debe ser un número entero positivo");
         }
     }
     async getAll(){

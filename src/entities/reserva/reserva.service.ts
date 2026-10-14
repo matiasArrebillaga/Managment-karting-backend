@@ -17,12 +17,12 @@ type OpcionesValidacion = {
 
 class ReservaService {
     private validarId(id: number) {
-        if (!Number.isInteger(id)) throw new Error("El identificador debe ser un número entero");
+        if (!Number.isInteger(id)) throw new AppError("El identificador debe ser un número entero");
     }
 
     private normalizarFecha(fecha: Date | string): Date {
         const valor = new Date(fecha);
-        if (Number.isNaN(valor.getTime())) throw new Error("La fecha de reserva no es válida");
+        if (Number.isNaN(valor.getTime())) throw new AppError("La fecha de reserva no es válida");
         return new Date(Date.UTC(valor.getUTCFullYear(), valor.getUTCMonth(), valor.getUTCDate()));
     }
 
@@ -33,11 +33,11 @@ class ReservaService {
     // transforma las dos fechas en cantidad de horas para el precio tambien valida
     private horasReservadas(horaInicio: Date, horaFin: Date): number {
         if (Number.isNaN(horaInicio.getTime()) || Number.isNaN(horaFin.getTime())) {
-            throw new Error("Las horas de inicio y fin no son válidas");
+            throw new AppError("Las horas de inicio y fin no son válidas");
         }
         const duracion = horaFin.getTime() - horaInicio.getTime();
-        if (duracion <= 0) throw new Error("La hora de inicio debe ser anterior a la hora de fin");
-        if (duracion % MS_POR_HORA !== 0) throw new Error("La reserva debe ser de horas enteras");
+        if (duracion <= 0) throw new AppError("La hora de inicio debe ser anterior a la hora de fin");
+        if (duracion % MS_POR_HORA !== 0) throw new AppError("La reserva debe ser de horas enteras");
         return duracion / MS_POR_HORA;
     }
 
@@ -60,7 +60,7 @@ class ReservaService {
             }
         });
         if (!licenciaValida) {
-            throw new Error(
+            throw new AppError(
                 "La persona no cuenta con una licencia de nivel suficiente para el karting"
             );
         }
@@ -87,14 +87,14 @@ class ReservaService {
         );
 
         if (solapadas.some(r => r.Kartings_idKartings === data.Kartings_idKartings)) {
-            throw new Error("El karting seleccionado ya está reservado en ese horario");
+            throw new AppError("El karting seleccionado ya está reservado en ese horario");
         }
 
         const enElCircuito = solapadas.filter(
             r => r.Circuitos_idCircuitos === data.Circuitos_idCircuitos
         ).length;
         if (enElCircuito >= maximoCircuito) {
-            throw new Error("El circuito alcanzo el cupo maximo de kartings para ese horario");
+            throw new AppError("El circuito alcanzo el cupo maximo de kartings para ese horario");
         }
     }
 
@@ -111,7 +111,7 @@ class ReservaService {
         const horas = this.horasReservadas(data.horaInicio, data.horaFin);
 
         if (opciones.fechaEsNueva && fechaReserva < hoyUTC()) { // uso del nuevo util
-            throw new Error("No se puede reservar en una fecha pasada");
+            throw new AppError("No se puede reservar en una fecha pasada");
         }
 
         await this.bloquearRecursos(db, data.Kartings_idKartings, data.Circuitos_idCircuitos);
@@ -124,13 +124,13 @@ class ReservaService {
             }),
             db.circuitos.findUnique({ where: { idCircuitos: data.Circuitos_idCircuitos } })
         ]);
-        if (!persona) throw new Error("La persona no existe");
-        if (!karting) throw new Error("El karting no existe");
-        if (!circuito) throw new Error("El circuito no existe");
+        if (!persona) throw new AppError("La persona no existe");
+        if (!karting) throw new AppError("El karting no existe");
+        if (!circuito) throw new AppError("El circuito no existe");
 
         // mismo criterio que usa carrera.service para no asignar un kart fuera de servicio
         if (opciones.kartingEsNuevo && karting.estado?.toLowerCase() !== "disponible") {
-            throw new Error(`El karting no está disponible (estado: ${karting.estado})`);
+            throw new AppError(`El karting no está disponible (estado: ${karting.estado})`);
         }
 
         await this.validarLicencia(
@@ -216,7 +216,7 @@ class ReservaService {
     async update(idReservas: number, data: UpdateReservaInput, restringirAPersona?: number) {
         this.validarId(idReservas);
         const actual = await prisma.reservas.findUnique({ where: { idReservas } });
-        if (!actual) throw new Error("La reserva indicada no existe");
+        if (!actual) throw new AppError("La reserva indicada no existe");
         this.verificarPertenencia(actual.Personas_idPersona, restringirAPersona);
         const resultante: CreateReserva = {
             // cambia solo los campos necesarios y deja los otros igual    
@@ -263,7 +263,7 @@ class ReservaService {
         this.validarId(idReservas);
         if (restringirAPersona !== undefined) {
             const actual = await prisma.reservas.findUnique({ where: { idReservas } });
-            if (!actual) throw new Error("La reserva indicada no existe");
+            if (!actual) throw new AppError("La reserva indicada no existe");
             this.verificarPertenencia(actual.Personas_idPersona, restringirAPersona);
         }
         return await prisma.reservas.delete({

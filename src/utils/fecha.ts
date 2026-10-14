@@ -1,3 +1,4 @@
+import { AppError } from "../middleware/error.middleware";
 
 export function hoyUTC(): Date {
     const ahora = new Date();
@@ -7,7 +8,7 @@ export function hoyUTC(): Date {
 export function normalizarHora(valor: unknown, campo: string): Date {
     if (valor instanceof Date) return valor;
     const partes = /^([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/.exec(String(valor ?? "").trim());
-    if (!partes) throw new Error(`El campo ${campo} debe tener formato HH:MM`);
+    if (!partes) throw new AppError(`El campo ${campo} debe tener formato HH:MM`);
     return new Date(Date.UTC(
         1970, 0, 1,
         Number(partes[1]), Number(partes[2]), Number(partes[3] ?? 0)
@@ -19,7 +20,7 @@ export function normalizarFecha(fecha: Date | string): Date {
     const valor = fecha instanceof Date ? fecha : new Date(fecha);
 
     if (Number.isNaN(valor.getTime())) {
-        throw new Error("La fecha no es válida");
+        throw new AppError("La fecha no es válida");
     }
 
     return new Date(

@@ -1,4 +1,5 @@
 import LicenciaController from "./licencia.controller";
+import { requireFields } from "../../middleware/error.middleware";
 import {Router} from "express";
 import { verifyRoles } from "../../middleware/auth.middleware";
 
@@ -9,7 +10,7 @@ router.get("/",verifyRoles("EMPLEADO","ADMIN"), LicenciaController.getAll);
 // /mias va antes de /:id, si no Express toma "mias" como un id
 router.get("/mias", verifyRoles("CLIENTE","EMPLEADO","ADMIN"), LicenciaController.getMias);
 router.get("/:id",verifyRoles("ADMIN","EMPLEADO"), LicenciaController.getById);
-router.post("/",verifyRoles("EMPLEADO","ADMIN"), LicenciaController.create);
+router.post("/",verifyRoles("EMPLEADO","ADMIN"), requireFields("fechaEmision", "fechaVencimiento", "Personas_idPersona", "TiposLicencias_idTipoLicencia"), LicenciaController.create);
 router.patch("/:id", verifyRoles("EMPLEADO","ADMIN"),LicenciaController.update);
 router.delete("/:id",verifyRoles("ADMIN"),LicenciaController.delete);
 export default router;
