@@ -44,4 +44,10 @@ describe("validacion de mail y contraseña", () => {
         await expect(personaService.update(1, { mail: "hola" })).rejects.toThrow(/mail no tiene un formato válido/);
         expect(db.personas.update).not.toHaveBeenCalled();
     });
+
+    it("el update no devuelve la contraseña", async () => {
+        await personaService.update(1, { nombre: "Juan" });
+
+        expect(db.personas.update.mock.calls[0][0].omit).toEqual({ contraseña: true });
+    });
 });

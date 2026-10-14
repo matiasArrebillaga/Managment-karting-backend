@@ -140,7 +140,8 @@ private async crearPersonaConRol(
                 ...(data.telefono === undefined ? {} : {telefono: data.telefono.trim()}),
                 ...(data.fechaNacimiento === undefined ? {} : {fechaNacimiento: new Date(data.fechaNacimiento)}),
                 ...(data.contraseña === undefined ? {} : {contraseña: await bcrypt.hash(data.contraseña, 10)})
-            }
+            },
+            omit: {contraseña: true}
         });
     }
     async delete(idPersona:number){
