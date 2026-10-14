@@ -605,10 +605,21 @@ const objectSchema = (properties: Record<string, object>, required: string[] = [
     properties,
     required
 });
+// En las respuestas todos los campos vienen siempre, salvo los includes que solo agregan algunas rutas.
+// Sin required el frontend genera todos los tipos como opcionales.
+const responseSchema = (properties: Record<string, object>, opcionales: string[] = []) =>
+    objectSchema(properties, Object.keys(properties).filter((key) => !opcionales.includes(key)));
+// Prisma serializa las columnas DATE y TIME como fecha ISO completa y los Decimal como string
+const fechaRespuesta = { ...dateTime, example: "2026-10-14T00:00:00.000Z" };
+const horaRespuesta = { ...dateTime, example: "1970-01-01T14:00:00.000Z" };
+const decimal = { type: "string", example: "20000" };
+const nombreRol = { type: "string", enum: ["CLIENTE", "EMPLEADO", "ADMIN"] };
+const ref = (schema: string) => ({ $ref: `#/components/schemas/${schema}` });
+const personaProps = { idPersona: integerId, nombre: { type: "string" }, apellido: { type: "string" }, dni: { type: "string" }, fechaNacimiento: fechaRespuesta, mail: { type: "string", format: "email" }, telefono: { type: "string" }, Localidades_idLocalidades: integerId, idRol: integerId };
 
 const schemas = {
     Error: objectSchema({ message: { type: "string", example: "Recurso no encontrado" } }, ["message"]),
-    Message: objectSchema({ message: { type: "string", example: "Registro eliminado correctamente" } }),
+    Message: responseSchema({ message: { type: "string", example: "Registro eliminado correctamente" } }),
     LoginRequest: objectSchema({
         mail: { type: "string", format: "email", example: "piloto@example.com" },
         contraseña: { type: "string", format: "password", example: "secreto" }
@@ -623,10 +634,12 @@ const schemas = {
         contraseña: { type: "string", format: "password", minLength: 8 },
         Localidades_idLocalidades: integerId
     }, ["nombre", "apellido", "dni", "fechaNacimiento", "mail", "telefono", "contraseña", "Localidades_idLocalidades"]),
-    AuthResponse: objectSchema({
+    AuthResponse: responseSchema({
         token: { type: "string", description: "Token JWT" },
-        persona: { $ref: "#/components/schemas/Persona" }
+        persona: ref("PersonaAuth")
     }),
+    // la persona del login viene con su rol incluido
+    PersonaAuth: responseSchema({ ...personaProps, rol: responseSchema({ idRol: integerId, nombre: nombreRol }) }),
     KartingRequest: objectSchema({
         categoria: { type: "string" },
         modelo: { type: "string" },
@@ -634,46 +647,50 @@ const schemas = {
         fechaAdquisicion: date,
         TiposKarting_idTiposKarting: integerId
     }, ["categoria", "modelo", "estado", "fechaAdquisicion", "TiposKarting_idTiposKarting"]),
-    Karting: objectSchema({ idKartings: integerId, categoria: { type: "string" }, modelo: { type: "string" }, estado: { type: "string" }, fechaAdquisicion: date, TiposKarting_idTiposKarting: integerId }),
+    Karting: responseSchema({ idKartings: integerId, categoria: { type: "string" }, modelo: { type: "string" }, estado: { type: "string" }, fechaAdquisicion: fechaRespuesta, TiposKarting_idTiposKarting: integerId }),
     PersonaRequest: objectSchema({ nombre: { type: "string" }, apellido: { type: "string" }, dni: { type: "string" }, fechaNacimiento: date, mail: { type: "string", format: "email" }, telefono: { type: "string" }, contraseña: { type: "string", format: "password", minLength: 8 }, Localidades_idLocalidades: integerId }, ["nombre", "apellido", "dni", "fechaNacimiento", "mail", "telefono", "contraseña", "Localidades_idLocalidades"]),
-    AsignarRolRequest: objectSchema({ nombreRol: { type: "string", enum: ["CLIENTE", "EMPLEADO", "ADMIN"] } }, ["nombreRol"]),
-    Persona: objectSchema({ idPersona: integerId, nombre: { type: "string" }, apellido: { type: "string" }, dni: { type: "string" }, fechaNacimiento: date, mail: { type: "string", format: "email" }, telefono: { type: "string" }, Localidades_idLocalidades: integerId, idRol: integerId }),
+    AsignarRolRequest: objectSchema({ nombreRol }, ["nombreRol"]),
+    Persona: responseSchema(personaProps),
     LocalidadRequest: objectSchema({ nombre: { type: "string" } }, ["nombre"]),
-    Localidad: objectSchema({ idLocalidades: integerId, nombre: { type: "string" } }),
+    Localidad: responseSchema({ idLocalidades: integerId, nombre: { type: "string" } }),
     CircuitoRequest: objectSchema({ distancia: integerId, dificultad: { type: "string" }, maximo: integerId }, ["distancia", "dificultad", "maximo"]),
-    Circuito: objectSchema({ idCircuitos: integerId, distancia: integerId, dificultad: { type: "string" }, maximo: integerId }),
+    Circuito: responseSchema({ idCircuitos: integerId, distancia: integerId, dificultad: { type: "string" }, maximo: integerId }),
     RolRequest: objectSchema({ nombre: { type: "string" } }, ["nombre"]),
-    Rol: objectSchema({ idRol: integerId, nombre: { type: "string" } }),
+    Rol: responseSchema({ idRol: integerId, nombre: { type: "string" } }),
     TipoLicenciaRequest: objectSchema({ nombre: { type: "string" }, descripcion: { type: "string" }, nivel: integerId }, ["nombre", "descripcion", "nivel"]),
-    TipoLicencia: objectSchema({ idTipoLicencia: integerId, nombre: { type: "string" }, descripcion: { type: "string" }, nivel: integerId }),
+    TipoLicencia: responseSchema({ idTipoLicencia: integerId, nombre: { type: "string" }, descripcion: { type: "string" }, nivel: integerId }),
     TipoKartingRequest: objectSchema({ nombre: { type: "string" }, descripcion: { type: "string" }, precioHora: { type: "number", example: 20000 }, TiposLicencias_idTipoLicenciaMinima: integerId }, ["nombre", "descripcion", "precioHora", "TiposLicencias_idTipoLicenciaMinima"]),
-    TipoKarting: objectSchema({ idTiposKarting: integerId, nombre: { type: "string" }, descripcion: { type: "string" }, precioHora: { type: "number", example: 20000 }, TiposLicencias_idTipoLicenciaMinima: integerId }),
+    TipoKarting: responseSchema({ idTiposKarting: integerId, nombre: { type: "string" }, descripcion: { type: "string" }, precioHora: decimal, TiposLicencias_idTipoLicenciaMinima: integerId }),
     TorneoRequest: objectSchema({ nombre: { type: "string", maxLength: 45 }, descripcion: { type: "string", maxLength: 45 }, cupoMaximo: { type: "integer", minimum: 1 }, fechaInicio: date, fechaFin: date, TiposLicencias_idTipoLicencia: integerId }, ["nombre", "descripcion", "cupoMaximo", "fechaInicio", "fechaFin", "TiposLicencias_idTipoLicencia"]),
-    Torneo: objectSchema({ idTorneos: integerId, nombre: { type: "string" }, descripcion: { type: "string" }, cupoMaximo: { type: "integer" }, fechaInicio: date, fechaFin: date, TiposLicencias_idTipoLicencia: integerId, tiposlicencias: { $ref: "#/components/schemas/TipoLicencia" }, estado: { type: "string", enum: ["proximo", "en_curso", "finalizado"], readOnly: true, description: "Calculado contra el día de hoy" } }),
+    // tiposlicencias solo viene en el listado; estado no viene al crear/actualizar ni dentro de una inscripcion
+    Torneo: responseSchema({ idTorneos: integerId, nombre: { type: "string" }, descripcion: { type: "string" }, cupoMaximo: { type: "integer" }, fechaInicio: fechaRespuesta, fechaFin: fechaRespuesta, TiposLicencias_idTipoLicencia: integerId, tiposlicencias: ref("TipoLicencia"), estado: { type: "string", enum: ["proximo", "en_curso", "finalizado"], readOnly: true, description: "Calculado contra el día de hoy" } }, ["tiposlicencias", "estado"]),
     LicenciaRequest: objectSchema({ fechaEmision: date, fechaVencimiento: date, Personas_idPersona: integerId, TiposLicencias_idTipoLicencia: integerId }, ["fechaEmision", "fechaVencimiento", "Personas_idPersona", "TiposLicencias_idTipoLicencia"]),
-    Licencia: objectSchema({ idLicencias: integerId, fechaEmision: date, fechaVencimiento: date, Personas_idPersona: integerId, TiposLicencias_idTipoLicencia: integerId }),
+    Licencia: responseSchema({ idLicencias: integerId, fechaEmision: fechaRespuesta, fechaVencimiento: fechaRespuesta, Personas_idPersona: integerId, TiposLicencias_idTipoLicencia: integerId }),
     // Personas_idPersona no es obligatorio: para un CLIENTE lo impone el servidor con
     // el id del token, y lo que venga en el body se descarta.
     ReservaRequest: objectSchema({ fechaReserva: date, horaInicio: hora, horaFin: hora, Personas_idPersona: integerId, Circuitos_idCircuitos: integerId, Kartings_idKartings: integerId }, ["fechaReserva", "horaInicio", "horaFin", "Circuitos_idCircuitos", "Kartings_idKartings"]),
-    Reserva: objectSchema({ idReservas: integerId, fechaReserva: date, horaInicio: hora, horaFin: hora, monto: { type: "number", description: "Calculado por el servidor: precioHora del tipo de karting por la cantidad de horas" }, Personas_idPersona: integerId, Circuitos_idCircuitos: integerId, Kartings_idKartings: integerId }),
+    Reserva: responseSchema({ idReservas: integerId, fechaReserva: fechaRespuesta, horaInicio: horaRespuesta, horaFin: horaRespuesta, monto: { ...decimal, description: "Calculado por el servidor: precioHora del tipo de karting por la cantidad de horas" }, Personas_idPersona: integerId, Circuitos_idCircuitos: integerId, Kartings_idKartings: integerId }),
     CarreraRequest: objectSchema({ fechaCarrera: date, horaInicio: hora, horaFin: hora, kartings: { type: "array", minItems: 1, items: integerId, description: "Ids de los karts que corren la carrera" }, Torneos_idTorneos: integerId, Circuitos_idCircuitos: integerId }, ["fechaCarrera", "horaInicio", "horaFin", "kartings", "Torneos_idTorneos", "Circuitos_idCircuitos"]),
-    Carrera: objectSchema({ fechaCarrera: date, horaInicio: hora, horaFin: hora, kartings: { type: "array", items: { $ref: "#/components/schemas/Karting" } }, Torneos_idTorneos: integerId, Circuitos_idCircuitos: integerId }),
+    // circuitos solo viene en /carreras/torneo/{idTorneo}
+    Carrera: responseSchema({ fechaCarrera: fechaRespuesta, horaInicio: horaRespuesta, horaFin: horaRespuesta, kartings: { type: "array", items: ref("Karting") }, Torneos_idTorneos: integerId, Circuitos_idCircuitos: integerId, circuitos: ref("Circuito") }, ["circuitos"]),
     ParticipacionRequest: objectSchema({ Carrera_Torneos_idTorneos: integerId, Carrera_Circuitos_idCircuitos: integerId, Carrera_fecha: date, Personas_idPersona: integerId, tiempo, posicion_final: posicion }, ["Carrera_Torneos_idTorneos", "Carrera_Circuitos_idCircuitos", "Carrera_fecha", "Personas_idPersona", "tiempo", "posicion_final"]),
     ResultadosCarreraRequest: objectSchema({ Carrera_Torneos_idTorneos: integerId, Carrera_Circuitos_idCircuitos: integerId, Carrera_fecha: date, resultados: { type: "array", minItems: 1, items: objectSchema({ Personas_idPersona: integerId, posicion_final: posicion, tiempo }) } }),
-    Participacion: objectSchema({ Carrera_Torneos_idTorneos: integerId, Carrera_Circuitos_idCircuitos: integerId, Carrera_fecha: date, Personas_idPersona: integerId, puntos: { type: "integer", description: "Calculado por el servidor según la posición" }, tiempo, posicion_final: posicion }),
-    TablaGeneralItem: objectSchema({
+    Participacion: responseSchema({ Carrera_Torneos_idTorneos: integerId, Carrera_Circuitos_idCircuitos: integerId, Carrera_fecha: fechaRespuesta, Personas_idPersona: integerId, puntos: { type: "integer", description: "Calculado por el servidor según la posición" }, tiempo, posicion_final: posicion }),
+    // nombre y apellido faltan si la persona se borro despues de correr
+    TablaGeneralItem: responseSchema({
         posicion: integerId,
         idPersona: integerId,
         nombre: { type: "string", example: "Juan" },
         apellido: { type: "string", example: "Pérez" },
         puntosTotales: integerId,
         victorias: { type: "integer", description: "Cantidad de 1° puestos (primer criterio de desempate)" }
-    }),
-    ClasificacionCarreraItem: objectSchema({ posicion, idPersona: integerId, nombre: { type: "string" }, apellido: { type: "string" }, tiempo, puntos: { type: "integer" } }),
+    }, ["nombre", "apellido"]),
+    ClasificacionCarreraItem: responseSchema({ posicion, idPersona: integerId, nombre: { type: "string" }, apellido: { type: "string" }, tiempo, puntos: { type: "integer" } }),
     // La fecha y la hora no se mandan: las pone el servidor. Para un CLIENTE el
     // Personas_idPersona tambien se ignora y sale del token.
     InscripcionRequest: objectSchema({ Torneos_idTorneos: integerId, Personas_idPersona: integerId }, ["Torneos_idTorneos"]),
-    Inscripcion: objectSchema({ Torneos_idTorneos: integerId, Personas_idPersona: integerId, fecha_inscripcion: date, hora_inscripcion: dateTime })
+    // torneos viene en el listado y en /inscripciones/mias, no al crear
+    Inscripcion: responseSchema({ Torneos_idTorneos: integerId, Personas_idPersona: integerId, fecha_inscripcion: fechaRespuesta, hora_inscripcion: horaRespuesta, torneos: ref("Torneo") }, ["torneos"])
 };
 
 const options: swaggerJSDoc.Options = {
