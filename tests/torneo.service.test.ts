@@ -102,3 +102,25 @@ describe("update del torneo", () => {
         expect(db.torneos.update).not.toHaveBeenCalled();
     });
 });
+
+describe("filtro por tipo de licencia", () => {
+    it("filtra en la query por licencia e incluye el tipo de licencia", async () => {
+        await torneoService.getAll(undefined, 2);
+
+        const args = db.torneos.findMany.mock.calls[0][0];
+        expect(args.where).toEqual({ TiposLicencias_idTipoLicencia: 2 });
+        expect(args.include).toEqual({ tiposlicencias: true });
+    });
+
+    it("combina el filtro de licencia con el de estado", async () => {
+        await torneoService.getAll("proximo", 1);
+
+        expect(db.torneos.findMany.mock.calls[0][0].where)
+            .toEqual({ fechaInicio: { gt: hoy }, TiposLicencias_idTipoLicencia: 1 });
+    });
+
+    it("rechaza una licencia que no es un entero", async () => {
+        await expect(torneoService.getAll(undefined, NaN)).rejects.toThrow("El tipo de licencia debe ser un número entero");
+        expect(db.torneos.findMany).not.toHaveBeenCalled();
+    });
+});

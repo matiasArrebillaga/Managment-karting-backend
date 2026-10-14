@@ -73,12 +73,19 @@ class TorneosService {
         }
     }
 
-    async getAll(estado?: string) {
+    async getAll(estado?: string, idTipoLicencia?: number) {
+        if (idTipoLicencia !== undefined && !Number.isInteger(idTipoLicencia)) {
+            throw new Error("El tipo de licencia debe ser un número entero");
+        }
         const torneos = await prisma.torneos.findMany({
-            ...(estado !== undefined && { where: this.filtroEstado(estado) }),
+            where: {
+                ...(estado !== undefined && this.filtroEstado(estado)),
+                ...(idTipoLicencia !== undefined && { TiposLicencias_idTipoLicencia: idTipoLicencia })
+            },
+            include: { tiposlicencias: true },
             orderBy: { fechaInicio: "asc" }
         });
-        return torneos.map((t: { fechaInicio: Date; fechaFin: Date }) => this.conEstado(t));
+        return torneos.map(t => this.conEstado(t));
     }
 
     async getById(idTorneo: number) {

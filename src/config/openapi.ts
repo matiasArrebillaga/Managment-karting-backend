@@ -441,13 +441,19 @@ paths["/api/participaciones/carrera"] = {
     }
 };
 
-// El listado de torneos generico + el filtro por estado derivado de las fechas
+// El listado de torneos generico + filtros por estado (derivado de las fechas) y por tipo de licencia
 (paths["/api/torneos"] as { get: { parameters?: object[] } }).get.parameters = [{
     name: "estado",
     in: "query",
     required: false,
     description: "Filtra por estado calculado contra el día de hoy",
     schema: { type: "string", enum: ["proximo", "en_curso", "finalizado"] }
+}, {
+    name: "idTipoLicencia",
+    in: "query",
+    required: false,
+    description: "Filtra por tipo de licencia del torneo. Se puede combinar con estado",
+    schema: { type: "integer" }
 }];
 
 paths["/api/participaciones/carrera/{Carrera_fecha}/{Carrera_Torneos_idTorneos}/{Carrera_Circuitos_idCircuitos}"] = {
@@ -559,7 +565,7 @@ const schemas = {
     TipoKartingRequest: objectSchema({ nombre: { type: "string" }, descripcion: { type: "string" }, precioHora: { type: "number", example: 20000 }, TiposLicencias_idTipoLicenciaMinima: integerId }),
     TipoKarting: objectSchema({ idTiposKarting: integerId, nombre: { type: "string" }, descripcion: { type: "string" }, precioHora: { type: "number", example: 20000 }, TiposLicencias_idTipoLicenciaMinima: integerId }),
     TorneoRequest: objectSchema({ nombre: { type: "string", maxLength: 45 }, descripcion: { type: "string", maxLength: 45 }, cupoMaximo: { type: "integer", minimum: 1 }, fechaInicio: date, fechaFin: date }),
-    Torneo: objectSchema({ idTorneos: integerId, nombre: { type: "string" }, descripcion: { type: "string" }, cupoMaximo: { type: "integer" }, fechaInicio: date, fechaFin: date, estado: { type: "string", enum: ["proximo", "en_curso", "finalizado"], readOnly: true, description: "Calculado contra el día de hoy" } }),
+    Torneo: objectSchema({ idTorneos: integerId, nombre: { type: "string" }, descripcion: { type: "string" }, cupoMaximo: { type: "integer" }, fechaInicio: date, fechaFin: date, TiposLicencias_idTipoLicencia: integerId, tiposlicencias: { $ref: "#/components/schemas/TipoLicencia" }, estado: { type: "string", enum: ["proximo", "en_curso", "finalizado"], readOnly: true, description: "Calculado contra el día de hoy" } }),
     LicenciaRequest: objectSchema({ fechaEmision: date, fechaVencimiento: date, Personas_idPersona: integerId, TiposLicencias_idTipoLicencia: integerId }),
     Licencia: objectSchema({ idLicencias: integerId, fechaEmision: date, fechaVencimiento: date, Personas_idPersona: integerId, TiposLicencias_idTipoLicencia: integerId }),
     // Personas_idPersona no es obligatorio: para un CLIENTE lo impone el servidor con

@@ -441,7 +441,7 @@ describe("resultados de carrera", () => {
             .set("Authorization", `Bearer ${token("CLIENTE")}`);
 
         expect(response.status).toBe(200);
-        expect(torneoService.getAll as unknown as jest.Mock).toHaveBeenCalledWith("proximo");
+        expect(torneoService.getAll as unknown as jest.Mock).toHaveBeenCalledWith("proximo", undefined);
     });
 
     it("rechaza una carga sin lista de resultados", async () => {

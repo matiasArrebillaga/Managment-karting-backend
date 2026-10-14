@@ -7,9 +7,10 @@ class TorneosController {
 
     async getAll(req: Request, res: Response, next: NextFunction) {
         try {
-            // permite buscar por estado
+            // permite buscar por estado y por tipo de licencia
             const estado = typeof req.query.estado === "string" ? req.query.estado : undefined;
-            const torneos = await TorneosService.getAll(estado);
+            const idTipoLicencia = req.query.idTipoLicencia === undefined ? undefined : Number(req.query.idTipoLicencia);
+            const torneos = await TorneosService.getAll(estado, idTipoLicencia);
 
             res.json(torneos);
 
