@@ -33,7 +33,8 @@ El proyecto se desarrolla como trabajo práctico grupal de la materia Desarrollo
 
 ### Frontend
 
-- **Framework y tecnologías:** [Completar con las tecnologías utilizadas].
+- **Framework y tecnologías:** React 19 + TypeScript, Vite, MUI (Material UI) y React Router.
+- **Guía de estilo:** se usa oxlint como linter en lugar de la guía de Airbnb sugerida por el enunciado.
 - **Documentación del frontend:** [Agregar enlace al repositorio o README].
 
 ## 4. Funcionalidades principales
@@ -75,7 +76,7 @@ tests/           tests de rutas y servicios
 
 ### 5.3. Instalación y ejecución
 
-Consultar el README principal del backend para las instrucciones completas: [Agregar enlace al README del backend].
+Consultar el README principal del backend para las instrucciones completas: [README del backend](../README.md).
 
 Requisitos previos:
 
@@ -192,7 +193,7 @@ npm run build
 Evidencias:
 
 - **Resultado de ejecución de tests:** [Agregar enlace a captura o log].
-- **GitHub Actions:** [Agregar enlace al workflow, si está configurado].
+- **GitHub Actions:** [workflow "Tests y Build"](https://github.com/matiasArrebillaga/Managment-karting-backend/actions/workflows/test.yml), corre los tests y el build en cada push y PR a `develop`.
 - **Resultado de compilación:** [Agregar evidencia, si corresponde].
 
 ### 7.2. Frontend
