@@ -86,6 +86,14 @@ private async crearPersonaConRol(
         10
     );
 
+    // el cliente arranca con la licencia de menor nivel, vigente por 1 año
+    const tipoInicial = nombreRol === "CLIENTE"
+        ? await prisma.tiposlicencias.findFirst({ orderBy: { nivel: "asc" } })
+        : null;
+    const hoy = new Date();
+    const vencimiento = new Date(hoy);
+    vencimiento.setFullYear(hoy.getFullYear() + 1);
+
     const persona = await prisma.personas.create({
         data: {
             ...data,
@@ -96,7 +104,10 @@ private async crearPersonaConRol(
             telefono: data.telefono.trim(),
             fechaNacimiento,
             contraseña: contraseñaHasheada,
-            idRol: rol.idRol
+            idRol: rol.idRol,
+            ...(tipoInicial && {
+                licencias: { create: { fechaEmision: hoy, fechaVencimiento: vencimiento, TiposLicencias_idTipoLicencia: tipoInicial.idTipoLicencia } }
+            })
         }
     });
 

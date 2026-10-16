@@ -40,6 +40,22 @@ describe("validacion de mail y contraseña", () => {
         await expect(personaService.create({ ...valida, contraseña })).rejects.toThrow(/entre 8 y 255/);
     });
 
+    it("el cliente nuevo recibe la licencia de menor nivel por 1 año; el empleado no", async () => {
+        db.localidades = { findUnique: jest.fn(async () => ({ idLocalidades: 1 })) };
+        db.tiposlicencias = { findFirst: jest.fn(async () => ({ idTipoLicencia: 1, nivel: 1 })) };
+        db.personas.findFirst = jest.fn(async () => null);
+        db.personas.create = jest.fn(async ({ data }: any) => data);
+
+        await personaService.create(valida);
+        const licencia = db.personas.create.mock.calls[0][0].data.licencias.create;
+        expect(db.tiposlicencias.findFirst.mock.calls[0][0]).toEqual({ orderBy: { nivel: "asc" } });
+        expect(licencia.TiposLicencias_idTipoLicencia).toBe(1);
+        expect(licencia.fechaVencimiento.getFullYear()).toBe(licencia.fechaEmision.getFullYear() + 1);
+
+        await personaService.crearEmpleado(valida);
+        expect(db.personas.create.mock.calls[1][0].data.licencias).toBeUndefined();
+    });
+
     it("en el update tambien valida el mail", async () => {
         await expect(personaService.update(1, { mail: "hola" })).rejects.toThrow(/mail no tiene un formato válido/);
         expect(db.personas.update).not.toHaveBeenCalled();
