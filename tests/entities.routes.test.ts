@@ -143,6 +143,9 @@ describe("roles de localidades, tiposKartings y licencias", () => {
         // el CLIENTE tiene que ver el precioHora antes de reservar
         ["/api/tiposKartings", "CLIENTE"],
         ["/api/tiposKartings/1", "CLIENTE"],
+        // el CLIENTE ve qué licencia pide cada torneo y filtra por ella
+        ["/api/tiposLicencias", "CLIENTE"],
+        ["/api/tiposLicencias/1", "CLIENTE"],
     ] as const)("permite GET %s a un %s", async (path, role) => {
         const response = await request(app)
             .get(path)
