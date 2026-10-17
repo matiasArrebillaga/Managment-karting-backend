@@ -29,6 +29,18 @@ class PersonasTorneosController {
         }
     }
 
+    async getInscriptosTorneo(req: Request, res: Response, next: NextFunction) {
+        try {
+            const inscriptos =
+                await PersonasTorneosService.getInscriptosTorneo(Number(req.params.idTorneo));
+
+            res.status(200).json(inscriptos);
+
+        } catch (error) {
+            next(error);
+        }
+    }
+
     async getById(req: AuthRequest, res: Response, next: NextFunction) {
         try {
             const Torneos_idTorneos =

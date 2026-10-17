@@ -370,6 +370,32 @@ paths["/api/inscripciones/mias"] = {
     }
 };
 
+paths["/api/inscripciones/torneo/{idTorneo}"] = {
+    get: {
+        tags: ["Inscripciones"],
+        summary: "Obtener los inscriptos de un torneo",
+        description: "Devuelve id, nombre y apellido de cada persona inscripta, en orden de inscripción. Lo pueden ver todos los roles.",
+        parameters: [{ name: "idTorneo", in: "path", required: true, schema: { type: "integer" } }],
+        responses: {
+            "200": {
+                description: "Inscriptos obtenidos correctamente",
+                content: {
+                    "application/json": {
+                        schema: {
+                            type: "array",
+                            items: {
+                                type: "object",
+                                properties: { idPersona: { type: "integer" }, nombre: { type: "string" }, apellido: { type: "string" } }
+                            }
+                        }
+                    }
+                }
+            },
+            "500": standardResponses("Inscripción")["500"]
+        }
+    }
+};
+
 paths["/api/carreras/torneo/{idTorneo}"] = {
     get: {
         tags: ["Carreras"],
