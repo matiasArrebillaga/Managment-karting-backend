@@ -18,8 +18,14 @@ class AuthService {
         }
         // llama al service create de persona con los datos
         return personaService.create({
-            ...data,
-            fechaNacimiento
+            nombre: data.nombre,
+            apellido: data.apellido,
+            dni: data.dni,
+            fechaNacimiento,
+            mail: data.mail,
+            telefono: data.telefono,
+            Localidades_idLocalidades: data.Localidades_idLocalidades,
+            contraseña: data.contraseña
         });
     }
 // logica del login y manejo de tokens

@@ -95,21 +95,29 @@ private async crearPersonaConRol(
     vencimiento.setFullYear(hoy.getFullYear() + 1);
 
     const persona = await prisma.personas.create({
-        data: {
-            ...data,
-            nombre: data.nombre.trim(),
-            apellido: data.apellido.trim(),
-            dni: data.dni.trim(),
-            mail,
-            telefono: data.telefono.trim(),
-            fechaNacimiento,
-            contraseña: contraseñaHasheada,
-            idRol: rol.idRol,
-            ...(tipoInicial && {
-                licencias: { create: { fechaEmision: hoy, fechaVencimiento: vencimiento, TiposLicencias_idTipoLicencia: tipoInicial.idTipoLicencia } }
-            })
-        }
-    });
+    data: {
+        nombre: data.nombre.trim(),
+        apellido: data.apellido.trim(),
+        dni: data.dni.trim(),
+        fechaNacimiento,
+        mail,
+        telefono: data.telefono.trim(),
+        Localidades_idLocalidades: data.Localidades_idLocalidades,
+        contraseña: contraseñaHasheada,
+        idRol: rol.idRol,
+
+        ...(tipoInicial && {
+            licencias: {
+                create: {
+                    fechaEmision: hoy,
+                    fechaVencimiento: vencimiento,
+                    TiposLicencias_idTipoLicencia:
+                        tipoInicial.idTipoLicencia
+                }
+            }
+        })
+    }
+});
 
     const { contraseña, ...personaSinContraseña } = persona;
 
