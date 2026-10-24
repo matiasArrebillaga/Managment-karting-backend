@@ -40,58 +40,107 @@ class LicenciaService {
 
     
     async create(data: CreateLicencia) {
-        this.validarDatos(data);
+  this.validarDatos(data);
 
-        // Validar que exista la persona
-        const persona = await prisma.personas.findUnique({
-            where: {
-                idPersona: data.Personas_idPersona
-            }
-        });
-
-        if (!persona) {
-            throw new AppError("La persona ingresada no existe");
-        }
-
-        // Validar que exista el tipo de licencia
-        const tipoLicencia = await prisma.tiposlicencias.findUnique({
-            where: {
-                idTipoLicencia: data.TiposLicencias_idTipoLicencia
-            }
-        });
-
-        if (!tipoLicencia) {
-            throw new AppError("El tipo de licencia ingresado no existe");
-        }
-
-        return await prisma.licencias.create({
-            data: {...data, fechaEmision: new Date(data.fechaEmision), fechaVencimiento: new Date(data.fechaVencimiento)}
-        });
+  // Validar que exista la persona
+  const persona = await prisma.personas.findUnique({
+    where: {
+      idPersona: data.Personas_idPersona
     }
+  });
+
+  if (!persona) {
+    throw new AppError("La persona ingresada no existe");
+  }
+
+  // Validar que exista el tipo de licencia
+  const tipoLicencia = await prisma.tiposlicencias.findUnique({
+    where: {
+      idTipoLicencia: data.TiposLicencias_idTipoLicencia
+    }
+  });
+
+  if (!tipoLicencia) {
+    throw new AppError("El tipo de licencia ingresado no existe");
+  }
+
+  const datos = {
+    Personas_idPersona: data.Personas_idPersona,
+    TiposLicencias_idTipoLicencia: data.TiposLicencias_idTipoLicencia,
+    fechaEmision: new Date(data.fechaEmision),
+    fechaVencimiento: new Date(data.fechaVencimiento)
+  };
+
+  return await prisma.licencias.create({
+    data: datos
+  });
+}
 
 
 
     async update(idLicencias: number, data: UpdateLicencia) {
-        this.validarId(idLicencias);
-        this.validarDatos(data);
-        const actual = await prisma.licencias.findUnique({where: {idLicencias}});
-        if (!actual) throw new AppError("La licencia ingresada no existe");
-        if (data.Personas_idPersona !== undefined &&
-            !await prisma.personas.findUnique({where: {idPersona: data.Personas_idPersona}})) {
-            throw new AppError("La persona ingresada no existe");
-        }
-        if (data.TiposLicencias_idTipoLicencia !== undefined &&
-            !await prisma.tiposlicencias.findUnique({where: {idTipoLicencia: data.TiposLicencias_idTipoLicencia}})) {
-            throw new AppError("El tipo de licencia ingresado no existe");
-        }
-        const emision = data.fechaEmision === undefined ? actual.fechaEmision : new Date(data.fechaEmision);
-        const vencimiento = data.fechaVencimiento === undefined ? actual.fechaVencimiento : new Date(data.fechaVencimiento);
-        this.validarDatos({fechaEmision: emision.toISOString(), fechaVencimiento: vencimiento.toISOString()});
-        return await prisma.licencias.update({
-            where: { idLicencias },
-            data: {...data, ...(data.fechaEmision === undefined ? {} : {fechaEmision: emision}), ...(data.fechaVencimiento === undefined ? {} : {fechaVencimiento: vencimiento})}
-        });
-    }
+  this.validarId(idLicencias);
+  this.validarDatos(data);
+
+  const actual = await prisma.licencias.findUnique({
+    where: { idLicencias }
+  });
+
+  if (!actual) {
+    throw new AppError("La licencia ingresada no existe");
+  }
+
+  if (
+    data.Personas_idPersona !== undefined &&
+    !await prisma.personas.findUnique({
+      where: { idPersona: data.Personas_idPersona }
+    })
+  ) {
+    throw new AppError("La persona ingresada no existe");
+  }
+
+  if (
+    data.TiposLicencias_idTipoLicencia !== undefined &&
+    !await prisma.tiposlicencias.findUnique({
+      where: { idTipoLicencia: data.TiposLicencias_idTipoLicencia }
+    })
+  ) {
+    throw new AppError("El tipo de licencia ingresado no existe");
+  }
+
+  const emision = data.fechaEmision === undefined
+    ? actual.fechaEmision
+    : new Date(data.fechaEmision);
+
+  const vencimiento = data.fechaVencimiento === undefined
+    ? actual.fechaVencimiento
+    : new Date(data.fechaVencimiento);
+
+  this.validarDatos({
+    fechaEmision: emision.toISOString(),
+    fechaVencimiento: vencimiento.toISOString()
+  });
+
+  const datos = {
+    ...(data.Personas_idPersona !== undefined && {
+      Personas_idPersona: data.Personas_idPersona
+    }),
+    ...(data.TiposLicencias_idTipoLicencia !== undefined && {
+      TiposLicencias_idTipoLicencia: data.TiposLicencias_idTipoLicencia
+    }),
+    ...(data.fechaEmision !== undefined && {
+      fechaEmision: emision
+    }),
+    ...(data.fechaVencimiento !== undefined && {
+      fechaVencimiento: vencimiento
+    })
+  };
+
+  return await prisma.licencias.update({
+    where: { idLicencias },
+    data: datos
+  });
+}
 
     async delete(idLicencias: number) {
         this.validarId(idLicencias);

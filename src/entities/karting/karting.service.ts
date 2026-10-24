@@ -42,52 +42,71 @@ class KartingService {
         });
     }
 
-    async create(data: CreateKarting) {
-        this.validarDatos(data);
-        const tipoKarting = await prisma.tiposkarting.findUnique({
-            where: {
-                idTiposKarting: data.TiposKarting_idTiposKarting
-            }
-        });
+async create(data: CreateKarting) {
+  this.validarDatos(data);
 
-        if (!tipoKarting) {
-            throw new AppError("El tipo de karting ingresado no existe");
-        }
-
-        return await prisma.kartings.create({
-            data: {
-                ...data,
-                categoria: data.categoria.trim(),
-                modelo: data.modelo.trim(),
-                estado: data.estado.trim(),
-                fechaAdquisicion: new Date(data.fechaAdquisicion)
-            }
-        });
+  const tipoKarting = await prisma.tiposkarting.findUnique({
+    where: {
+      idTiposKarting: data.TiposKarting_idTiposKarting
     }
+  });
+
+  if (!tipoKarting) {
+    throw new AppError("El tipo de karting ingresado no existe");
+  }
+
+  const datos = {
+    categoria: data.categoria.trim(),
+    modelo: data.modelo.trim(),
+    estado: data.estado.trim(),
+    fechaAdquisicion: new Date(data.fechaAdquisicion),
+    TiposKarting_idTiposKarting: data.TiposKarting_idTiposKarting
+  };
+
+  return await prisma.kartings.create({
+    data: datos
+  });
+}
 
     async update(idKartings: number, data: UpdateKarting) {
-        this.validarId(idKartings);
-        this.validarDatos(data);
-        if (data.TiposKarting_idTiposKarting !== undefined) {
-            const tipoKarting = await prisma.tiposkarting.findUnique({
-                where: { idTiposKarting: data.TiposKarting_idTiposKarting }
-            });
-            if (!tipoKarting) {
-                throw new AppError("El tipo de karting ingresado no existe");
-            }
-        }
-        return await prisma.kartings.update({
-            where: { idKartings },
-            data: {
-                ...data,
-                ...(data.categoria === undefined ? {} : { categoria: data.categoria.trim() }),
-                ...(data.modelo === undefined ? {} : { modelo: data.modelo.trim() }),
-                ...(data.estado === undefined ? {} : { estado: data.estado.trim() }),
-                ...(data.fechaAdquisicion === undefined ? {} : { fechaAdquisicion: new Date(data.fechaAdquisicion) })
-            }
-        });
-    }
+  this.validarId(idKartings);
+  this.validarDatos(data);
 
+  if (data.TiposKarting_idTiposKarting !== undefined) {
+    const tipoKarting = await prisma.tiposkarting.findUnique({
+      where: {
+        idTiposKarting: data.TiposKarting_idTiposKarting
+      }
+    });
+
+    if (!tipoKarting) {
+      throw new AppError("El tipo de karting ingresado no existe");
+    }
+  }
+
+  const datos = {
+    ...(data.categoria !== undefined && {
+      categoria: data.categoria.trim()
+    }),
+    ...(data.modelo !== undefined && {
+      modelo: data.modelo.trim()
+    }),
+    ...(data.estado !== undefined && {
+      estado: data.estado.trim()
+    }),
+    ...(data.fechaAdquisicion !== undefined && {
+      fechaAdquisicion: new Date(data.fechaAdquisicion)
+    }),
+    ...(data.TiposKarting_idTiposKarting !== undefined && {
+      TiposKarting_idTiposKarting: data.TiposKarting_idTiposKarting
+    })
+  };
+
+  return await prisma.kartings.update({
+    where: { idKartings },
+    data: datos
+  });
+}
     async delete(idKartings: number) {
         this.validarId(idKartings);
         return await prisma.kartings.delete({

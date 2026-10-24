@@ -21,32 +21,53 @@ class RolService {
             where: {idRol}
         });
     }
-    async create(data: Omit<IRol, "idRol">){
-        this.validarDatos(data);
-        const existente = await prisma.roles.findFirst({ where: { nombre: data.nombre.trim() } });
-        if (existente) {
-            throw new AppError("Ya existe un rol con ese nombre");
-        }
-        return await prisma.roles.create({
-            data: { nombre: data.nombre.trim() }
-        })
+    async create(data: Omit<IRol, "idRol">) {
+  this.validarDatos(data);
+
+  const existente = await prisma.roles.findFirst({
+    where: { nombre: data.nombre.trim() }
+  });
+
+  if (existente) {
+    throw new AppError("Ya existe un rol con ese nombre");
+  }
+
+  const datos = {
+    nombre: data.nombre.trim()
+  };
+
+  return await prisma.roles.create({
+    data: datos
+  });
+}
+    async update(idRol: number, data: Partial<IRol>) {
+  this.validarId(idRol);
+  this.validarDatos(data);
+
+  if (data.nombre !== undefined) {
+    const existente = await prisma.roles.findFirst({
+      where: {
+        nombre: data.nombre.trim(),
+        NOT: { idRol }
+      }
+    });
+
+    if (existente) {
+      throw new AppError("Ya existe un rol con ese nombre");
     }
-    async update(idRol:number,data:Partial<IRol>){
-        this.validarId(idRol);
-        this.validarDatos(data);
-        if (data.nombre !== undefined) {
-            const existente = await prisma.roles.findFirst({
-                where: { nombre: data.nombre.trim(), NOT: { idRol } }
-            });
-            if (existente) {
-                throw new AppError("Ya existe un rol con ese nombre");
-            }
-        }
-        return await prisma.roles.update({
-            where: {idRol},
-            data: data.nombre === undefined ? data : { nombre: data.nombre.trim() }
-        });
-    }
+  }
+
+  const datos = {
+    ...(data.nombre !== undefined && {
+      nombre: data.nombre.trim()
+    })
+  };
+
+  return await prisma.roles.update({
+    where: { idRol },
+    data: datos
+  });
+}
     async delete(idRol:number){
         this.validarId(idRol);
         return await prisma.roles.delete({

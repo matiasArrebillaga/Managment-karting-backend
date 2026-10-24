@@ -27,24 +27,41 @@ class TiposLicenciasService {
             where: {idTipoLicencia : idTipoLicencias}
         });
     }
+
     async create(data:CreateTiposLicencias){
         this.validarDatos(data);
+        const datos = {
+            nombre : data.nombre.trim(),
+            descripcion : data.descripcion.trim(),
+            nivel : data.nivel
+        }
         return await prisma.tiposlicencias.create({
-            data: { ...data, nombre: data.nombre.trim(), descripcion: data.descripcion.trim() }
+            data:datos
         })
     }
-    async update(idTipoLicencias:number,data:UpdateTiposLicencias){
-        this.validarId(idTipoLicencias);
-        this.validarDatos(data);
-        return await prisma.tiposlicencias.update({
-            where: {idTipoLicencia : idTipoLicencias},
-            data: {
-                ...data,
-                ...(data.nombre === undefined ? {} : { nombre: data.nombre.trim() }),
-                ...(data.descripcion === undefined ? {} : { descripcion: data.descripcion.trim() })
-            }
-        });
-    }
+
+async update(idTipoLicencias: number, data: UpdateTiposLicencias) {
+    this.validarId(idTipoLicencias);
+    this.validarDatos(data);
+
+    const datos = {
+    ...(data.nombre !== undefined && {
+      nombre: data.nombre.trim()
+    }),
+    ...(data.descripcion !== undefined && {
+      descripcion: data.descripcion.trim()
+    }),
+    ...(data.nivel !== undefined && {
+      nivel: data.nivel
+    })
+    };
+
+    return await prisma.tiposlicencias.update({
+    where: { idTipoLicencia: idTipoLicencias },
+    data: datos
+  });
+}
+
     async delete(idTipoLicencias:number){
         this.validarId(idTipoLicencias);
         return await prisma.tiposlicencias.delete({

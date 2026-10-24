@@ -137,32 +137,67 @@ private async crearPersonaConRol(
         });
     }
 
-    async update(idPersona:number,data:UpdatePersona){
-        this.validarId(idPersona);
-        this.validarDatos(data);
-        if (data.mail !== undefined) {
-            const existente = await prisma.personas.findFirst({ where: { mail: data.mail.trim(), NOT: { idPersona } } });
-            if (existente) throw new AppError("El mail ya está registrado");
-        }
-        if (data.Localidades_idLocalidades !== undefined &&
-            !await prisma.localidades.findUnique({where: {idLocalidades: data.Localidades_idLocalidades}})) {
-            throw new AppError("La localidad ingresada no existe");
-        }
-        return await prisma.personas.update({
-            where: {idPersona},
-            data: {
-                ...data,
-                ...(data.nombre === undefined ? {} : {nombre: data.nombre.trim()}),
-                ...(data.apellido === undefined ? {} : {apellido: data.apellido.trim()}),
-                ...(data.dni === undefined ? {} : {dni: data.dni.trim()}),
-                ...(data.mail === undefined ? {} : {mail: data.mail.trim()}),
-                ...(data.telefono === undefined ? {} : {telefono: data.telefono.trim()}),
-                ...(data.fechaNacimiento === undefined ? {} : {fechaNacimiento: new Date(data.fechaNacimiento)}),
-                ...(data.contraseña === undefined ? {} : {contraseña: await bcrypt.hash(data.contraseña, 10)})
-            },
-            omit: {contraseña: true}
-        });
+    async update(idPersona: number, data: UpdatePersona) {
+  this.validarId(idPersona);
+  this.validarDatos(data);
+
+  if (data.mail !== undefined) {
+    const existente = await prisma.personas.findFirst({
+      where: {
+        mail: data.mail.trim(),
+        NOT: { idPersona }
+      }
+    });
+
+    if (existente) {
+      throw new AppError("El mail ya está registrado");
     }
+  }
+
+  if (
+    data.Localidades_idLocalidades !== undefined &&
+    !await prisma.localidades.findUnique({
+      where: {
+        idLocalidades: data.Localidades_idLocalidades
+      }
+    })
+  ) {
+    throw new AppError("La localidad ingresada no existe");
+  }
+
+  const datos = {
+    ...(data.nombre !== undefined && {
+      nombre: data.nombre.trim()
+    }),
+    ...(data.apellido !== undefined && {
+      apellido: data.apellido.trim()
+    }),
+    ...(data.dni !== undefined && {
+      dni: data.dni.trim()
+    }),
+    ...(data.mail !== undefined && {
+      mail: data.mail.trim()
+    }),
+    ...(data.telefono !== undefined && {
+      telefono: data.telefono.trim()
+    }),
+    ...(data.fechaNacimiento !== undefined && {
+      fechaNacimiento: new Date(data.fechaNacimiento)
+    }),
+    ...(data.contraseña !== undefined && {
+      contraseña: await bcrypt.hash(data.contraseña, 10)
+    }),
+    ...(data.Localidades_idLocalidades !== undefined && {
+      Localidades_idLocalidades: data.Localidades_idLocalidades
+    })
+  };
+
+  return await prisma.personas.update({
+    where: { idPersona },
+    data: datos,
+    omit: { contraseña: true }
+  });
+}
     async delete(idPersona:number){
         this.validarId(idPersona);
         return await prisma.personas.delete({

@@ -38,18 +38,19 @@ class LocalidadService {
     }
     // recibe el id y la interface de update
     async update(idLocalidades: number, data: UpdateLocalidad) {
-    this.validarId(idLocalidades);
-    this.validarDatos(data);
+  this.validarId(idLocalidades);
+  this.validarDatos(data);
 
-    return await prisma.localidades.update({
-        where: { idLocalidades },
-        //Si el nombre es distinto de undefined asigna el nombre que se le envia por la request
-        data: {
-            ...(data.nombre !== undefined && {
-                nombre: data.nombre.trim()
-            })
-        }
-    });
+  const datos = {
+    ...(data.nombre !== undefined && {
+      nombre: data.nombre.trim()
+    })
+  };
+
+  return await prisma.localidades.update({
+    where: { idLocalidades },
+    data: datos
+  });
 }
     async delete(idLocalidades:number){
         this.validarId(idLocalidades);

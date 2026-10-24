@@ -57,6 +57,25 @@ describe("validacion de mail y contraseña", () => {
         Localidades_idLocalidades: 1
     };
 
+    it("ignora campos no permitidos en el update de persona", async () => {
+        db.personas.findFirst = jest.fn(async () => null);
+        db.personas.update = jest.fn(async ({ data }: any) => data);
+
+        const datosMaliciosos = {
+            nombre: "Juan",
+            reservas: { create: [{}] },
+            idRol: 1
+        };
+
+        await personaService.update(1, datosMaliciosos as any);
+
+        const datosEnviados = db.personas.update.mock.calls[0][0].data;
+
+        expect(datosEnviados).toEqual({ nombre: "Juan" });
+        expect(datosEnviados).not.toHaveProperty("reservas");
+        expect(datosEnviados).not.toHaveProperty("idRol");
+    });
+
     it.each([
         "hola",
         "juan@",

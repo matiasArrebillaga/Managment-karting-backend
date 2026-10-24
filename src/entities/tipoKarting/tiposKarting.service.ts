@@ -35,38 +35,66 @@ class TiposKartingsService {
             where: {idTiposKarting : idTipoKarting}
         });
     }
-    async create(data:CreateTiposKartings){
-        this.validarDatos(data);
-        const licencia = await prisma.tiposlicencias.findUnique({
-            where: { idTipoLicencia: data.TiposLicencias_idTipoLicenciaMinima }
-        });
-        if (!licencia) {
-            throw new AppError("La licencia mínima ingresada no existe");
-        }
-        return await prisma.tiposkarting.create({
-            data: { ...data, nombre: data.nombre.trim(), descripcion: data.descripcion.trim() }
-        })
+    async create(data: CreateTiposKartings) {
+    this.validarDatos(data);
+
+    const licencia = await prisma.tiposlicencias.findUnique({
+    where: {
+    idTipoLicencia: data.TiposLicencias_idTipoLicenciaMinima
+      }
+     });
+
+    if (!licencia) {
+    throw new AppError("La licencia mínima ingresada no existe");
     }
-    async update(idTipoKarting:number,data:UpdateTiposKartings){
-        this.validarId(idTipoKarting);
-        this.validarDatos(data);
-        if (data.TiposLicencias_idTipoLicenciaMinima !== undefined) {
-            const licencia = await prisma.tiposlicencias.findUnique({
-                where: { idTipoLicencia: data.TiposLicencias_idTipoLicenciaMinima }
-            });
-            if (!licencia) {
-                throw new AppError("La licencia mínima ingresada no existe");
-            }
-        }
-        return await prisma.tiposkarting.update({
-            where: {idTiposKarting : idTipoKarting},
-            data: {
-                ...data,
-                ...(data.nombre === undefined ? {} : { nombre: data.nombre.trim() }),
-                ...(data.descripcion === undefined ? {} : { descripcion: data.descripcion.trim() })
-            }
-        });
+
+    const datos = {
+    nombre: data.nombre.trim(),
+    descripcion: data.descripcion.trim(),
+    precioHora : data.precioHora,
+    TiposLicencias_idTipoLicenciaMinima:
+    data.TiposLicencias_idTipoLicenciaMinima
+  };
+
+    return await prisma.tiposkarting.create({
+    data: datos
+    });
+}
+
+  async update(idTipoKarting: number, data: UpdateTiposKartings) {
+this.validarId(idTipoKarting);
+this.validarDatos(data);
+
+  if (data.TiposLicencias_idTipoLicenciaMinima !== undefined) {
+    const licencia = await prisma.tiposlicencias.findUnique({
+      where: {
+        idTipoLicencia: data.TiposLicencias_idTipoLicenciaMinima
+      }
+    });
+
+    if (!licencia) {
+      throw new AppError("La licencia mínima ingresada no existe");
     }
+  }
+
+  const datos = {
+    ...(data.nombre !== undefined && {
+      nombre: data.nombre.trim()
+    }),
+    ...(data.descripcion !== undefined && {
+      descripcion: data.descripcion.trim()
+    }),
+    ...(data.TiposLicencias_idTipoLicenciaMinima !== undefined && {
+      TiposLicencias_idTipoLicenciaMinima:
+        data.TiposLicencias_idTipoLicenciaMinima
+    })
+  };
+
+  return await prisma.tiposkarting.update({
+    where: { idTiposKarting: idTipoKarting },
+    data: datos
+  });
+}
     async delete(idTipoKarting:number){
         this.validarId(idTipoKarting);
         return await prisma.tiposkarting.delete({
