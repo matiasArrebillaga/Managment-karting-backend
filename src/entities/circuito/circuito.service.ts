@@ -29,20 +29,42 @@ class CircuitoService {
             where: {idCircuitos}
         });
     }
-    async create(data:CreateCircuito){
-        this.validarDatos(data);
-        return await prisma.circuitos.create({
-            data: {...data, dificultad: data.dificultad.trim()}
-        })
-    }
-    async update(idCircuitos:number,data:UpdateCircuito){
-        this.validarId(idCircuitos);
-        this.validarDatos(data);
-        return await prisma.circuitos.update({
-            where: {idCircuitos},
-            data: data.dificultad === undefined ? data : {...data, dificultad: data.dificultad.trim()}
-        });
-    }
+
+   async create(data: CreateCircuito) {
+    const datos = {
+    distancia: data.distancia,
+    dificultad: data.dificultad.trim(),
+    maximo: data.maximo
+    };
+    this.validarDatos(datos);
+    return await prisma.circuitos.create({
+    data: datos
+
+});
+
+}
+
+    async update(idCircuitos: number, data: UpdateCircuito) {
+  this.validarId(idCircuitos);
+  this.validarDatos(data);
+
+  const datos = {
+    ...(data.distancia !== undefined && {
+      distancia: data.distancia
+    }),
+    ...(data.dificultad !== undefined && {
+      dificultad: data.dificultad.trim()
+    }),
+    ...(data.maximo !== undefined && {
+      maximo: data.maximo
+    })
+  };
+
+  return await prisma.circuitos.update({
+    where: { idCircuitos },
+    data: datos
+  });
+}
     async delete(idCircuitos:number){
         this.validarId(idCircuitos);
         return await prisma.circuitos.delete({

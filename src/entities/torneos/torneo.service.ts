@@ -106,37 +106,75 @@ class TorneosService {
         });
     }
 
-    async update(idTorneo: number, data: UpdateTorneos) {
-        this.validarId(idTorneo);
-        // solo convierte las fechas que vienen, el patch es parcial
-        const datos = {
-            ...data,
-            fechaInicio: data.fechaInicio === undefined ? undefined : new Date(data.fechaInicio),
-            fechaFin: data.fechaFin === undefined ? undefined : new Date(data.fechaFin)
-        };
-        this.validarDatos(datos);
-        const actual = await prisma.torneos.findUnique({where: {idTorneos: idTorneo}});
-        if (!actual) throw new AppError("El torneo indicado no existe");
-        const inicio = datos.fechaInicio ?? actual.fechaInicio;
-        const fin = datos.fechaFin ?? actual.fechaFin;
-        if (inicio >= fin) throw new AppError("La fecha de inicio debe ser anterior a la fecha de fin");
-        // cambiar la licencia dejaria a las carreras ya armadas con karts de otra licencia
-        if (datos.TiposLicencias_idTipoLicencia !== undefined &&
-            datos.TiposLicencias_idTipoLicencia !== actual.TiposLicencias_idTipoLicencia) {
-            await this.validarLicenciaExiste(datos.TiposLicencias_idTipoLicencia);
-            if (await prisma.carreras.count({ where: { Torneos_idTorneos: idTorneo } }) > 0) {
-                throw new AppError("No se puede cambiar el tipo de licencia: el torneo ya tiene carreras");
-            }
+   
+async update(idTorneo: number, data: UpdateTorneos) {
+    this.validarId(idTorneo);
+
+    // Construimos solo los campos permitidos y convertimos las fechas recibidas.
+    const datos = {
+        ...(data.nombre !== undefined && {
+            nombre: data.nombre
+        }),
+        ...(data.descripcion !== undefined && {
+            descripcion: data.descripcion
+        }),
+        ...(data.fechaInicio !== undefined && {
+            fechaInicio: new Date(data.fechaInicio)
+        }),
+        ...(data.fechaFin !== undefined && {
+            fechaFin: new Date(data.fechaFin)
+        }),
+        ...(data.TiposLicencias_idTipoLicencia !== undefined && {
+            TiposLicencias_idTipoLicencia: data.TiposLicencias_idTipoLicencia
+        })
+    };
+
+    this.validarDatos(datos);
+
+    const actual = await prisma.torneos.findUnique({
+        where: { idTorneos: idTorneo }
+    });
+
+    if (!actual) {
+        throw new AppError("El torneo indicado no existe");
+    }
+
+    const inicio = datos.fechaInicio ?? actual.fechaInicio;
+    const fin = datos.fechaFin ?? actual.fechaFin;
+
+    if (inicio >= fin) {
+        throw new AppError(
+            "La fecha de inicio debe ser anterior a la fecha de fin"
+        );
+    }
+
+    // Cambiar la licencia dejaría a las carreras ya armadas con karts de otra licencia.
+    if (
+        datos.TiposLicencias_idTipoLicencia !== undefined &&
+        datos.TiposLicencias_idTipoLicencia !== actual.TiposLicencias_idTipoLicencia
+    ) {
+        await this.validarLicenciaExiste(
+            datos.TiposLicencias_idTipoLicencia
+        );
+
+        if (
+            await prisma.carreras.count({
+                where: { Torneos_idTorneos: idTorneo }
+            }) > 0
+        ) {
+            throw new AppError(
+                "No se puede cambiar el tipo de licencia: el torneo ya tiene carreras"
+            );
         }
-        return await prisma.torneos.update({
-            where: { idTorneos: idTorneo },
-            data: {
-                ...datos,
-                ...(datos.nombre === undefined ? {} : {nombre: datos.nombre.trim()}),
-                ...(datos.descripcion === undefined ? {} : {descripcion: datos.descripcion.trim()})
-            }
+    }
+
+    return await prisma.torneos.update({
+        where: { idTorneos: idTorneo },
+        data: datos
         });
     }
+    
+
 
     async delete(idTorneo: number) {
         this.validarId(idTorneo);
