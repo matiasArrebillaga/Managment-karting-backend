@@ -2,7 +2,7 @@ import { prisma } from "../../config/prisma";
 import { Prisma } from "../../generated/prisma/client";
 import { AppError } from "../../middleware/error.middleware";
 import { CreateReserva, CreateReservaInput, UpdateReservaInput } from "./reserva.interface";
-import { hoyUTC, normalizarHora } from "../../utils/fecha";
+import { horaActualUTC, hoyUTC, normalizarHora } from "../../utils/fecha";
 import { franjaOcupada } from "../../utils/ocupacion";
 
 const MS_POR_HORA = 60 * 60 * 1000;
@@ -116,6 +116,11 @@ class ReservaService {
 
         if (opciones.fechaEsNueva && fechaReserva < hoyUTC()) { // uso del nuevo util
             throw new AppError("No se puede reservar en una fecha pasada");
+        }
+        // hoy solo se puede reservar un horario que todavia no empezo
+        if (opciones.fechaEsNueva && fechaReserva.getTime() === hoyUTC().getTime()
+            && data.horaInicio <= horaActualUTC()) {
+            throw new AppError("No se puede reservar en un horario que ya pasó");
         }
 
         await this.bloquearRecursos(db, data.Kartings_idKartings, data.Circuitos_idCircuitos);

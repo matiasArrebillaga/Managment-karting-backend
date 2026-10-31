@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, jest } from "@jest/globals";
+import { afterEach, beforeEach, describe, expect, it, jest } from "@jest/globals";
 
 jest.mock("../src/config/prisma");
 
@@ -114,6 +114,26 @@ describe("controles de disponibilidad", () => {
         })).rejects.toThrow(/fecha pasada/);
 
         expect(db.reservas.create).not.toHaveBeenCalled();
+    });
+
+    describe("reserva para hoy (reloj fijo: 15/06/2026 21:30 en Argentina, ya es 16/06 en UTC)", () => {
+        const HOY = new Date(Date.UTC(2026, 5, 15));
+        beforeEach(() => { jest.useFakeTimers().setSystemTime(new Date("2026-06-15T21:30:00-03:00")); });
+        afterEach(() => { jest.useRealTimers(); });
+
+        it("rechaza un horario que ya empezo", async () => {
+            await expect(reservaService.realizarReserva({
+                ...reservaValida(), fechaReserva: HOY, horaInicio: hora("21:00"), horaFin: hora("22:00")
+            })).rejects.toThrow("No se puede reservar en un horario que ya pasó");
+
+            expect(db.reservas.create).not.toHaveBeenCalled();
+        });
+
+        it("con el server en UTC, un horario de mas tarde hoy se puede reservar", async () => {
+            await expect(reservaService.realizarReserva({
+                ...reservaValida(), fechaReserva: HOY, horaInicio: hora("22:00"), horaFin: hora("23:00")
+            })).resolves.toMatchObject({ idReservas: 99 });
+        });
     });
 
     it("rechaza asignar un karting que no esta disponible", async () => {

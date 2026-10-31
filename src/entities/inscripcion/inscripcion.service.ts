@@ -2,7 +2,7 @@
 import { prisma } from "../../config/prisma";
 import type { Prisma } from "../../generated/prisma/client";
 import { AppError } from "../../middleware/error.middleware";
-import { hoyUTC } from "../../utils/fecha";
+import { horaActualUTC, hoyUTC } from "../../utils/fecha";
 import { CreatePersonaTorneo } from "./inscripciones.interface";
 
 class PersonasTorneosService {
@@ -13,14 +13,6 @@ class PersonasTorneosService {
 
     private aEntero(valor: unknown): number {
         return Number(valor);
-    }
-    // da la hora actual
-    private horaActual(): Date {
-        const ahora = new Date();
-        return new Date(Date.UTC(
-            1970, 0, 1,
-            ahora.getHours(), ahora.getMinutes(), ahora.getSeconds()
-        ));
     }
     //valida que el torneo exista, no haya empezado y tenga cupo
     private async validarTorneo(
@@ -129,7 +121,7 @@ class PersonasTorneosService {
             return await db.personas_torneos.create({
                 data: {
                     fecha_inscripcion: hoyUTC(),
-                    hora_inscripcion: this.horaActual(),
+                    hora_inscripcion: horaActualUTC(),
                     torneos: { connect: { idTorneos: Torneos_idTorneos } },
                     personas: { connect: { idPersona: Personas_idPersona } }
                 }

@@ -11,7 +11,7 @@ const db = prisma as unknown as Record<string, any>;
 
 // Reloj fijo: la fecha y la hora de inscripcion salen del servidor, asi que los tests las
 // comparan contra un valor exacto en lugar de volver a calcularlas.
-const AHORA_LOCAL = new Date(2026, 5, 15, 18, 30, 45); // 15/06/2026 18:30:45 local
+const AHORA_LOCAL = new Date("2026-06-15T18:30:45-03:00"); // 15/06/2026 18:30:45 en Argentina
 const HOY_UTC = new Date(Date.UTC(2026, 5, 15));
 
 const fecha = (anio: number, mes: number, dia: number) => new Date(Date.UTC(anio, mes, dia));
@@ -48,7 +48,7 @@ afterEach(() => {
 });
 
 describe("los timestamps los pone el servidor", () => {
-    it("graba la fecha de hoy y la hora local, ignorando lo que venga en el body", async () => {
+    it("graba la fecha de hoy y la hora de Argentina, ignorando lo que venga en el body", async () => {
         await inscripcionService.create({
             Torneos_idTorneos: 1,
             Personas_idPersona: 1,
