@@ -97,7 +97,7 @@ model participaciones {
 
 model roles {
   idRol    Int        @id @default(autoincrement())
-  nombre   String     @db.VarChar(20)
+  nombre   String     @unique @db.VarChar(20)
   personas personas[]
 }
 
@@ -105,9 +105,9 @@ model personas {
   idPersona                 Int      @id @default(autoincrement())
   nombre                    String   @db.VarChar(45)
   apellido                  String   @db.VarChar(45)
-  dni                       String   @db.VarChar(45)
+  dni                       String   @unique @db.VarChar(45)
   fechaNacimiento           DateTime @db.Date
-  mail                      String   @db.VarChar(45)
+  mail                      String   @unique @db.VarChar(45)
   telefono                  String   @db.VarChar(45)
   contraseña               String   @db.VarChar(255)
   Localidades_idLocalidades Int

@@ -31,8 +31,9 @@ class AuthService {
 // logica del login y manejo de tokens
 async login(data: ILoginDTO) {
 // primero busca a la persona por mail e incluye el rol
-    const persona = await prisma.personas.findFirst({
-        where: { mail: data.mail },
+    // mail es @unique: findUnique trae a la unica persona con ese mail
+    const persona = await prisma.personas.findUnique({
+        where: { mail: String(data.mail ?? "").trim().toLowerCase() },
         include: {
             rol: true
         }

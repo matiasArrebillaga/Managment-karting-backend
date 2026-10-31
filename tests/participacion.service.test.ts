@@ -4,16 +4,20 @@ jest.mock("../src/config/prisma");
 
 import { prisma } from "../src/config/prisma";
 import participacionService from "../src/entities/participacion/participacion.service";
+import { ahoraArgentina } from "../src/utils/fecha";
 
 const db = prisma as unknown as Record<string, any>;
 
-// Arma una carrera que termina en `instante` (hora local), guardada como la guarda la DB:
+// Arma una carrera que termina en `instante` (hora de Argentina), guardada como la guarda la DB:
 // el dia en DATE a medianoche UTC y la hora de pared en TIME sobre la epoch UTC.
-const carreraQueTermina = (instante: Date) => ({
-    fechaCarrera: new Date(Date.UTC(instante.getFullYear(), instante.getMonth(), instante.getDate())),
-    horaInicio: new Date(Date.UTC(1970, 0, 1, 0, 0)),
-    horaFin: new Date(Date.UTC(1970, 0, 1, instante.getHours(), instante.getMinutes())),
-});
+const carreraQueTermina = (instante: Date) => {
+    const pared = ahoraArgentina(instante);
+    return {
+        fechaCarrera: new Date(Date.UTC(pared.getUTCFullYear(), pared.getUTCMonth(), pared.getUTCDate())),
+        horaInicio: new Date(Date.UTC(1970, 0, 1, 0, 0)),
+        horaFin: new Date(Date.UTC(1970, 0, 1, pared.getUTCHours(), pared.getUTCMinutes())),
+    };
+};
 
 const HORA = 60 * 60 * 1000;
 

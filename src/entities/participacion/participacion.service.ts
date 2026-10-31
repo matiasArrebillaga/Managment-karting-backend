@@ -1,6 +1,7 @@
 
 import {prisma} from "../../config/prisma.js";
 import { AppError } from "../../middleware/error.middleware.js";
+import { ahoraArgentina } from "../../utils/fecha.js";
 import {
     ClavesCarrera,
     CreateParticipacion,
@@ -62,13 +63,13 @@ class ParticipacionesService {
     }
 
     // fechaCarrera (DATE) y horaFin (TIME) llegan como instantes UTC que guardan la hora de
-    // pared del kartodromo; se rearman en hora local para compararlos contra el reloj.
+    // pared del kartodromo; se arman igual que ahoraArgentina() para compararlos contra el reloj.
     private async obtenerCarreraFinalizada(claves: ClavesCarrera) {
         const carrera = await this.obtenerCarrera(claves);
         const f = carrera.fechaCarrera;
         const h = carrera.horaFin;
-        const fin = new Date(f.getUTCFullYear(), f.getUTCMonth(), f.getUTCDate(), h.getUTCHours(), h.getUTCMinutes());
-        if (fin > new Date()) {
+        const fin = new Date(Date.UTC(f.getUTCFullYear(), f.getUTCMonth(), f.getUTCDate(), h.getUTCHours(), h.getUTCMinutes()));
+        if (fin > ahoraArgentina()) {
             throw new AppError("No se puede registrar el resultado de una carrera que aun no paso");
         }
         return carrera;

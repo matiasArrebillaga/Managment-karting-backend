@@ -1,6 +1,6 @@
 import { Prisma } from "../generated/prisma/client";
 
-type Excluir = {
+export type Excluir = {
     idReserva?: number; // reserva en edicion
     // carrera en edicion: la fecha ya va en el filtro, con esto queda su clave completa
     carrera?: { Torneos_idTorneos: number; Circuitos_idCircuitos: number };

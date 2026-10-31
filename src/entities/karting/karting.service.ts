@@ -1,6 +1,8 @@
 import { AppError } from "../../middleware/error.middleware";
 import { CreateKarting, IKarting, UpdateKarting } from "./karting.interface";
 import { prisma } from "../../config/prisma";
+import { normalizarFecha, normalizarHora } from "../../utils/fecha";
+import { Excluir, franjaOcupada } from "../../utils/ocupacion";
 
 class KartingService {
     private validarId(id: number) {
@@ -33,6 +35,23 @@ class KartingService {
 
     async getAll() {
         return await prisma.kartings.findMany();
+    }
+
+    // karts en estado Disponible que no estan en ninguna reserva ni carrera que se solape con la franja.
+    // excluir sirve al editar: la reserva o carrera que se esta editando no cuenta como ocupacion
+    async getDisponibles(fecha: unknown, horaInicio: unknown, horaFin: unknown, excluir: Excluir = {}) {
+        const dia = normalizarFecha(String(fecha ?? ""));
+        const inicio = normalizarHora(horaInicio, "horaInicio");
+        const fin = normalizarHora(horaFin, "horaFin");
+        if (inicio >= fin) throw new AppError("La hora de inicio debe ser anterior a la hora de fin");
+
+        const ocupadas = await franjaOcupada(prisma, dia, inicio, fin, excluir);
+        return await prisma.kartings.findMany({
+            where: {
+                estado: "Disponible",
+                idKartings: { notIn: ocupadas.map(o => o.Kartings_idKartings) }
+            }
+        });
     }
 
     async getById(idKartings: number) {

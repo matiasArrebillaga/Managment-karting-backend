@@ -2,8 +2,9 @@ import { prisma } from "../../config/prisma";
 import { Prisma } from "../../generated/prisma/client";
 import { AppError } from "../../middleware/error.middleware";
 import { CreateReserva, CreateReservaInput, UpdateReservaInput } from "./reserva.interface";
-import { hoyUTC, normalizarHora } from "../../utils/fecha";
+import { horaActualUTC, hoyUTC, normalizarHora } from "../../utils/fecha";
 import { franjaOcupada } from "../../utils/ocupacion";
+import { validarLicenciaVigente } from "../../utils/licencia";
 
 const MS_POR_HORA = 60 * 60 * 1000;
 
@@ -35,9 +36,12 @@ class ReservaService {
         if (Number.isNaN(horaInicio.getTime()) || Number.isNaN(horaFin.getTime())) {
             throw new AppError("Las horas de inicio y fin no son válidas");
         }
+        // las horas se guardan como 1970-01-01 en UTC: si inicio y fin caen en punto, la duracion ya es de horas enteras
+        if (horaInicio.getTime() % MS_POR_HORA !== 0 || horaFin.getTime() % MS_POR_HORA !== 0) {
+            throw new AppError("Las reservas son de hora en hora (ej: 10:00 a 12:00)");
+        }
         const duracion = horaFin.getTime() - horaInicio.getTime();
         if (duracion <= 0) throw new AppError("La hora de inicio debe ser anterior a la hora de fin");
-        if (duracion % MS_POR_HORA !== 0) throw new AppError("La reserva debe ser de horas enteras");
         return duracion / MS_POR_HORA;
     }
 
@@ -47,28 +51,11 @@ class ReservaService {
         await db.$queryRaw`SELECT idCircuitos FROM circuitos WHERE idCircuitos = ${idCirc} FOR UPDATE`;
     }
 
-    private async validarLicencia(
-        db: Prisma.TransactionClient,
-        Personas_idPersona: number,
-        nivelRequerido: number
-    ) {
-        const licenciaValida = await db.licencias.findFirst({
-            where: {
-                Personas_idPersona,
-                fechaVencimiento: { gte: new Date() },
-                tiposlicencias: { nivel: { gte: nivelRequerido } }
-            }
-        });
-        if (!licenciaValida) {
-            throw new AppError(
-                "La persona no cuenta con una licencia de nivel suficiente para el karting"
-            );
-        }
-    }
   
      async listarReservasRango(fechaInicio : Date , fechaFin : Date){
+        // sin esto, una fecha faltante o mal escrita llega a Prisma como Invalid Date y da 500
         return await prisma.reservas.findMany({
-            where: { fechaReserva: { gte: fechaInicio, lte: fechaFin } },
+            where: { fechaReserva: { gte: this.normalizarFecha(fechaInicio), lte: this.normalizarFecha(fechaFin) } },
             orderBy: [{ fechaReserva: "asc" }, { horaInicio: "asc" }]
         });
     }
@@ -113,6 +100,11 @@ class ReservaService {
         if (opciones.fechaEsNueva && fechaReserva < hoyUTC()) { // uso del nuevo util
             throw new AppError("No se puede reservar en una fecha pasada");
         }
+        // hoy solo se puede reservar un horario que todavia no empezo
+        if (opciones.fechaEsNueva && fechaReserva.getTime() === hoyUTC().getTime()
+            && data.horaInicio <= horaActualUTC()) {
+            throw new AppError("No se puede reservar en un horario que ya pasó");
+        }
 
         await this.bloquearRecursos(db, data.Kartings_idKartings, data.Circuitos_idCircuitos);
 
@@ -133,10 +125,11 @@ class ReservaService {
             throw new AppError(`El karting no está disponible (estado: ${karting.estado})`);
         }
 
-        await this.validarLicencia(
+        await validarLicenciaVigente(
             db,
             data.Personas_idPersona,
-            karting.tiposkarting.tiposlicencias.nivel
+            karting.tiposkarting.tiposlicencias.nivel,
+            "para el karting"
         );
         await this.validarDisponibilidad(
             db, data, fechaReserva, circuito.maximo, opciones.idReservaExcluida

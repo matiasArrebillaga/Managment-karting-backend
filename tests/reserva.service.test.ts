@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, jest } from "@jest/globals";
+import { afterEach, beforeEach, describe, expect, it, jest } from "@jest/globals";
 
 jest.mock("../src/config/prisma");
 
@@ -71,7 +71,17 @@ describe("calculo del monto", () => {
         await expect(reservaService.realizarReserva({
             ...reservaValida(),
             horaFin: hora("11:30")
-        })).rejects.toThrow(/horas enteras/);
+        })).rejects.toThrow(/de hora en hora/);
+
+        expect(db.reservas.create).not.toHaveBeenCalled();
+    });
+
+    it("rechaza horas enteras que no empiecen en punto (10:30 a 11:30)", async () => {
+        await expect(reservaService.realizarReserva({
+            ...reservaValida(),
+            horaInicio: hora("10:30"),
+            horaFin: hora("11:30")
+        })).rejects.toThrow(/de hora en hora/);
 
         expect(db.reservas.create).not.toHaveBeenCalled();
     });
@@ -104,6 +114,26 @@ describe("controles de disponibilidad", () => {
         })).rejects.toThrow(/fecha pasada/);
 
         expect(db.reservas.create).not.toHaveBeenCalled();
+    });
+
+    describe("reserva para hoy (reloj fijo: 15/06/2026 21:30 en Argentina, ya es 16/06 en UTC)", () => {
+        const HOY = new Date(Date.UTC(2026, 5, 15));
+        beforeEach(() => { jest.useFakeTimers().setSystemTime(new Date("2026-06-15T21:30:00-03:00")); });
+        afterEach(() => { jest.useRealTimers(); });
+
+        it("rechaza un horario que ya empezo", async () => {
+            await expect(reservaService.realizarReserva({
+                ...reservaValida(), fechaReserva: HOY, horaInicio: hora("21:00"), horaFin: hora("22:00")
+            })).rejects.toThrow("No se puede reservar en un horario que ya pasó");
+
+            expect(db.reservas.create).not.toHaveBeenCalled();
+        });
+
+        it("con el server en UTC, un horario de mas tarde hoy se puede reservar", async () => {
+            await expect(reservaService.realizarReserva({
+                ...reservaValida(), fechaReserva: HOY, horaInicio: hora("22:00"), horaFin: hora("23:00")
+            })).resolves.toMatchObject({ idReservas: 99 });
+        });
     });
 
     it("rechaza asignar un karting que no esta disponible", async () => {
@@ -368,6 +398,11 @@ describe("normalizacion de la entrada", () => {
         await expect(reservaService.realizarReserva(
             { ...reservaValida(), horaInicio: undefined } as any
         )).rejects.toThrow("El campo horaInicio debe tener formato HH:MM");
+    });
+
+    it("rechaza el listado por rango sin fechas validas (400, no 500)", async () => {
+        await expect(reservaService.listarReservasRango(new Date("x"), new Date("2026-10-31")))
+            .rejects.toThrow("La fecha de reserva no es válida");
     });
 
     it("descarta del patch los campos que no son de la reserva", async () => {
