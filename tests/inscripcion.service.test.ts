@@ -200,6 +200,15 @@ describe("solape entre torneos", () => {
             .rejects.toThrow("Copa Junio");
         expect(db.personas_torneos.create).not.toHaveBeenCalled();
     });
+
+    it("si ya esta inscripta en el mismo torneo lo dice asi", async () => {
+        db.personas_torneos.findFirst = jest.fn(async () => ({
+            Torneos_idTorneos: 1, torneos: { nombre: "Copa Junio" }
+        }));
+
+        await expect(inscripcionService.create({ Torneos_idTorneos: 1, Personas_idPersona: 1 }))
+            .rejects.toThrow("La persona ya está inscripta en este torneo");
+    });
 });
 
 describe("listado propio", () => {

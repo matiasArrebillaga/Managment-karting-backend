@@ -35,9 +35,12 @@ class ReservaService {
         if (Number.isNaN(horaInicio.getTime()) || Number.isNaN(horaFin.getTime())) {
             throw new AppError("Las horas de inicio y fin no son válidas");
         }
+        // las horas se guardan como 1970-01-01 en UTC: si inicio y fin caen en punto, la duracion ya es de horas enteras
+        if (horaInicio.getTime() % MS_POR_HORA !== 0 || horaFin.getTime() % MS_POR_HORA !== 0) {
+            throw new AppError("Las reservas son de hora en hora (ej: 10:00 a 12:00)");
+        }
         const duracion = horaFin.getTime() - horaInicio.getTime();
         if (duracion <= 0) throw new AppError("La hora de inicio debe ser anterior a la hora de fin");
-        if (duracion % MS_POR_HORA !== 0) throw new AppError("La reserva debe ser de horas enteras");
         return duracion / MS_POR_HORA;
     }
 
@@ -67,8 +70,9 @@ class ReservaService {
     }
   
      async listarReservasRango(fechaInicio : Date , fechaFin : Date){
+        // sin esto, una fecha faltante o mal escrita llega a Prisma como Invalid Date y da 500
         return await prisma.reservas.findMany({
-            where: { fechaReserva: { gte: fechaInicio, lte: fechaFin } },
+            where: { fechaReserva: { gte: this.normalizarFecha(fechaInicio), lte: this.normalizarFecha(fechaFin) } },
             orderBy: [{ fechaReserva: "asc" }, { horaInicio: "asc" }]
         });
     }

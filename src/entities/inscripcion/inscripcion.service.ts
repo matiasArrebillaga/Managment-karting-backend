@@ -60,6 +60,9 @@ class PersonasTorneosService {
         });
 
         if (solapada) {
+            if (solapada.Torneos_idTorneos === idTorneo) {
+                throw new AppError("La persona ya está inscripta en este torneo");
+            }
             throw new AppError(
                 `La persona ya está inscripta en ${solapada.torneos.nombre}, que se superpone con este torneo`
             );
