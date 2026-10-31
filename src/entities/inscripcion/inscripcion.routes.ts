@@ -1,4 +1,5 @@
 
+import { requireFields } from "../../middleware/error.middleware";
 import { Router } from "express";
 import PersonasTorneosController from "./inscripcion.controller";
 import { verifyRoles } from "../../middleware/auth.middleware";
@@ -19,6 +20,13 @@ personasTorneos.get(
     PersonasTorneosController.getMias
 );
 
+// tambien va antes: si no, "/torneo/5" matchearia "/:Torneos_idTorneos/:Personas_idPersona"
+personasTorneos.get(
+    "/torneo/:idTorneo",
+    verifyRoles("CLIENTE","EMPLEADO","ADMIN"),
+    PersonasTorneosController.getInscriptosTorneo
+);
+
 personasTorneos.get(
     "/:Torneos_idTorneos/:Personas_idPersona",
     verifyRoles("CLIENTE","EMPLEADO","ADMIN"),
@@ -28,6 +36,7 @@ personasTorneos.get(
 personasTorneos.post(
     "/",
     verifyRoles("CLIENTE","EMPLEADO","ADMIN"),
+    requireFields("Torneos_idTorneos"),
     PersonasTorneosController.create
 );
 

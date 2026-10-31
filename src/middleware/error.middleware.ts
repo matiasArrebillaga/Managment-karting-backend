@@ -18,6 +18,19 @@ export function notFoundHandler(req: Request, res: Response) {
     });
 }
 
+// middleware de ruta: corta con 400 si al body le falta algun campo obligatorio
+// asi el service nunca recibe un body vacio (ej: "Cannot read properties of undefined")
+export function requireFields(...campos: string[]) {
+    return (req: Request, res: Response, next: NextFunction) => {
+        const body = req.body ?? {};
+        const faltantes = campos.filter(campo => body[campo] === undefined || body[campo] === null || body[campo] === "");
+        if (faltantes.length > 0) {
+            return next(new AppError(`Faltan campos obligatorios: ${faltantes.join(", ")}`));
+        }
+        next();
+    };
+}
+
 // funcion de manejo unificado de errores
 // err es unknown para recibir cualquier tipo de error
 export function errorHandler(err: unknown, req: Request, res: Response, next: NextFunction) {
@@ -41,14 +54,14 @@ export function errorHandler(err: unknown, req: Request, res: Response, next: Ne
                 message: "El recurso ya existe"
             });
         }
+        if (code === "P2003") { // clave foranea: el id referenciado no existe o el registro esta en uso
+            return res.status(409).json({
+                message: "El recurso referenciado no existe o está en uso"
+            });
+        }
     }
-// si el error es de JavaScript 
-    if (err instanceof Error) {
-        return res.status(400).json({
-            message: err.message
-        });
-    }
-// si no se reconoce el error da un error generico
+// cualquier otro error (de JavaScript, de Prisma, etc.) es un fallo nuestro:
+// no se expone el mensaje interno, queda solo en el console.error de arriba
     res.status(500).json({
         message: "Error interno del servidor"
     });

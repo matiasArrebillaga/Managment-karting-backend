@@ -1,7 +1,7 @@
 import app from "./app";
 import { prisma } from "./config/prisma";
 
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000; // Railway inyecta PORT; en local no existe y usamos 3000
 
 async function startServer() {
     try {

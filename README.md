@@ -107,3 +107,9 @@ npx jest tests/reserva.service.test.ts --runInBand --forceExit
 ```
 
 Antes de subir cambios conviene correr también `npm run build` para verificar que compile.
+
+## Documentación
+
+Toda la documentación del proyecto, incluyendo propuestas, Pull Requests, minutas, evidencias de pruebas y capturas responsive, se encuentra en la carpeta [`docs/`](docs/).
+
+📚 **[Consultar la documentación completa](docs/README.md)**.

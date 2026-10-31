@@ -1,4 +1,5 @@
 import ReservaController from "./reserva.controller";
+import { requireFields } from "../../middleware/error.middleware";
 import {Router} from "express";
 import { verifyRoles } from "../../middleware/auth.middleware";
 
@@ -12,7 +13,7 @@ router.get("/fechas", verifyRoles("ADMIN","EMPLEADO"), ReservaController.getRese
 router.get("/mias",verifyRoles("CLIENTE","EMPLEADO","ADMIN"),ReservaController.getMias);
 // un CLIENTE puede ver el detalle, pero el service le devuelve 404 si no es suya
 router.get("/:id",verifyRoles("CLIENTE","ADMIN","EMPLEADO"),ReservaController.getById);
-router.post("/",verifyRoles("CLIENTE","EMPLEADO","ADMIN"), ReservaController.create);
+router.post("/",verifyRoles("CLIENTE","EMPLEADO","ADMIN"), requireFields("fechaReserva", "horaInicio", "horaFin", "Circuitos_idCircuitos", "Kartings_idKartings"), ReservaController.create);
 router.patch("/:id",verifyRoles("CLIENTE","EMPLEADO","ADMIN"), ReservaController.update);
 // un CLIENTE puede cancelar, pero el service lo limita a las propias
 router.delete("/:id",verifyRoles("CLIENTE","EMPLEADO","ADMIN"),ReservaController.delete);

@@ -213,3 +213,22 @@ describe("listado propio", () => {
         });
     });
 });
+
+describe("inscriptos de un torneo", () => {
+    it("devuelve solo id, nombre y apellido de cada persona", async () => {
+        db.personas_torneos.findMany.mockResolvedValueOnce([
+            { personas: { idPersona: 4, nombre: "Ana", apellido: "Paz" } }
+        ]);
+
+        const inscriptos = await inscripcionService.getInscriptosTorneo(1);
+
+        expect(inscriptos).toEqual([{ idPersona: 4, nombre: "Ana", apellido: "Paz" }]);
+        expect(db.personas_torneos.findMany.mock.calls[0][0].select).toEqual({
+            personas: { select: { idPersona: true, nombre: true, apellido: true } }
+        });
+    });
+
+    it("rechaza un id de torneo que no es entero", async () => {
+        await expect(inscripcionService.getInscriptosTorneo(NaN)).rejects.toThrow("entero");
+    });
+});

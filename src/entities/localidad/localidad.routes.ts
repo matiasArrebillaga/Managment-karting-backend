@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { requireFields } from "../../middleware/error.middleware";
 import localidadController from "./localidad.controller";
 import { verifyRoles } from "../../middleware/auth.middleware";
 
@@ -13,7 +14,7 @@ router.get("/",verifyRoles("CLIENTE","EMPLEADO","ADMIN"), localidadController.ge
 router.get("/:id",verifyRoles("CLIENTE","EMPLEADO","ADMIN"), localidadController.getById);
 
 //CREATE
-router.post("/",verifyRoles("ADMIN","EMPLEADO"), localidadController.create);
+router.post("/",verifyRoles("ADMIN","EMPLEADO"), requireFields("nombre"), localidadController.create);
 
 //UPDATE
 router.patch("/:id",verifyRoles("ADMIN","EMPLEADO"), localidadController.update);

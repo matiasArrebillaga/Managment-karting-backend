@@ -1,3 +1,4 @@
+import { AppError } from "../../middleware/error.middleware";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import {prisma} from "../../config/prisma"
@@ -13,12 +14,18 @@ class AuthService {
         const fechaNacimiento = new Date(data.fechaNacimiento); // transforma la data en fecha
 
         if (Number.isNaN(fechaNacimiento.getTime())) { // valida que sea un numero valido
-            throw new Error("La fecha de nacimiento no es válida");
+            throw new AppError("La fecha de nacimiento no es válida");
         }
         // llama al service create de persona con los datos
         return personaService.create({
-            ...data,
-            fechaNacimiento
+            nombre: data.nombre,
+            apellido: data.apellido,
+            dni: data.dni,
+            fechaNacimiento,
+            mail: data.mail,
+            telefono: data.telefono,
+            Localidades_idLocalidades: data.Localidades_idLocalidades,
+            contraseña: data.contraseña
         });
     }
 // logica del login y manejo de tokens
@@ -32,7 +39,7 @@ async login(data: ILoginDTO) {
     });
 
     if (!persona) {
-        throw new Error("Credenciales invalidas");
+        throw new AppError("Credenciales invalidas", 401);
     }
     // valida el hash de la contraseña ingresada con bycrypt 
     const contraseñaValida = await bcrypt.compare(
@@ -41,7 +48,7 @@ async login(data: ILoginDTO) {
     );
 
     if (!contraseñaValida) {
-        throw new Error("Credenciales invalidas");
+        throw new AppError("Credenciales invalidas", 401);
     }
     // una vez validada la contraseña se crea y firma el token con el rol y los datos de la persona    
     const token = jwt.sign(

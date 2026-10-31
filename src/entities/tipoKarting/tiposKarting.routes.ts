@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { requireFields } from "../../middleware/error.middleware";
 import TiposKartingsController from "./tiposKarting.controller";
 import { verifyRoles } from "../../middleware/auth.middleware";
 
@@ -7,7 +8,7 @@ const router = Router();
 
 router.get("/", verifyRoles("CLIENTE","EMPLEADO","ADMIN"),TiposKartingsController.getAll);
 router.get("/:id",verifyRoles("CLIENTE","EMPLEADO","ADMIN"), TiposKartingsController.getById);
-router.post("/", verifyRoles("EMPLEADO","ADMIN"),TiposKartingsController.create);
+router.post("/", verifyRoles("EMPLEADO","ADMIN"), requireFields("nombre", "descripcion", "precioHora", "TiposLicencias_idTipoLicenciaMinima"), TiposKartingsController.create);
 router.patch("/:id",verifyRoles("EMPLEADO","ADMIN"), TiposKartingsController.update);
 router.delete("/:id",verifyRoles("ADMIN"),TiposKartingsController.delete);
 

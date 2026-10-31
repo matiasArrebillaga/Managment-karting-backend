@@ -64,6 +64,25 @@ const services = [
     participacionService,
 ] as unknown as ServiceMock[];
 
+// bodies minimos que pasan requireFields en cada POST (el service esta mockeado)
+const persona = {
+    nombre: "Ana", apellido: "Gomez", dni: "123", fechaNacimiento: "2000-01-01",
+    mail: "test@test.com", telefono: "111", contraseña: "secreta12", Localidades_idLocalidades: 1,
+};
+const bodies: Record<string, object> = {
+    "/api/kartings": { categoria: "A", modelo: "M", estado: "disponible", fechaAdquisicion: "2024-01-01", TiposKarting_idTiposKarting: 1 },
+    "/api/personas": persona,
+    "/api/localidades": { nombre: "Rosario" },
+    "/api/circuitos": { distancia: 1000, dificultad: "media", maximo: 10 },
+    "/api/roles": { nombre: "EMPLEADO" },
+    "/api/tiposLicencias": { nombre: "B", descripcion: "basica", nivel: 1 },
+    "/api/tiposKartings": { nombre: "Pro", descripcion: "rapido", precioHora: 100, TiposLicencias_idTipoLicenciaMinima: 1 },
+    "/api/torneos": { nombre: "T", descripcion: "D", cupoMaximo: 10, fechaInicio: "2026-12-01", fechaFin: "2026-12-10", TiposLicencias_idTipoLicencia: 1 },
+    "/api/licencias": { fechaEmision: "2026-01-01", fechaVencimiento: "2027-01-01", Personas_idPersona: 1, TiposLicencias_idTipoLicencia: 1 },
+    "/api/carreras": { fechaCarrera: "2026-12-05", horaInicio: "10:00", horaFin: "11:00", Torneos_idTorneos: 1, Circuitos_idCircuitos: 1, kartings: [1] },
+    "/api/participaciones": { Carrera_Torneos_idTorneos: 1, Carrera_Circuitos_idCircuitos: 1, Carrera_fecha: "2026-12-05", Personas_idPersona: 1, posicion_final: 1, tiempo: "00:10:00" },
+};
+
 beforeEach(() => {
     jest.clearAllMocks();
     for (const service of services) {
@@ -124,6 +143,9 @@ describe("roles de localidades, tiposKartings y licencias", () => {
         // el CLIENTE tiene que ver el precioHora antes de reservar
         ["/api/tiposKartings", "CLIENTE"],
         ["/api/tiposKartings/1", "CLIENTE"],
+        // el CLIENTE ve qué licencia pide cada torneo y filtra por ella
+        ["/api/tiposLicencias", "CLIENTE"],
+        ["/api/tiposLicencias/1", "CLIENTE"],
     ] as const)("permite GET %s a un %s", async (path, role) => {
         const response = await request(app)
             .get(path)
@@ -136,7 +158,7 @@ describe("roles de localidades, tiposKartings y licencias", () => {
         const alta = await request(app)
             .post("/api/licencias")
             .set("Authorization", `Bearer ${token("ADMIN")}`)
-            .send({});
+            .send(bodies["/api/licencias"]);
         expect(alta.status).toBe(201);
 
         const cambio = await request(app)
@@ -176,7 +198,7 @@ describe("CRUD de las entidades", () => {
         const response = await request(app)
             .post(path)
             .set("Authorization", `Bearer ${token(role)}`)
-            .send({});
+            .send(bodies[path]);
 
         expect(response.status).toBe(201);
         expect((looseService(service)[createMethod] as unknown as jest.Mock)).toHaveBeenCalled();
@@ -377,8 +399,7 @@ describe("rutas con claves compuestas", () => {
         const create = await request(app)
             .post(path)
             .set("Authorization", `Bearer ${token(role)}`)
-            // carreras parsea las horas "HH:MM" en el service
-            .send({ horaInicio: "10:00", horaFin: "11:00" });
+            .send(bodies[path]);
 
         expect(create.status).toBe(201);
         expect((looseService(service)[createMethod] as unknown as jest.Mock)).toHaveBeenCalled();
@@ -441,7 +462,7 @@ describe("resultados de carrera", () => {
             .set("Authorization", `Bearer ${token("CLIENTE")}`);
 
         expect(response.status).toBe(200);
-        expect(torneoService.getAll as unknown as jest.Mock).toHaveBeenCalledWith("proximo");
+        expect(torneoService.getAll as unknown as jest.Mock).toHaveBeenCalledWith("proximo", undefined);
     });
 
     it("rechaza una carga sin lista de resultados", async () => {
@@ -461,11 +482,11 @@ describe("autenticación", () => {
 
         const response = await request(app)
             .post("/api/auth/register")
-            .send({ mail: "test@test.com" });
+            .send(persona);
 
         expect(response.status).toBe(201);
         expect(response.body).toEqual({ idPersona: 1 });
-        expect((authService.register as unknown as jest.Mock)).toHaveBeenCalledWith({ mail: "test@test.com" });
+        expect((authService.register as unknown as jest.Mock)).toHaveBeenCalledWith(persona);
     });
 
     it("inicia sesión y devuelve el token", async () => {
@@ -480,5 +501,40 @@ describe("autenticación", () => {
 
         expect(response.status).toBe(200);
         expect(response.body.token).toBe("token-de-prueba");
+    });
+});
+
+describe("campos obligatorios", () => {
+    it("un POST sin body corta con 400 y no llega al service", async () => {
+        const response = await request(app)
+            .post("/api/kartings")
+            .set("Authorization", `Bearer ${token("EMPLEADO")}`);
+
+        expect(response.status).toBe(400);
+        expect(response.body.message).toBe("Faltan campos obligatorios: categoria, modelo, estado, fechaAdquisicion, TiposKarting_idTiposKarting");
+        expect(kartingService.create as unknown as jest.Mock).not.toHaveBeenCalled();
+    });
+
+    it("lista solo los campos que faltan", async () => {
+        const response = await request(app)
+            .post("/api/auth/login")
+            .send({ mail: "test@test.com", contraseña: "" });
+
+        expect(response.status).toBe(400);
+        expect(response.body.message).toBe("Faltan campos obligatorios: contraseña");
+        expect(authService.login as unknown as jest.Mock).not.toHaveBeenCalled();
+    });
+});
+
+describe("documentación OpenAPI", () => {
+    it("manda el token a las rutas protegidas y deja públicas las de auth", async () => {
+        const { body: spec } = await request(app).get("/api-docs.json");
+
+        expect(spec.security).toEqual([{ bearerAuth: [] }]);
+        expect(spec.paths["/api/auth/login"].post.security).toEqual([]);
+        expect(spec.paths["/api/auth/localidades"].get.security).toEqual([]);
+        for (const path of ["/api/personas/{id}/rol", "/api/personas/empleado", "/api/reservas/fechas", "/api/licencias/mias"]) {
+            expect(spec.paths[path]).toBeDefined();
+        }
     });
 });
