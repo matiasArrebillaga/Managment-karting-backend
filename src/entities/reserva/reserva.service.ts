@@ -4,6 +4,7 @@ import { AppError } from "../../middleware/error.middleware";
 import { CreateReserva, CreateReservaInput, UpdateReservaInput } from "./reserva.interface";
 import { horaActualUTC, hoyUTC, normalizarHora } from "../../utils/fecha";
 import { franjaOcupada } from "../../utils/ocupacion";
+import { validarLicenciaVigente } from "../../utils/licencia";
 
 const MS_POR_HORA = 60 * 60 * 1000;
 
@@ -50,24 +51,6 @@ class ReservaService {
         await db.$queryRaw`SELECT idCircuitos FROM circuitos WHERE idCircuitos = ${idCirc} FOR UPDATE`;
     }
 
-    private async validarLicencia(
-        db: Prisma.TransactionClient,
-        Personas_idPersona: number,
-        nivelRequerido: number
-    ) {
-        const licenciaValida = await db.licencias.findFirst({
-            where: {
-                Personas_idPersona,
-                fechaVencimiento: { gte: new Date() },
-                tiposlicencias: { nivel: { gte: nivelRequerido } }
-            }
-        });
-        if (!licenciaValida) {
-            throw new AppError(
-                "La persona no cuenta con una licencia de nivel suficiente para el karting"
-            );
-        }
-    }
   
      async listarReservasRango(fechaInicio : Date , fechaFin : Date){
         // sin esto, una fecha faltante o mal escrita llega a Prisma como Invalid Date y da 500
@@ -142,10 +125,11 @@ class ReservaService {
             throw new AppError(`El karting no está disponible (estado: ${karting.estado})`);
         }
 
-        await this.validarLicencia(
+        await validarLicenciaVigente(
             db,
             data.Personas_idPersona,
-            karting.tiposkarting.tiposlicencias.nivel
+            karting.tiposkarting.tiposlicencias.nivel,
+            "para el karting"
         );
         await this.validarDisponibilidad(
             db, data, fechaReserva, circuito.maximo, opciones.idReservaExcluida

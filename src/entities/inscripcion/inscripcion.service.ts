@@ -3,6 +3,7 @@ import { prisma } from "../../config/prisma";
 import type { Prisma } from "../../generated/prisma/client";
 import { AppError } from "../../middleware/error.middleware";
 import { horaActualUTC, hoyUTC } from "../../utils/fecha";
+import { validarLicenciaVigente } from "../../utils/licencia";
 import { CreatePersonaTorneo } from "./inscripciones.interface";
 
 class PersonasTorneosService {
@@ -14,23 +15,25 @@ class PersonasTorneosService {
     private aEntero(valor: unknown): number {
         return Number(valor);
     }
-    //valida que el torneo exista, no haya empezado y tenga cupo
+    //valida que el torneo exista, no haya empezado, tenga cupo y que la persona tenga la licencia
     private async validarTorneo(
         db: Prisma.TransactionClient,
         idTorneo: number,
         idPers: number
     ) {
         const [torneo, persona] = await Promise.all([ // calida que el torneo y la persona existan
-            db.torneos.findUnique({ where: { idTorneos: idTorneo } }),
+            db.torneos.findUnique({ where: { idTorneos: idTorneo }, include: { tiposlicencias: true } }),
             db.personas.findUnique({ where: { idPersona: idPers } })
         ]);
 
         if (!torneo) throw new AppError("El torneo ingresado no existe", 404);
         if (!persona) throw new AppError("La persona ingresada no existe", 404);
 
-        if (torneo.fechaInicio < hoyUTC()) { // que el torneo no haya empezado
+        if (torneo.fechaInicio <= hoyUTC()) { // que el torneo no haya empezado: el dia de inicio ya cierra
             throw new AppError("El torneo ya comenzó: no se admiten inscripciones");
         }
+
+        await validarLicenciaVigente(db, idPers, torneo.tiposlicencias.nivel, "para el torneo");
 
         const cantidadInscripciones = await db.personas_torneos.count({ // que haya cupo
             where: { Torneos_idTorneos: idTorneo }
@@ -116,6 +119,8 @@ class PersonasTorneosService {
         // comienza la transaccion, previene overbooking si queda un solo cupo
         return await prisma.$transaction(async (db) => {
             await db.$queryRaw`SELECT idTorneos FROM torneos WHERE idTorneos = ${Torneos_idTorneos} FOR UPDATE`;
+            // bloquea tambien a la persona: dos inscripciones suyas a torneos superpuestos no pasan juntas
+            await db.$queryRaw`SELECT idPersona FROM personas WHERE idPersona = ${Personas_idPersona} FOR UPDATE`;
             await this.validarTorneo(db, Torneos_idTorneos, Personas_idPersona);
             
             return await db.personas_torneos.create({
@@ -145,7 +150,7 @@ class PersonasTorneosService {
             const torneo = await prisma.torneos.findUnique({
                 where: { idTorneos: Torneos_idTorneos }
             });
-            if (torneo && torneo.fechaInicio < hoyUTC()) {
+            if (torneo && torneo.fechaInicio <= hoyUTC()) {
                 throw new AppError(
                     "El torneo ya comenzó: la baja la tiene que hacer un administrador", 400
                 );

@@ -21,7 +21,8 @@ const TORNEO_FUTURO = {
     nombre: "Copa Julio",
     cupoMaximo: 10,
     fechaInicio: fecha(2026, 6, 1),
-    fechaFin: fecha(2026, 6, 10)
+    fechaFin: fecha(2026, 6, 10),
+    tiposlicencias: { nivel: 2 }
 };
 
 const datosCreados = () => db.personas_torneos.create.mock.calls[0][0].data;
@@ -31,6 +32,7 @@ beforeEach(() => {
     jest.useFakeTimers().setSystemTime(AHORA_LOCAL);
     db.torneos = { findUnique: jest.fn(async () => TORNEO_FUTURO) };
     db.personas = { findUnique: jest.fn(async () => ({ idPersona: 1 })) };
+    db.licencias = { findFirst: jest.fn(async () => ({ idLicencias: 1 })) };
     db.personas_torneos = {
         count: jest.fn(async () => 0),
         findFirst: jest.fn(async () => null),
@@ -115,14 +117,14 @@ describe("estado del torneo", () => {
         expect(db.personas_torneos.create).not.toHaveBeenCalled();
     });
 
-    it("acepta un torneo que arranca hoy", async () => {
+    it("rechaza un torneo que arranca hoy: el dia de inicio ya esta cerrado", async () => {
         db.torneos.findUnique = jest.fn(async () => ({
             ...TORNEO_FUTURO, fechaInicio: HOY_UTC, fechaFin: fecha(2026, 5, 20)
         }));
 
-        await inscripcionService.create({ Torneos_idTorneos: 1, Personas_idPersona: 1 });
-
-        expect(db.personas_torneos.create).toHaveBeenCalled();
+        await expect(inscripcionService.create({ Torneos_idTorneos: 1, Personas_idPersona: 1 }))
+            .rejects.toThrow("ya comenzó");
+        expect(db.personas_torneos.create).not.toHaveBeenCalled();
     });
 
     it("rechaza un torneo que no existe", async () => {
@@ -148,6 +150,13 @@ describe("estado del torneo", () => {
         expect(db.personas_torneos.delete).not.toHaveBeenCalled();
     });
 
+    it("un cliente tampoco puede darse de baja el dia que empieza el torneo", async () => {
+        db.torneos.findUnique = jest.fn(async () => ({ ...TORNEO_FUTURO, fechaInicio: HOY_UTC }));
+
+        await expect(inscripcionService.delete(1, 4, 4)).rejects.toThrow("administrador");
+        expect(db.personas_torneos.delete).not.toHaveBeenCalled();
+    });
+
     it("un admin si puede dar de baja con el torneo empezado", async () => {
         db.torneos.findUnique = jest.fn(async () => ({
             ...TORNEO_FUTURO, fechaInicio: fecha(2026, 5, 1)
@@ -168,13 +177,35 @@ describe("cupo", () => {
         expect(db.personas_torneos.create).not.toHaveBeenCalled();
     });
 
-    it("cuenta y graba en la misma transaccion, con la fila del torneo lockeada", async () => {
+    it("cuenta y graba en la misma transaccion, con las filas del torneo y la persona lockeadas", async () => {
         await inscripcionService.create({ Torneos_idTorneos: 1, Personas_idPersona: 1 });
 
         expect(db.$transaction).toHaveBeenCalledTimes(1);
-        expect(db.$queryRaw).toHaveBeenCalledTimes(1);
+        expect(db.$queryRaw).toHaveBeenCalledTimes(2);
         // el lock va antes de contar: si no, dos requests leen el mismo cupo libre
-        expect(db.$queryRaw.mock.calls[0][0].join("?")).toContain("FOR UPDATE");
+        expect(db.$queryRaw.mock.calls[0][0].join("?")).toContain("FROM torneos");
+        // y la persona: si no, dos inscripciones a torneos superpuestos pasan juntas
+        expect(db.$queryRaw.mock.calls[1][0].join("?")).toContain("FROM personas");
+        expect(db.$queryRaw.mock.calls[1][0].join("?")).toContain("FOR UPDATE");
+    });
+});
+
+describe("licencia del torneo", () => {
+    it("exige una licencia vigente de nivel igual o mayor al del torneo", async () => {
+        await inscripcionService.create({ Torneos_idTorneos: 1, Personas_idPersona: 1 });
+
+        const filtro = db.licencias.findFirst.mock.calls[0][0].where;
+        expect(filtro.Personas_idPersona).toBe(1);
+        expect(filtro.tiposlicencias).toEqual({ nivel: { gte: 2 } });
+        expect(filtro.fechaVencimiento.gte).toBeInstanceOf(Date);
+    });
+
+    it("rechaza a quien no tiene esa licencia", async () => {
+        db.licencias.findFirst = jest.fn(async () => null);
+
+        await expect(inscripcionService.create({ Torneos_idTorneos: 1, Personas_idPersona: 1 }))
+            .rejects.toThrow("La persona no cuenta con una licencia de nivel suficiente para el torneo");
+        expect(db.personas_torneos.create).not.toHaveBeenCalled();
     });
 });
 
