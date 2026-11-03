@@ -30,7 +30,9 @@ beforeEach(() => {
     db.tiposlicencias = {
         findUnique: jest.fn(async ({ where }: any) => [1, 2].includes(where.idTipoLicencia) ? { idTipoLicencia: where.idTipoLicencia } : null),
     };
-    db.carreras = { count: jest.fn(async () => 0) };
+    db.carreras = { count: jest.fn(async () => 0), findMany: jest.fn(async () => [] as unknown[]) };
+    db.personas_torneos = { count: jest.fn(async () => 0) };
+    db.$queryRaw = jest.fn(async () => [] as unknown[]);
 });
 
 const torneoNuevo = (licencia: number) => ({
@@ -122,5 +124,56 @@ describe("filtro por tipo de licencia", () => {
     it("rechaza una licencia que no es un entero", async () => {
         await expect(torneoService.getAll(undefined, NaN)).rejects.toThrow("El tipo de licencia debe ser un número entero");
         expect(db.torneos.findMany).not.toHaveBeenCalled();
+    });
+});
+
+describe("editar un torneo ya armado (KAN-90)", () => {
+    // carrera del torneo 4 dentro de sus fechas, con 4 karts en el circuito 2
+    const CARRERA = { fechaCarrera: enDias(5), Circuitos_idCircuitos: 2, _count: { kartings: 4 } };
+
+    beforeEach(() => {
+        db.torneos.findUnique = jest.fn(async () => ({ ...TORNEOS[3], cupoMaximo: 4 }));
+        db.carreras.findMany = jest.fn(async () => [CARRERA]);
+    });
+
+    it("bloquea el torneo con FOR UPDATE antes de leerlo, en ReadCommitted", async () => {
+        await torneoService.update(4, { nombre: "Otra" });
+
+        expect(db.$queryRaw.mock.calls[0][0].join("?")).toContain("FOR UPDATE");
+        expect(db.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(db.torneos.findUnique.mock.invocationCallOrder[0]);
+        expect(db.$transaction.mock.calls.at(-1)[1]).toEqual({ isolationLevel: "ReadCommitted" });
+    });
+
+    it("ahora si guarda el cupo (antes se descartaba en silencio)", async () => {
+        db.$queryRaw = jest.fn(async () => [{ idCircuitos: 2, maximo: 8 }]);
+
+        await torneoService.update(4, { cupoMaximo: 3 });
+
+        expect(db.torneos.update.mock.calls[0][0].data.cupoMaximo).toBe(3);
+    });
+
+    it("no deja bajar el cupo por debajo de los inscriptos", async () => {
+        db.personas_torneos.count = jest.fn(async () => 5);
+
+        await expect(torneoService.update(4, { cupoMaximo: 4 })).rejects.toThrow("los 5 inscriptos");
+        expect(db.torneos.update).not.toHaveBeenCalled();
+    });
+
+    it("no deja subir el cupo por encima de los karts de una carrera", async () => {
+        await expect(torneoService.update(4, { cupoMaximo: 6 })).rejects.toThrow("menos de 6 kartings");
+    });
+
+    it("no deja subir el cupo por encima del maximo del circuito, que lee bloqueado", async () => {
+        db.carreras.findMany = jest.fn(async () => [{ ...CARRERA, _count: { kartings: 10 } }]);
+        db.$queryRaw = jest.fn(async () => [{ idCircuitos: 2, maximo: 8 }]);
+
+        await expect(torneoService.update(4, { cupoMaximo: 9 })).rejects.toThrow("El circuito 2 admite 8");
+        expect(db.$queryRaw.mock.calls[1][0].join("?")).toContain("LOCK IN SHARE MODE");
+    });
+
+    it("no deja mover las fechas dejando una carrera afuera", async () => {
+        await expect(torneoService.update(4, { fechaFin: enDias(3).toISOString().slice(0, 10) }))
+            .rejects.toThrow("quedaría fuera de las fechas del torneo");
+        expect(db.torneos.update).not.toHaveBeenCalled();
     });
 });

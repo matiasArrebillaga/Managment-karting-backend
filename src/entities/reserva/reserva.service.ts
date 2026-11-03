@@ -3,7 +3,7 @@ import { Prisma } from "../../generated/prisma/client";
 import { AppError } from "../../middleware/error.middleware";
 import { CreateReserva, CreateReservaInput, UpdateReservaInput } from "./reserva.interface";
 import { horaActualUTC, hoyUTC, normalizarFecha, normalizarHora } from "../../utils/fecha";
-import { bloquearFranja, franjaOcupada, opcionesTxFranja } from "../../utils/ocupacion";
+import { bloquearFranja, franjaOcupada, opcionesTxBloqueo } from "../../utils/ocupacion";
 import { validarLicenciaVigente } from "../../utils/licencia";
 
 const MS_POR_HORA = 60 * 60 * 1000;
@@ -203,7 +203,7 @@ class ReservaService {
                     Kartings_idKartings: datos.Kartings_idKartings
                 }
             });
-        }, opcionesTxFranja);
+        }, opcionesTxBloqueo);
     }
     // tiene las mismas validacion que create 
     async update(idReservas: number, data: UpdateReservaInput, restringirAPersona?: number) {
@@ -249,7 +249,7 @@ class ReservaService {
                     monto
                 }
             });
-        }, opcionesTxFranja);
+        }, opcionesTxBloqueo);
     }
 
     async delete(idReservas: number, restringirAPersona?: number) {

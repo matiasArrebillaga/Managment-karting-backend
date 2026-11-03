@@ -2,8 +2,8 @@ import { Prisma } from "../generated/prisma/client";
 import { AppError } from "../middleware/error.middleware";
 
 // ReadCommitted: cada lectura ve lo ultimo confirmado y los FOR UPDATE no toman gap locks.
-// La correccion la dan los candados de bloquearFranja, no la foto de REPEATABLE READ.
-export const opcionesTxFranja = { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted };
+// La correccion la dan los candados explicitos (FOR UPDATE / LOCK IN SHARE MODE), no la foto de REPEATABLE READ.
+export const opcionesTxBloqueo = { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted };
 
 // Bloquea siempre en el mismo orden (karts -> circuito -> franja) para que reservas y
 // carreras no se crucen en un deadlock. Va al principio de la transaccion, antes de leer.

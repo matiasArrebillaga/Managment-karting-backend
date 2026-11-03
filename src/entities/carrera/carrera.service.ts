@@ -2,7 +2,7 @@ import {prisma} from "../../config/prisma.js";
 import { Prisma } from "../../generated/prisma/client.js";
 import { CreateCarrera, UpdateCarrera } from "../carrera/carrera.interface.js";
 import { normalizarFecha, normalizarHora } from "../../utils/fecha.js";
-import { bloquearFranja, franjaOcupada, opcionesTxFranja } from "../../utils/ocupacion.js";
+import { bloquearFranja, franjaOcupada, opcionesTxBloqueo } from "../../utils/ocupacion.js";
 import { AppError } from "../../middleware/error.middleware.js";
 
 // trae los karts asignados de cada carrera
@@ -53,6 +53,12 @@ class CarrerasService {
         if (horaInicio >= horaFin) {
             throw new AppError("La hora de inicio debe ser anterior a la hora de fin");
         }
+    }
+
+    // compartido: varias carreras del mismo torneo no se esperan, pero si alguien edita
+    // el cupo o las fechas del torneo (FOR UPDATE) se validan contra el valor nuevo
+    private async bloquearTorneo(db: Prisma.TransactionClient, idTorneo: number) {
+        await db.$queryRaw`SELECT idTorneos FROM torneos WHERE idTorneos = ${idTorneo} LOCK IN SHARE MODE`;
     }
 
     private async validarEntidadesRelacionadas(db: Prisma.TransactionClient, Torneos_idTorneos: number, Circuitos_idCircuitos: number) {
@@ -183,6 +189,7 @@ class CarrerasService {
             }
             // solo cuando cambian los karts: cambiar el horario no cambia cuantos ni cuales son
             if (nuevosKartings !== undefined) {
+                await this.bloquearTorneo(db, Torneos_idTorneos);
                 const torneo = await db.torneos.findUnique({ where: { idTorneos: Torneos_idTorneos } });
                 if (!torneo) throw new AppError("El torneo indicado no existe");
                 await this.validarKartingsDelTorneo(db, nuevosKartings, torneo);
@@ -202,7 +209,7 @@ class CarrerasService {
                 include: conKartings
             });
             return this.aplanar(actualizada);
-        }, opcionesTxFranja);
+        }, opcionesTxBloqueo);
     }
 
     // Eliminar una carrera; sus karts asignados se borran en cascada
@@ -224,6 +231,7 @@ class CarrerasService {
         return await prisma.$transaction(async (db) => {
             // antes de cualquier lectura, para que franjaOcupada vea lo ultimo confirmado (KAN-82)
             await bloquearFranja(db, kartings, data.Circuitos_idCircuitos, fechaCarrera);
+            await this.bloquearTorneo(db, data.Torneos_idTorneos);
             const { torneo, circuito } = await this.validarEntidadesRelacionadas(
                 db, data.Torneos_idTorneos, data.Circuitos_idCircuitos
             );
@@ -243,7 +251,7 @@ class CarrerasService {
                 include: conKartings
             });
             return this.aplanar(carrera);
-        }, opcionesTxFranja);
+        }, opcionesTxBloqueo);
     }
 
     async getByTorneo(idTorneo: number) {
