@@ -298,8 +298,9 @@ describe("pertenencia", () => {
     it("un cliente no puede modificar la reserva de otro", async () => {
         db.reservas.findUnique = jest.fn(async () => ({ ...reservaValida(), idReservas: 50, Personas_idPersona: 2 }));
 
+        // 404 como en getById: no le confirma que la reserva existe
         await expect(reservaService.update(50, { horaFin: hora("13:00") }, 7))
-            .rejects.toMatchObject({ statusCode: 403 });
+            .rejects.toMatchObject({ statusCode: 404 });
 
         expect(db.reservas.update).not.toHaveBeenCalled();
     });
@@ -317,7 +318,7 @@ describe("pertenencia", () => {
         db.reservas.delete = jest.fn(async () => ({}));
 
         await expect(reservaService.delete(50, 7))
-            .rejects.toMatchObject({ statusCode: 403 });
+            .rejects.toMatchObject({ statusCode: 404 });
 
         expect(db.reservas.delete).not.toHaveBeenCalled();
     });
@@ -329,6 +330,47 @@ describe("pertenencia", () => {
         await reservaService.delete(50, 7);
 
         expect(db.reservas.delete).toHaveBeenCalledWith({ where: { idReservas: 50 } });
+    });
+
+    describe("reservas pasadas", () => {
+        const RESERVA_PASADA = { ...reservaValida(), fechaReserva: new Date(Date.UTC(2020, 0, 10)), idReservas: 50, Personas_idPersona: 7 };
+
+        it("un cliente no puede editar una reserva que ya paso", async () => {
+            db.reservas.findUnique = jest.fn(async () => RESERVA_PASADA);
+
+            await expect(reservaService.update(50, { horaFin: hora("13:00") }, 7))
+                .rejects.toMatchObject({ statusCode: 403 });
+            expect(db.reservas.update).not.toHaveBeenCalled();
+        });
+
+        it("un cliente no puede borrar una reserva que ya paso", async () => {
+            db.reservas.findUnique = jest.fn(async () => RESERVA_PASADA);
+            db.reservas.delete = jest.fn(async () => ({}));
+
+            await expect(reservaService.delete(50, 7)).rejects.toMatchObject({ statusCode: 403 });
+            expect(db.reservas.delete).not.toHaveBeenCalled();
+        });
+
+        it("un empleado si puede borrarla", async () => {
+            db.reservas.delete = jest.fn(async () => ({ idReservas: 50 }));
+
+            await reservaService.delete(50);
+
+            expect(db.reservas.delete).toHaveBeenCalled();
+        });
+    });
+
+    it("404 explicito si la reserva a editar no existe", async () => {
+        db.reservas.findUnique = jest.fn(async () => null);
+
+        await expect(reservaService.update(50, { horaFin: hora("13:00") }))
+            .rejects.toMatchObject({ statusCode: 404 });
+    });
+
+    it("la licencia se valida contra el dia reservado, no contra hoy", async () => {
+        await reservaService.realizarReserva(reservaValida());
+
+        expect(db.licencias.findFirst.mock.calls[0][0].where.fechaVencimiento).toEqual({ gte: EN_UN_ANIO });
     });
 
     it("sin restriccion (empleado o admin) opera sobre cualquiera", async () => {
@@ -417,7 +459,7 @@ describe("normalizacion de la entrada", () => {
 
     it("rechaza el listado por rango sin fechas validas (400, no 500)", async () => {
         await expect(reservaService.listarReservasRango(new Date("x"), new Date("2026-10-31")))
-            .rejects.toThrow("La fecha de reserva no es válida");
+            .rejects.toMatchObject({ statusCode: 400, message: "La fecha no es válida" });
     });
 
     it("descarta del patch los campos que no son de la reserva", async () => {

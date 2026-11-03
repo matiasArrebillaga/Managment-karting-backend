@@ -2,7 +2,7 @@ import { prisma } from "../../config/prisma";
 import { Prisma } from "../../generated/prisma/client";
 import { AppError } from "../../middleware/error.middleware";
 import { CreateReserva, CreateReservaInput, UpdateReservaInput } from "./reserva.interface";
-import { horaActualUTC, hoyUTC, normalizarHora } from "../../utils/fecha";
+import { horaActualUTC, hoyUTC, normalizarFecha, normalizarHora } from "../../utils/fecha";
 import { bloquearFranja, franjaOcupada, opcionesTxFranja } from "../../utils/ocupacion";
 import { validarLicenciaVigente } from "../../utils/licencia";
 
@@ -19,12 +19,6 @@ type OpcionesValidacion = {
 class ReservaService {
     private validarId(id: number) {
         if (!Number.isInteger(id)) throw new AppError("El identificador debe ser un número entero");
-    }
-
-    private normalizarFecha(fecha: Date | string): Date {
-        const valor = new Date(fecha);
-        if (Number.isNaN(valor.getTime())) throw new AppError("La fecha de reserva no es válida");
-        return new Date(Date.UTC(valor.getUTCFullYear(), valor.getUTCMonth(), valor.getUTCDate()));
     }
 
     //  manda los ids como texto validarId es el que despues decide.
@@ -49,7 +43,7 @@ class ReservaService {
      async listarReservasRango(fechaInicio : Date , fechaFin : Date){
         // sin esto, una fecha faltante o mal escrita llega a Prisma como Invalid Date y da 500
         return await prisma.reservas.findMany({
-            where: { fechaReserva: { gte: this.normalizarFecha(fechaInicio), lte: this.normalizarFecha(fechaFin) } },
+            where: { fechaReserva: { gte: normalizarFecha(fechaInicio), lte: normalizarFecha(fechaFin) } },
             orderBy: [{ fechaReserva: "asc" }, { horaInicio: "asc" }]
         });
     }
@@ -88,7 +82,7 @@ class ReservaService {
         for (const campo of ["Personas_idPersona", "Circuitos_idCircuitos", "Kartings_idKartings"] as const) {
             this.validarId(data[campo]);
         }
-        const fechaReserva = this.normalizarFecha(data.fechaReserva);
+        const fechaReserva = normalizarFecha(data.fechaReserva);
         const horas = this.horasReservadas(data.horaInicio, data.horaFin);
 
         if (opciones.fechaEsNueva && fechaReserva < hoyUTC()) { // uso del nuevo util
@@ -120,10 +114,12 @@ class ReservaService {
             throw new AppError(`El karting no está disponible (estado: ${karting.estado})`);
         }
 
+        // contra el dia reservado, no contra hoy: si para ese dia ya vencio, no sirve
         await validarLicenciaVigente(
             db,
             data.Personas_idPersona,
             karting.tiposkarting.tiposlicencias.nivel,
+            fechaReserva,
             "para el karting"
         );
         await this.validarDisponibilidad(
@@ -157,10 +153,19 @@ class ReservaService {
             orderBy: [{ fechaReserva: "desc" }, { horaInicio: "asc" }]
         });
     }
-    // valida que puedas actualizar solo tu propia reserva
-    private verificarPertenencia(duenio: number, restringirAPersona?: number) {
-        if (restringirAPersona !== undefined && duenio !== restringirAPersona) {
-            throw new AppError("No podés operar sobre la reserva de otra persona", 403);
+    // un cliente solo opera sobre sus reservas y solo si todavia no pasaron.
+    // 404 y no 403 para la ajena, igual que getById: no le confirmamos que existe.
+    // si ya paso, editarla recalcularia el monto con el precio de hoy
+    private verificarPuedeOperar(
+        reserva: { Personas_idPersona: number; fechaReserva: Date },
+        restringirAPersona?: number
+    ) {
+        if (restringirAPersona === undefined) return;
+        if (reserva.Personas_idPersona !== restringirAPersona) {
+            throw new AppError("La reserva indicada no existe", 404);
+        }
+        if (reserva.fechaReserva < hoyUTC()) {
+            throw new AppError("La reserva ya pasó: solo un empleado puede modificarla o borrarla", 403);
         }
     }
 
@@ -189,7 +194,7 @@ class ReservaService {
             });
             return await db.reservas.create({
                 data: {
-                    fechaReserva: this.normalizarFecha(datos.fechaReserva),
+                    fechaReserva: normalizarFecha(datos.fechaReserva),
                     horaInicio: datos.horaInicio,
                     horaFin: datos.horaFin,
                     monto,
@@ -205,7 +210,7 @@ class ReservaService {
         this.validarId(idReservas);
         const actual = await prisma.reservas.findUnique({ where: { idReservas } });
         if (!actual) throw new AppError("La reserva indicada no existe", 404);
-        this.verificarPertenencia(actual.Personas_idPersona, restringirAPersona);
+        this.verificarPuedeOperar(actual, restringirAPersona);
         const resultante: CreateReserva = {
             // cambia solo los campos necesarios y deja los otros igual    
             fechaReserva: data.fechaReserva !== undefined
@@ -240,7 +245,7 @@ class ReservaService {
                 where: { idReservas },
                 data: {
                     ...resultante,
-                    fechaReserva: this.normalizarFecha(resultante.fechaReserva),
+                    fechaReserva: normalizarFecha(resultante.fechaReserva),
                     monto
                 }
             });
@@ -252,7 +257,7 @@ class ReservaService {
         if (restringirAPersona !== undefined) {
             const actual = await prisma.reservas.findUnique({ where: { idReservas } });
             if (!actual) throw new AppError("La reserva indicada no existe", 404);
-            this.verificarPertenencia(actual.Personas_idPersona, restringirAPersona);
+            this.verificarPuedeOperar(actual, restringirAPersona);
         }
         return await prisma.reservas.delete({
             where: { idReservas },

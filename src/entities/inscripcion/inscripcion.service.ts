@@ -33,7 +33,7 @@ class PersonasTorneosService {
             throw new AppError("El torneo ya comenzó: no se admiten inscripciones");
         }
 
-        await validarLicenciaVigente(db, idPers, torneo.tiposlicencias.nivel, "para el torneo");
+        await validarLicenciaVigente(db, idPers, torneo.tiposlicencias.nivel, hoyUTC(), "para el torneo");
 
         const cantidadInscripciones = await db.personas_torneos.count({ // que haya cupo
             where: { Torneos_idTorneos: idTorneo }
