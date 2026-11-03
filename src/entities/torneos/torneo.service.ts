@@ -2,6 +2,8 @@ import { AppError } from "../../middleware/error.middleware";
 import {prisma} from "../../config/prisma.js";
 import { CreateTorneos, ITorneos, UpdateTorneos } from "./torneo.interface.js";
 import { hoyUTC } from "../../utils/fecha.js";
+import { Prisma } from "../../generated/prisma/client.js";
+import { opcionesTxBloqueo } from "../../utils/ocupacion.js";
 
 const ESTADOS = ["proximo", "en_curso", "finalizado"] as const;
 type EstadoTorneo = typeof ESTADOS[number];
@@ -74,6 +76,42 @@ class TorneosService {
         }
     }
 
+    // lo que ya esta armado (inscriptos y carreras) tiene que seguir entrando en el torneo editado
+    private async validarContraLoArmado(
+        db: Prisma.TransactionClient,
+        idTorneo: number,
+        cambios: { cupoMaximo?: number; fechaInicio: Date; fechaFin: Date }
+    ) {
+        const carreras = await db.carreras.findMany({
+            where: { Torneos_idTorneos: idTorneo },
+            select: { fechaCarrera: true, Circuitos_idCircuitos: true, _count: { select: { kartings: true } } }
+        });
+        const fuera = carreras.find(c => c.fechaCarrera < cambios.fechaInicio || c.fechaCarrera > cambios.fechaFin);
+        if (fuera) {
+            throw new AppError(`La carrera del ${fuera.fechaCarrera.toISOString().slice(0, 10)} quedaría fuera de las fechas del torneo`);
+        }
+
+        const cupo = cambios.cupoMaximo;
+        if (cupo === undefined) return;
+        const inscriptos = await db.personas_torneos.count({ where: { Torneos_idTorneos: idTorneo } });
+        if (cupo < inscriptos) {
+            throw new AppError(`El cupo no puede ser menor que los ${inscriptos} inscriptos actuales`);
+        }
+        // carrera.service exige un kart por piloto del cupo
+        const cortas = carreras.filter(c => c._count.kartings < cupo);
+        if (cortas.length > 0) {
+            throw new AppError(`Hay ${cortas.length} carrera(s) con menos de ${cupo} kartings asignados`);
+        }
+        const ids = [...new Set(carreras.map(c => c.Circuitos_idCircuitos))];
+        if (ids.length === 0) return;
+        // compartido: si a la vez alguien baja el maximo de uno de estos circuitos (FOR UPDATE), uno espera al otro
+        const circuitos = await db.$queryRaw<{ idCircuitos: number; maximo: number }[]>`SELECT idCircuitos, maximo FROM circuitos WHERE idCircuitos IN (${Prisma.join(ids)}) LOCK IN SHARE MODE`;
+        const chico = circuitos.find(c => c.maximo < cupo);
+        if (chico) {
+            throw new AppError(`El circuito ${chico.idCircuitos} admite ${chico.maximo} kartings, menos que el cupo ${cupo}`);
+        }
+    }
+
     async getAll(estado?: string, idTipoLicencia?: number) {
         if (idTipoLicencia !== undefined && !Number.isInteger(idTipoLicencia)) {
             throw new AppError("El tipo de licencia debe ser un número entero");
@@ -126,52 +164,64 @@ async update(idTorneo: number, data: UpdateTorneos) {
         }),
         ...(data.TiposLicencias_idTipoLicencia !== undefined && {
             TiposLicencias_idTipoLicencia: data.TiposLicencias_idTipoLicencia
+        }),
+        ...(data.cupoMaximo !== undefined && {
+            cupoMaximo: data.cupoMaximo
         })
     };
 
     this.validarDatos(datos);
 
-    const actual = await prisma.torneos.findUnique({
-        where: { idTorneos: idTorneo }
-    });
+    return await prisma.$transaction(async (db) => {
+        // el mismo candado que toman las inscripciones y (compartido) las carreras:
+        // mientras se valida no entra un inscripto ni una carrera nueva
+        await db.$queryRaw`SELECT idTorneos FROM torneos WHERE idTorneos = ${idTorneo} FOR UPDATE`;
+        const actual = await db.torneos.findUnique({
+            where: { idTorneos: idTorneo }
+        });
 
-    if (!actual) {
-        throw new AppError("El torneo indicado no existe");
-    }
+        if (!actual) {
+            throw new AppError("El torneo indicado no existe", 404);
+        }
 
-    const inicio = datos.fechaInicio ?? actual.fechaInicio;
-    const fin = datos.fechaFin ?? actual.fechaFin;
+        const inicio = datos.fechaInicio ?? actual.fechaInicio;
+        const fin = datos.fechaFin ?? actual.fechaFin;
 
-    if (inicio >= fin) {
-        throw new AppError(
-            "La fecha de inicio debe ser anterior a la fecha de fin"
-        );
-    }
-
-    // Cambiar la licencia dejaría a las carreras ya armadas con karts de otra licencia.
-    if (
-        datos.TiposLicencias_idTipoLicencia !== undefined &&
-        datos.TiposLicencias_idTipoLicencia !== actual.TiposLicencias_idTipoLicencia
-    ) {
-        await this.validarLicenciaExiste(
-            datos.TiposLicencias_idTipoLicencia
-        );
-
-        if (
-            await prisma.carreras.count({
-                where: { Torneos_idTorneos: idTorneo }
-            }) > 0
-        ) {
+        if (inicio >= fin) {
             throw new AppError(
-                "No se puede cambiar el tipo de licencia: el torneo ya tiene carreras"
+                "La fecha de inicio debe ser anterior a la fecha de fin"
             );
         }
-    }
 
-    return await prisma.torneos.update({
-        where: { idTorneos: idTorneo },
-        data: datos
-        });
+        // Cambiar la licencia dejaría a las carreras ya armadas con karts de otra licencia.
+        if (
+            datos.TiposLicencias_idTipoLicencia !== undefined &&
+            datos.TiposLicencias_idTipoLicencia !== actual.TiposLicencias_idTipoLicencia
+        ) {
+            await this.validarLicenciaExiste(
+                datos.TiposLicencias_idTipoLicencia
+            );
+
+            if (
+                await db.carreras.count({
+                    where: { Torneos_idTorneos: idTorneo }
+                }) > 0
+            ) {
+                throw new AppError(
+                    "No se puede cambiar el tipo de licencia: el torneo ya tiene carreras"
+                );
+            }
+        }
+
+        if (datos.cupoMaximo !== undefined || datos.fechaInicio !== undefined || datos.fechaFin !== undefined) {
+            await this.validarContraLoArmado(db, idTorneo, { cupoMaximo: datos.cupoMaximo, fechaInicio: inicio, fechaFin: fin });
+        }
+
+        return await db.torneos.update({
+            where: { idTorneos: idTorneo },
+            data: datos
+            });
+    }, opcionesTxBloqueo);
     }
     
 

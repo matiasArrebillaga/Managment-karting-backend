@@ -1,5 +1,6 @@
 import { AppError } from "../../middleware/error.middleware";
 import {prisma} from "../../config/prisma"
+import { opcionesTxBloqueo, validarLicenciaEnCarrerasFuturas } from "../../utils/ocupacion"
 
 import { CreateTiposKartings, ITiposKartings, UpdateTiposKartings } from "./tiposKarting.interface"
 
@@ -65,18 +66,6 @@ class TiposKartingsService {
 this.validarId(idTipoKarting);
 this.validarDatos(data);
 
-  if (data.TiposLicencias_idTipoLicenciaMinima !== undefined) {
-    const licencia = await prisma.tiposlicencias.findUnique({
-      where: {
-        idTipoLicencia: data.TiposLicencias_idTipoLicenciaMinima
-      }
-    });
-
-    if (!licencia) {
-      throw new AppError("La licencia mínima ingresada no existe");
-    }
-  }
-
   const datos = {
     ...(data.nombre !== undefined && {
       nombre: data.nombre.trim()
@@ -84,16 +73,30 @@ this.validarDatos(data);
     ...(data.descripcion !== undefined && {
       descripcion: data.descripcion.trim()
     }),
+    // antes no estaba: el precio nuevo se validaba pero nunca se guardaba
+    ...(data.precioHora !== undefined && {
+      precioHora: data.precioHora
+    }),
     ...(data.TiposLicencias_idTipoLicenciaMinima !== undefined && {
       TiposLicencias_idTipoLicenciaMinima:
         data.TiposLicencias_idTipoLicenciaMinima
     })
   };
 
-  return await prisma.tiposkarting.update({
-    where: { idTiposKarting: idTipoKarting },
-    data: datos
-  });
+  const idLicencia = data.TiposLicencias_idTipoLicenciaMinima;
+  if (idLicencia === undefined) {
+    return await prisma.tiposkarting.update({ where: { idTiposKarting: idTipoKarting }, data: datos });
+  }
+  return await prisma.$transaction(async (db) => {
+    const licencia = await db.tiposlicencias.findUnique({ where: { idTipoLicencia: idLicencia } });
+    if (!licencia) {
+      throw new AppError("La licencia mínima ingresada no existe");
+    }
+    // se bloquean los karts de este tipo (el mismo candado que toman las carreras) antes de validar
+    await db.$queryRaw`SELECT idKartings FROM kartings WHERE TiposKarting_idTiposKarting = ${idTipoKarting} FOR UPDATE`;
+    await validarLicenciaEnCarrerasFuturas(db, { TiposKarting_idTiposKarting: idTipoKarting }, idLicencia);
+    return await db.tiposkarting.update({ where: { idTiposKarting: idTipoKarting }, data: datos });
+  }, opcionesTxBloqueo);
 }
     async delete(idTipoKarting:number){
         this.validarId(idTipoKarting);

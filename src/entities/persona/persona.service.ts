@@ -46,7 +46,7 @@ private async crearPersonaConRol(
 ) {
     this.validarDatos(data);
 
-    const mail = data.mail.trim();
+    const mail = data.mail.trim().toLowerCase();
 
     const personaExistente = await prisma.personas.findFirst({
         where: { mail }
@@ -144,7 +144,7 @@ private async crearPersonaConRol(
   if (data.mail !== undefined) {
     const existente = await prisma.personas.findFirst({
       where: {
-        mail: data.mail.trim(),
+        mail: data.mail.trim().toLowerCase(),
         NOT: { idPersona }
       }
     });
@@ -176,7 +176,7 @@ private async crearPersonaConRol(
       dni: data.dni.trim()
     }),
     ...(data.mail !== undefined && {
-      mail: data.mail.trim()
+      mail: data.mail.trim().toLowerCase()
     }),
     ...(data.telefono !== undefined && {
       telefono: data.telefono.trim()

@@ -87,7 +87,7 @@ class LicenciaService {
   });
 
   if (!actual) {
-    throw new AppError("La licencia ingresada no existe");
+    throw new AppError("La licencia ingresada no existe", 404);
   }
 
   if (

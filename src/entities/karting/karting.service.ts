@@ -1,6 +1,8 @@
 import { AppError } from "../../middleware/error.middleware";
 import { CreateKarting, IKarting, UpdateKarting } from "./karting.interface";
 import { prisma } from "../../config/prisma";
+import { normalizarFecha, normalizarHora } from "../../utils/fecha";
+import { Excluir, franjaOcupada, opcionesTxBloqueo, validarLicenciaEnCarrerasFuturas } from "../../utils/ocupacion";
 
 class KartingService {
     private validarId(id: number) {
@@ -33,6 +35,23 @@ class KartingService {
 
     async getAll() {
         return await prisma.kartings.findMany();
+    }
+
+    // karts en estado Disponible que no estan en ninguna reserva ni carrera que se solape con la franja.
+    // excluir sirve al editar: la reserva o carrera que se esta editando no cuenta como ocupacion
+    async getDisponibles(fecha: unknown, horaInicio: unknown, horaFin: unknown, excluir: Excluir = {}) {
+        const dia = normalizarFecha(String(fecha ?? ""));
+        const inicio = normalizarHora(horaInicio, "horaInicio");
+        const fin = normalizarHora(horaFin, "horaFin");
+        if (inicio >= fin) throw new AppError("La hora de inicio debe ser anterior a la hora de fin");
+
+        const ocupadas = await franjaOcupada(prisma, dia, inicio, fin, excluir);
+        return await prisma.kartings.findMany({
+            where: {
+                estado: "Disponible",
+                idKartings: { notIn: ocupadas.map(o => o.Kartings_idKartings) }
+            }
+        });
     }
 
     async getById(idKartings: number) {
@@ -72,18 +91,6 @@ async create(data: CreateKarting) {
   this.validarId(idKartings);
   this.validarDatos(data);
 
-  if (data.TiposKarting_idTiposKarting !== undefined) {
-    const tipoKarting = await prisma.tiposkarting.findUnique({
-      where: {
-        idTiposKarting: data.TiposKarting_idTiposKarting
-      }
-    });
-
-    if (!tipoKarting) {
-      throw new AppError("El tipo de karting ingresado no existe");
-    }
-  }
-
   const datos = {
     ...(data.categoria !== undefined && {
       categoria: data.categoria.trim()
@@ -102,10 +109,20 @@ async create(data: CreateKarting) {
     })
   };
 
-  return await prisma.kartings.update({
-    where: { idKartings },
-    data: datos
-  });
+  const idTipo = data.TiposKarting_idTiposKarting;
+  if (idTipo === undefined) {
+    return await prisma.kartings.update({ where: { idKartings }, data: datos });
+  }
+  return await prisma.$transaction(async (db) => {
+    // mismo primer candado que reservas y carreras: mientras se valida, nadie asigna este kart
+    await db.$queryRaw`SELECT idKartings FROM kartings WHERE idKartings = ${idKartings} FOR UPDATE`;
+    const tipoKarting = await db.tiposkarting.findUnique({ where: { idTiposKarting: idTipo } });
+    if (!tipoKarting) {
+      throw new AppError("El tipo de karting ingresado no existe");
+    }
+    await validarLicenciaEnCarrerasFuturas(db, { idKartings }, tipoKarting.TiposLicencias_idTipoLicenciaMinima);
+    return await db.kartings.update({ where: { idKartings }, data: datos });
+  }, opcionesTxBloqueo);
 }
     async delete(idKartings: number) {
         this.validarId(idKartings);
