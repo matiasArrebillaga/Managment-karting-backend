@@ -38,7 +38,9 @@ const filtroSolapes = () => db.reservas.findMany.mock.calls[0][0].where;
 
 beforeEach(() => {
     db.$transaction.mockClear();
-    db.$queryRaw.mockClear();
+    // el SELECT del circuito en bloquearFranja tiene que encontrarlo
+    db.$queryRaw = jest.fn(async () => [{ idCircuitos: 1 }]);
+    db.$executeRaw.mockClear();
     db.personas = { findUnique: jest.fn(async () => ({ idPersona: 1 })) };
     db.kartings = { findUnique: jest.fn(async () => KARTING_SENIOR) };
     db.circuitos = { findUnique: jest.fn(async () => ({ idCircuitos: 1, maximo: 8 })) };
@@ -350,14 +352,27 @@ describe("pertenencia", () => {
 });
 
 describe("solapamiento y escritura en la misma transaccion", () => {
-    it("el alta valida y graba dentro de $transaction, con los recursos lockeados", async () => {
+    it("el alta bloquea kart, circuito compartido y franja del dia, en ese orden", async () => {
         await reservaService.realizarReserva(reservaValida());
 
         expect(db.$transaction).toHaveBeenCalledTimes(1);
-        // kart y circuito, en ese orden, para no cruzar locks entre requests
-        expect(db.$queryRaw).toHaveBeenCalledTimes(2);
-        expect(db.$queryRaw.mock.calls[0][0].join("?")).toContain("kartings");
-        expect(db.$queryRaw.mock.calls[1][0].join("?")).toContain("circuitos");
+        expect(db.$transaction.mock.calls[0][1]).toEqual({ isolationLevel: "ReadCommitted" });
+        const sql = (call: any) => call[0].join("?");
+        expect(sql(db.$queryRaw.mock.calls[0])).toContain("FROM kartings");
+        expect(sql(db.$queryRaw.mock.calls[0])).toContain("FOR UPDATE");
+        // el circuito ya no se bloquea exclusivo: dos reservas de otros dias no se esperan
+        expect(sql(db.$queryRaw.mock.calls[1])).toContain("FROM circuitos");
+        expect(sql(db.$queryRaw.mock.calls[1])).toContain("LOCK IN SHARE MODE");
+        // la franja se bloquea con el dia como texto YYYY-MM-DD
+        expect(sql(db.$executeRaw.mock.calls[0])).toContain("franjas_circuito");
+        expect(db.$executeRaw.mock.calls[0].slice(1)).toEqual([1, EN_UN_ANIO.toISOString().slice(0, 10)]);
+    });
+
+    it("con un circuito inexistente corta con 400 antes de tocar la franja", async () => {
+        db.$queryRaw = jest.fn(async () => []);
+
+        await expect(reservaService.realizarReserva(reservaValida())).rejects.toThrow("El circuito no existe");
+        expect(db.$executeRaw).not.toHaveBeenCalled();
     });
 
     it("el patch tambien revalida y graba dentro de $transaction", async () => {

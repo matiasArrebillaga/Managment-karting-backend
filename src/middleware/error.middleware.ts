@@ -59,6 +59,13 @@ export function errorHandler(err: unknown, req: Request, res: Response, next: Ne
                 message: "El recurso referenciado no existe o está en uso"
             });
         }
+        // P2028: la transaccion espero un candado mas de lo permitido; P2034: deadlock.
+        // no es un fallo nuestro: otra operacion tenia el mismo horario, se puede reintentar
+        if (code === "P2028" || code === "P2034") {
+            return res.status(409).json({
+                message: "Hay otra operación sobre ese horario, intentá de nuevo"
+            });
+        }
     }
 // cualquier otro error (de JavaScript, de Prisma, etc.) es un fallo nuestro:
 // no se expone el mensaje interno, queda solo en el console.error de arriba

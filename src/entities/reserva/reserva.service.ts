@@ -3,7 +3,7 @@ import { Prisma } from "../../generated/prisma/client";
 import { AppError } from "../../middleware/error.middleware";
 import { CreateReserva, CreateReservaInput, UpdateReservaInput } from "./reserva.interface";
 import { horaActualUTC, hoyUTC, normalizarHora } from "../../utils/fecha";
-import { franjaOcupada } from "../../utils/ocupacion";
+import { bloquearFranja, franjaOcupada, opcionesTxFranja } from "../../utils/ocupacion";
 import { validarLicenciaVigente } from "../../utils/licencia";
 
 const MS_POR_HORA = 60 * 60 * 1000;
@@ -43,12 +43,6 @@ class ReservaService {
         const duracion = horaFin.getTime() - horaInicio.getTime();
         if (duracion <= 0) throw new AppError("La hora de inicio debe ser anterior a la hora de fin");
         return duracion / MS_POR_HORA;
-    }
-
-    //bloquea karting y circuitos para evitar problemas de solapamiento y sea una transaccion
-    private async bloquearRecursos(db: Prisma.TransactionClient, idKart: number, idCirc: number) {
-        await db.$queryRaw`SELECT idKartings FROM kartings WHERE idKartings = ${idKart} FOR UPDATE`;
-        await db.$queryRaw`SELECT idCircuitos FROM circuitos WHERE idCircuitos = ${idCirc} FOR UPDATE`;
     }
 
   
@@ -106,7 +100,8 @@ class ReservaService {
             throw new AppError("No se puede reservar en un horario que ya pasó");
         }
 
-        await this.bloquearRecursos(db, data.Kartings_idKartings, data.Circuitos_idCircuitos);
+        // bloquea el kart y el cupo del circuito en ese dia, no el circuito para todas las fechas
+        await bloquearFranja(db, [data.Kartings_idKartings], data.Circuitos_idCircuitos, fechaReserva);
 
         const [persona, karting, circuito] = await Promise.all([
             db.personas.findUnique({ where: { idPersona: data.Personas_idPersona } }),
@@ -203,7 +198,7 @@ class ReservaService {
                     Kartings_idKartings: datos.Kartings_idKartings
                 }
             });
-        });
+        }, opcionesTxFranja);
     }
     // tiene las mismas validacion que create 
     async update(idReservas: number, data: UpdateReservaInput, restringirAPersona?: number) {
@@ -249,7 +244,7 @@ class ReservaService {
                     monto
                 }
             });
-        });
+        }, opcionesTxFranja);
     }
 
     async delete(idReservas: number, restringirAPersona?: number) {

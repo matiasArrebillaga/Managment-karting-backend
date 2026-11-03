@@ -30,6 +30,10 @@ describe("errorHandler", () => {
         expect(responder({ code: "P2003" })).toMatchObject({ statusCode: 409, body: { message: "El recurso referenciado no existe o está en uso" } });
     });
 
+    it.each(["P2028", "P2034"])("%s (timeout o deadlock de la transaccion) es 409 para reintentar", (code) => {
+        expect(responder({ code })).toMatchObject({ statusCode: 409, body: { message: "Hay otra operación sobre ese horario, intentá de nuevo" } });
+    });
+
     it("un Error de JavaScript es 500 y no expone el mensaje interno", () => {
         const res = responder(new TypeError("Cannot read properties of undefined (reading 'trim')"));
         expect(res).toMatchObject({ statusCode: 500, body: { message: "Error interno del servidor" } });

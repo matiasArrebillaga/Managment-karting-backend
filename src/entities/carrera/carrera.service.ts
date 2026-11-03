@@ -2,7 +2,7 @@ import {prisma} from "../../config/prisma.js";
 import { Prisma } from "../../generated/prisma/client.js";
 import { CreateCarrera, UpdateCarrera } from "../carrera/carrera.interface.js";
 import { normalizarFecha, normalizarHora } from "../../utils/fecha.js";
-import { franjaOcupada } from "../../utils/ocupacion.js";
+import { bloquearFranja, franjaOcupada, opcionesTxFranja } from "../../utils/ocupacion.js";
 import { AppError } from "../../middleware/error.middleware.js";
 
 // trae los karts asignados de cada carrera
@@ -96,8 +96,8 @@ class CarrerasService {
     }
 
     // Valida que los karts existan, esten libres en la franja (carreras y reservas) y entren
-    // en el circuito. Bloquea karts y circuito igual que reserva.service para que dos altas
-    // simultaneas no se pisen. estado solo se exige a karts nuevos, como en reservas.
+    // en el circuito. Se llama con bloquearFranja ya hecho, asi dos altas simultaneas no se
+    // pisan. estado solo se exige a karts nuevos, como en reservas.
     private async validarAsignacion(
         db: Prisma.TransactionClient,
         kartings: number[],
@@ -107,9 +107,6 @@ class CarrerasService {
         horaFin: Date,
         opciones: { exigirDisponibles: boolean; excluir?: { Torneos_idTorneos: number; Circuitos_idCircuitos: number } }
     ) {
-        await db.$queryRaw`SELECT idKartings FROM kartings WHERE idKartings IN (${Prisma.join(kartings)}) FOR UPDATE`;
-        await db.$queryRaw`SELECT idCircuitos FROM circuitos WHERE idCircuitos = ${circuito.idCircuitos} FOR UPDATE`;
-
         const encontrados = await db.kartings.findMany({ where: { idKartings: { in: kartings } } });
         const faltantes = kartings.filter(id => !encontrados.some(k => k.idKartings === id));
         if (faltantes.length > 0) throw new AppError(`Los kartings ${faltantes.join(", ")} no existen`);
@@ -164,10 +161,14 @@ class CarrerasService {
         };
 
         return await prisma.$transaction(async (db) => {
+            // primero la fila de la carrera: asi sus karts no cambian por otro PATCH mientras se validan
+            await db.$queryRaw`SELECT 1 FROM carreras WHERE Torneos_idTorneos = ${Torneos_idTorneos} AND Circuitos_idCircuitos = ${Circuitos_idCircuitos} AND fechaCarrera = ${fecha.toISOString().slice(0, 10)} FOR UPDATE`;
             const actual = await db.carreras.findUnique({ where, include: conKartings });
             if (!actual) throw new AppError("La carrera indicada no existe", 404);
 
             if (horas.horaInicio !== undefined || horas.horaFin !== undefined || nuevosKartings !== undefined) {
+                const kartings = nuevosKartings ?? actual.kartings.map(k => k.Kartings_idKartings);
+                await bloquearFranja(db, kartings, Circuitos_idCircuitos, fecha);
                 const horaInicio = horas.horaInicio ?? actual.horaInicio;
                 const horaFin = horas.horaFin ?? actual.horaFin;
                 this.validarHorarios(horaInicio, horaFin);
@@ -175,7 +176,7 @@ class CarrerasService {
                 if (!circuito) throw new AppError("El circuito indicado no existe");
                 // se excluye a si misma del control de solape
                 await this.validarAsignacion(
-                    db, nuevosKartings ?? actual.kartings.map(k => k.Kartings_idKartings), circuito,
+                    db, kartings, circuito,
                     fecha, horaInicio, horaFin,
                     { exigirDisponibles: nuevosKartings !== undefined, excluir: { Torneos_idTorneos, Circuitos_idCircuitos } }
                 );
@@ -201,7 +202,7 @@ class CarrerasService {
                 include: conKartings
             });
             return this.aplanar(actualizada);
-        });
+        }, opcionesTxFranja);
     }
 
     // Eliminar una carrera; sus karts asignados se borran en cascada
@@ -221,6 +222,8 @@ class CarrerasService {
         this.validarHorarios(horaInicio, horaFin);
 
         return await prisma.$transaction(async (db) => {
+            // antes de cualquier lectura, para que franjaOcupada vea lo ultimo confirmado (KAN-82)
+            await bloquearFranja(db, kartings, data.Circuitos_idCircuitos, fechaCarrera);
             const { torneo, circuito } = await this.validarEntidadesRelacionadas(
                 db, data.Torneos_idTorneos, data.Circuitos_idCircuitos
             );
@@ -240,7 +243,7 @@ class CarrerasService {
                 include: conKartings
             });
             return this.aplanar(carrera);
-        });
+        }, opcionesTxFranja);
     }
 
     async getByTorneo(idTorneo: number) {

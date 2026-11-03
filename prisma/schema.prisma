@@ -43,6 +43,17 @@ model circuitos {
   maximo      Int
   carreras    carreras[]
   reservas    reservas[]
+  franjas     franjas_circuito[]
+}
+
+// candado del cupo de un circuito en un dia: reservas y carreras bloquean esta fila
+// y no la del circuito, asi dos altas en dias distintos no se esperan entre si
+model franjas_circuito {
+  Circuitos_idCircuitos Int
+  fecha                 DateTime  @db.Date
+  circuitos             circuitos @relation(fields: [Circuitos_idCircuitos], references: [idCircuitos], onDelete: Cascade, onUpdate: NoAction, map: "fk_FranjasCircuito_Circuitos")
+
+  @@id([Circuitos_idCircuitos, fecha])
 }
 
 model kartings {
