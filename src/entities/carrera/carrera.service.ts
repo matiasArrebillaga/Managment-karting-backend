@@ -8,6 +8,8 @@ import { AppError } from "../../middleware/error.middleware.js";
 // trae los karts asignados de cada carrera
 const conKartings = { kartings: { include: { kartings: true } } } as const;
 
+const MS_POR_HORA = 60 * 60 * 1000;
+
 type CarreraConKartings = Prisma.carrerasGetPayload<{ include: typeof conKartings }>;
 
 class CarrerasService {
@@ -52,6 +54,14 @@ class CarrerasService {
         }
         if (horaInicio >= horaFin) {
             throw new AppError("La hora de inicio debe ser anterior a la hora de fin");
+        }
+    }
+
+    // solo las horas que se mandan: una carrera vieja con minutos se puede seguir editando sin tocar el horario
+    private validarEnPunto(...horas: Date[]) {
+        // las horas se guardan como 1970-01-01 en UTC: en punto = multiplo exacto de una hora
+        if (horas.some(hora => hora.getTime() % MS_POR_HORA !== 0)) {
+            throw new AppError("Las carreras son en hora en punto (ej: 10:00 a 12:00)");
         }
     }
 
@@ -165,6 +175,7 @@ class CarrerasService {
             ...(data.horaInicio !== undefined && { horaInicio: normalizarHora(data.horaInicio, "horaInicio") }),
             ...(data.horaFin !== undefined && { horaFin: normalizarHora(data.horaFin, "horaFin") })
         };
+        this.validarEnPunto(...Object.values(horas));
 
         return await prisma.$transaction(async (db) => {
             // primero la fila de la carrera: asi sus karts no cambian por otro PATCH mientras se validan
@@ -227,6 +238,7 @@ class CarrerasService {
         const horaInicio = normalizarHora(data.horaInicio, "horaInicio");
         const horaFin = normalizarHora(data.horaFin, "horaFin");
         this.validarHorarios(horaInicio, horaFin);
+        this.validarEnPunto(horaInicio, horaFin);
 
         return await prisma.$transaction(async (db) => {
             // antes de cualquier lectura, para que franjaOcupada vea lo ultimo confirmado (KAN-82)

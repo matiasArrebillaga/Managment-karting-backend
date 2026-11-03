@@ -80,6 +80,12 @@ describe("alta de una carrera con varios kartings", () => {
         expect(db.carreras.create).not.toHaveBeenCalled();
     });
 
+    it("rechaza horas que no sean en punto (10:30 a 11:30)", async () => {
+        await expect(carreraService.crearCarrera({ ...carreraValida(), horaInicio: "10:30", horaFin: "11:30" }))
+            .rejects.toThrow(/hora en punto/);
+        expect(db.carreras.create).not.toHaveBeenCalled();
+    });
+
     it("rechaza si un karting esta reservado en esa franja", async () => {
         db.reservas.findMany = jest.fn(async () => [
             { Kartings_idKartings: 5, Circuitos_idCircuitos: 2 }
@@ -198,6 +204,22 @@ describe("update de una carrera", () => {
         await expect(carreraService.update(FECHA, 1, 1, { kartings: [4, 7] }))
             .rejects.toThrow(/kartings 7 no son del tipo de licencia/);
         expect(db.carreras.update).not.toHaveBeenCalled();
+    });
+
+    it("rechaza un horario nuevo que no sea en punto", async () => {
+        await expect(carreraService.update(FECHA, 1, 1, { horaFin: hora("11:30") }))
+            .rejects.toThrow(/hora en punto/);
+        expect(db.carreras.update).not.toHaveBeenCalled();
+    });
+
+    it("una carrera vieja con minutos se edita si no se manda el horario", async () => {
+        db.carreras.findUnique = jest.fn(async () => ({
+            horaInicio: hora("16:56"), horaFin: hora("17:57"),
+            kartings: [{ Kartings_idKartings: 4, kartings: { idKartings: 4 } }]
+        }));
+
+        await carreraService.update(FECHA, 1, 1, { kartings: [4, 5] });
+        expect(db.carreras.update).toHaveBeenCalled();
     });
 
     it("404 si la carrera no existe", async () => {
