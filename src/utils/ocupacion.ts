@@ -1,5 +1,6 @@
 import { Prisma } from "../generated/prisma/client";
 import { AppError } from "../middleware/error.middleware";
+import { hoyUTC } from "./fecha";
 
 // ReadCommitted: cada lectura ve lo ultimo confirmado y los FOR UPDATE no toman gap locks.
 // La correccion la dan los candados explicitos (FOR UPDATE / LOCK IN SHARE MODE), no la foto de REPEATABLE READ.
@@ -69,4 +70,26 @@ export async function franjaOcupada(
         ...reservas,
         ...carreras.map(c => ({ Kartings_idKartings: c.Kartings_idKartings, Circuitos_idCircuitos: c.Carrera_Circuitos_idCircuitos }))
     ];
+}
+
+// Un kart asignado a carreras de hoy en adelante tiene que seguir siendo de la licencia de esos torneos.
+// Se usa al cambiarle el tipo a un kart o la licencia minima a un tipo de karting.
+// Va despues de bloquear los karts (FOR UPDATE), asi ninguna carrera nueva los toma mientras se valida.
+export async function validarLicenciaEnCarrerasFuturas(
+    db: Prisma.TransactionClient,
+    kartings: Prisma.kartingsWhereInput,
+    idLicencia: number
+) {
+    const choques = await db.carreras_kartings.findMany({
+        where: {
+            kartings,
+            Carrera_fecha: { gte: hoyUTC() },
+            carreras: { torneos: { TiposLicencias_idTipoLicencia: { not: idLicencia } } }
+        },
+        select: { carreras: { select: { torneos: { select: { nombre: true } } } } }
+    });
+    if (choques.length > 0) {
+        const torneos = [...new Set(choques.map(c => c.carreras.torneos.nombre))];
+        throw new AppError(`No se puede cambiar: hay kartings asignados a carreras de ${torneos.join(", ")}, que exigen otra licencia`);
+    }
 }

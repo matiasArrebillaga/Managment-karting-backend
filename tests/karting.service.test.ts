@@ -19,6 +19,10 @@ beforeEach(() => {
         create: jest.fn(async ({ data }: any) => data),
         update: jest.fn(async ({ data }: any) => data)
     };
+
+    db.carreras_kartings = {
+        findMany: jest.fn(async () => [])
+    };
 });
 
 const kartingValido = {
@@ -66,6 +70,28 @@ describe("seguridad de karting", () => {
         expect(datosEnviados).toEqual({ modelo: "K2" });
         expect(datosEnviados).not.toHaveProperty("idKartings");
         expect(datosEnviados).not.toHaveProperty("reservas");
+    });
+});
+
+describe("cambiar el tipo de un kart asignado a carreras futuras", () => {
+    it("rechaza si el tipo nuevo no es de la licencia del torneo", async () => {
+        db.tiposkarting.findUnique = jest.fn(async () => ({ idTiposKarting: 2, TiposLicencias_idTipoLicenciaMinima: 3 }));
+        db.carreras_kartings.findMany = jest.fn(async () => [{ carreras: { torneos: { nombre: "Copa Rosario" } } }]);
+
+        await expect(kartingService.update(1, { TiposKarting_idTiposKarting: 2 })).rejects.toThrow("Copa Rosario");
+        expect(db.kartings.update).not.toHaveBeenCalled();
+    });
+
+    it("bloquea el kart antes de validar y filtra por la licencia del tipo nuevo", async () => {
+        db.tiposkarting.findUnique = jest.fn(async () => ({ idTiposKarting: 2, TiposLicencias_idTipoLicenciaMinima: 3 }));
+
+        await kartingService.update(1, { TiposKarting_idTiposKarting: 2 });
+
+        expect(db.$queryRaw).toHaveBeenCalled();
+        const where = db.carreras_kartings.findMany.mock.calls[0][0].where;
+        expect(where.kartings).toEqual({ idKartings: 1 });
+        expect(where.carreras).toEqual({ torneos: { TiposLicencias_idTipoLicencia: { not: 3 } } });
+        expect(db.kartings.update).toHaveBeenCalled();
     });
 });
 
