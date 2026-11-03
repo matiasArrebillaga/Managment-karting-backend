@@ -34,6 +34,25 @@ describe("errorHandler", () => {
         expect(responder({ code })).toMatchObject({ statusCode: 409, body: { message: "Hay otra operación sobre ese horario, intentá de nuevo" } });
     });
 
+    it("el JSON mal formado de express.json() es 400 sin exponer el mensaje del parser", () => {
+        const err = Object.assign(new SyntaxError("Unexpected token } in JSON"), { status: 400, type: "entity.parse.failed" });
+        expect(responder(err)).toMatchObject({ statusCode: 400, body: { message: "El cuerpo de la request no es un JSON válido" } });
+    });
+
+    it("un body demasiado grande es 413", () => {
+        const err = Object.assign(new Error("request entity too large"), { status: 413, type: "entity.too.large" });
+        expect(responder(err)).toMatchObject({ statusCode: 413, body: { message: "El cuerpo de la request es demasiado grande" } });
+    });
+
+    it("un status fuera de 4xx no se respeta: sigue siendo 500", () => {
+        expect(responder(Object.assign(new Error("x"), { status: 503 }))).toMatchObject({ statusCode: 500 });
+    });
+
+    it("PrismaClientValidationError (ej: un NaN como id) es 400", () => {
+        const err = Object.assign(new Error("Argument `idReservas`: Invalid value provided"), { name: "PrismaClientValidationError" });
+        expect(responder(err)).toMatchObject({ statusCode: 400, body: { message: "Los datos enviados no son válidos" } });
+    });
+
     it("un Error de JavaScript es 500 y no expone el mensaje interno", () => {
         const res = responder(new TypeError("Cannot read properties of undefined (reading 'trim')"));
         expect(res).toMatchObject({ statusCode: 500, body: { message: "Error interno del servidor" } });

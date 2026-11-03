@@ -204,7 +204,7 @@ class ReservaService {
     async update(idReservas: number, data: UpdateReservaInput, restringirAPersona?: number) {
         this.validarId(idReservas);
         const actual = await prisma.reservas.findUnique({ where: { idReservas } });
-        if (!actual) throw new AppError("La reserva indicada no existe");
+        if (!actual) throw new AppError("La reserva indicada no existe", 404);
         this.verificarPertenencia(actual.Personas_idPersona, restringirAPersona);
         const resultante: CreateReserva = {
             // cambia solo los campos necesarios y deja los otros igual    
@@ -251,7 +251,7 @@ class ReservaService {
         this.validarId(idReservas);
         if (restringirAPersona !== undefined) {
             const actual = await prisma.reservas.findUnique({ where: { idReservas } });
-            if (!actual) throw new AppError("La reserva indicada no existe");
+            if (!actual) throw new AppError("La reserva indicada no existe", 404);
             this.verificarPertenencia(actual.Personas_idPersona, restringirAPersona);
         }
         return await prisma.reservas.delete({

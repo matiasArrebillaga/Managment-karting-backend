@@ -136,7 +136,7 @@ async update(idTorneo: number, data: UpdateTorneos) {
     });
 
     if (!actual) {
-        throw new AppError("El torneo indicado no existe");
+        throw new AppError("El torneo indicado no existe", 404);
     }
 
     const inicio = datos.fechaInicio ?? actual.fechaInicio;
