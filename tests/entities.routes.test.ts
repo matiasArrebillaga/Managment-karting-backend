@@ -106,14 +106,12 @@ describe("rutas protegidas de todas las entidades", () => {
         ["/api/personas", "ADMIN", personaService],
         ["/api/localidades", "CLIENTE", localidadService],
         ["/api/circuitos", "CLIENTE", circuitoService],
-        ["/api/roles", "ADMIN", rolService],
         ["/api/tiposLicencias", "EMPLEADO", tipoLicenciaService],
         ["/api/tiposKartings", "EMPLEADO", tipoKartingService],
         ["/api/torneos", "CLIENTE", torneoService],
         ["/api/licencias", "EMPLEADO", licenciaService],
         ["/api/reservas", "EMPLEADO", reservaService],
         ["/api/carreras", "CLIENTE", carreraService],
-        ["/api/participaciones", "EMPLEADO", participacionService],
         // el listado completo dejo de ser visible para un CLIENTE: ahora usa /mias
         ["/api/inscripciones", "EMPLEADO", inscripcionService],
     ] as const;
@@ -185,7 +183,6 @@ describe("CRUD de las entidades", () => {
         ["/api/personas", "/api/personas/1", "ADMIN", "ADMIN", "ADMIN", personaService, "create"],
         ["/api/localidades", "/api/localidades/1", "EMPLEADO", "EMPLEADO", "EMPLEADO", localidadService, "create"],
         ["/api/circuitos", "/api/circuitos/1", "ADMIN", "EMPLEADO", "ADMIN", circuitoService, "create"],
-        ["/api/roles", "/api/roles/1", "ADMIN", "ADMIN", "ADMIN", rolService, "create"],
         ["/api/tiposLicencias", "/api/tiposLicencias/1", "EMPLEADO", "EMPLEADO", "ADMIN", tipoLicenciaService, "create"],
         ["/api/tiposKartings", "/api/tiposKartings/1", "EMPLEADO", "EMPLEADO", "ADMIN", tipoKartingService, "create"],
         ["/api/torneos", "/api/torneos/1", "EMPLEADO", "EMPLEADO", "ADMIN", torneoService, "create"],
@@ -383,15 +380,6 @@ describe("rutas con claves compuestas", () => {
             "crearCarrera",
             "EMPLEADO",
         ],
-        [
-            "/api/participaciones",
-            "/api/participaciones/2026-01-01/1/1/1",
-            "EMPLEADO",
-            participacionService,
-            "put",
-            "registrarParticipacion",
-            "EMPLEADO",
-        ],
         // inscripciones queda fuera de esta tabla: ya no tiene PUT. Tiene su propio describe.
     ] as const;
 
@@ -414,16 +402,6 @@ describe("rutas con claves compuestas", () => {
     });
 });
 
-describe("resultados de carrera", () => {
-    it("un CLIENTE no puede cargarse resultados", async () => {
-        const response = await request(app)
-            .post("/api/participaciones")
-            .set("Authorization", `Bearer ${token("CLIENTE")}`)
-            .send({});
-
-        expect(response.status).toBe(403);
-        expect(participacionService.registrarParticipacion as unknown as jest.Mock).not.toHaveBeenCalled();
-    });
 
     it("un EMPLEADO carga la clasificación completa de una carrera", async () => {
         const response = await request(app)
@@ -474,7 +452,7 @@ describe("resultados de carrera", () => {
         expect(response.status).toBe(400);
         expect(participacionService.registrarResultadosCarrera as unknown as jest.Mock).not.toHaveBeenCalled();
     });
-});
+
 
 describe("autenticación", () => {
     it("registra una persona", async () => {

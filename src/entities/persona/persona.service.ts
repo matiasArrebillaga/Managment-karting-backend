@@ -1,6 +1,6 @@
 import { AppError } from "../../middleware/error.middleware";
 import {prisma} from "../../config/prisma"
-import { IPersona, UpdatePersona , CreatePersona } from "./persona.interface"
+import { UpdatePersona , CreatePersona } from "./persona.interface"
 import bcrypt from "bcryptjs";
 
 class PersonaService {

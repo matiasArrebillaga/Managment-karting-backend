@@ -1,6 +1,6 @@
 import { AppError } from "../../middleware/error.middleware";
 import { prisma } from "../../config/prisma";
-import { CreateCircuito, ICircuito, UpdateCircuito } from "./circuto.interface";
+import { CreateCircuito, UpdateCircuito } from "./circuto.interface";
 
 class CircuitoService {
     private validarId(id: number) {

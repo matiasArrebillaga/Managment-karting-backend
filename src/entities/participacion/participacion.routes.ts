@@ -17,7 +17,6 @@ participacion.get(
     ParticipacionesController.getClasificacionCarrera
 );
 participacion.get(PK, verifyRoles("EMPLEADO", "ADMIN"), ParticipacionesController.getById);
-participacion.post("/", verifyRoles("EMPLEADO", "ADMIN"), requireFields("Carrera_Torneos_idTorneos", "Carrera_Circuitos_idCircuitos", "Carrera_fecha", "Personas_idPersona", "posicion_final", "tiempo"), ParticipacionesController.create);
 // Clasificación completa de una carrera, en una transacción
 participacion.post("/carrera", verifyRoles("EMPLEADO", "ADMIN"), requireFields("Carrera_Torneos_idTorneos", "Carrera_Circuitos_idCircuitos", "Carrera_fecha", "resultados"), ParticipacionesController.registrarCarrera);
 participacion.put(PK, verifyRoles("EMPLEADO", "ADMIN"), ParticipacionesController.update);
