@@ -90,7 +90,10 @@ class CarrerasService {
         }
     }
 
-    // Un kart por piloto para todo el cupo, y todos de la licencia que pide el torneo
+    // Un kart por piloto para todo el cupo, y todos de la categoria del torneo.
+    // Se compara por id de tipo de licencia (no por nivel) a proposito: en un torneo
+    // compiten karts de la misma categoria. El nivel se usa para la persona
+    // (validarLicenciaVigente), que es otra regla.
     private async validarKartingsDelTorneo(
         db: Prisma.TransactionClient,
         kartings: number[],

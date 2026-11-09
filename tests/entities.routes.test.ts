@@ -203,9 +203,9 @@ describe("roles de localidades, tiposKartings y licencias", () => {
 
 describe("CRUD de las entidades", () => {
     const entities = [
-        ["/api/kartings", "/api/kartings/1", "EMPLEADO", "EMPLEADO", "EMPLEADO", kartingService, "create"],
+        ["/api/kartings", "/api/kartings/1", "EMPLEADO", "EMPLEADO", "ADMIN", kartingService, "create"],
         ["/api/personas", "/api/personas/1", "ADMIN", "ADMIN", "ADMIN", personaService, "create"],
-        ["/api/localidades", "/api/localidades/1", "EMPLEADO", "EMPLEADO", "EMPLEADO", localidadService, "create"],
+        ["/api/localidades", "/api/localidades/1", "EMPLEADO", "EMPLEADO", "ADMIN", localidadService, "create"],
         ["/api/circuitos", "/api/circuitos/1", "ADMIN", "EMPLEADO", "ADMIN", circuitoService, "create"],
         ["/api/roles", "/api/roles/1", "ADMIN", "ADMIN", "ADMIN", rolService, "create"],
         ["/api/tiposLicencias", "/api/tiposLicencias/1", "EMPLEADO", "EMPLEADO", "ADMIN", tipoLicenciaService, "create"],
@@ -578,5 +578,19 @@ describe("documentación OpenAPI", () => {
         for (const path of ["/api/personas/{id}/rol", "/api/personas/empleado", "/api/reservas/fechas", "/api/licencias/mias"]) {
             expect(spec.paths[path]).toBeDefined();
         }
+    });
+});
+
+describe("borrado solo ADMIN", () => {
+    it.each([
+        ["/api/kartings/1", kartingService],
+        ["/api/localidades/1", localidadService],
+    ] as const)("un EMPLEADO no puede borrar %s", async (path, service) => {
+        const response = await request(app)
+            .delete(path)
+            .set("Authorization", `Bearer ${token("EMPLEADO")}`);
+
+        expect(response.status).toBe(403);
+        expect(service.delete as unknown as jest.Mock).not.toHaveBeenCalled();
     });
 });

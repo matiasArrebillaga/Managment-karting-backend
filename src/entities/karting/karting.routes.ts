@@ -13,5 +13,5 @@ router.get("/disponibles",verifyRoles("EMPLEADO","ADMIN","CLIENTE"), kartingCont
 router.get("/:id",verifyRoles("EMPLEADO","ADMIN","CLIENTE"), kartingController.getById);
 router.post("/",verifyRoles("EMPLEADO","ADMIN"), requireFields("categoria", "modelo", "estado", "fechaAdquisicion", "TiposKarting_idTiposKarting"), kartingController.create);
 router.patch("/:id",verifyRoles("EMPLEADO","ADMIN"), kartingController.update);
-router.delete("/:id",verifyRoles("EMPLEADO","ADMIN"),kartingController.delete);
+router.delete("/:id",verifyRoles("ADMIN"),kartingController.delete);
 export default router;
