@@ -23,6 +23,9 @@ import { errorHandler, notFoundHandler } from "./middleware/error.middleware";
 
 const app = express(); // declaracion de uso de express para el server
 
+// Railway pone un proxy delante: confiamos en 1 salto para que req.ip sea la IP real del
+// cliente (sin esto el rate limit veria a todos con la IP del proxy y compartirian el cupo)
+app.set("trust proxy", 1);
 app.use(helmet()); // headers de seguridad (no-sniff, frameguard, CSP, etc.)
 
 // mecanismo de seguridad para controlar la conexion entre el cliente y el server
@@ -39,10 +42,12 @@ app.get("/api-docs.json", (req, res) => {
 });
 
 // ruta de login y registro, obtiene el token entonces no requiere verificacion
-// freno a la fuerza bruta: 10 intentos cada 15 minutos por IP. En los tests se saltea
+// freno a la fuerza bruta: 10 intentos fallidos cada 15 minutos por IP. Los exitosos no
+// cuentan, asi un local con una sola IP publica no se bloquea. En los tests se saltea
 const limiteAuth = rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 10,
+    skipSuccessfulRequests: true,
     standardHeaders: "draft-8",
     legacyHeaders: false,
     skip: () => process.env.NODE_ENV === "test",

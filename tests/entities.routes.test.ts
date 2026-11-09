@@ -1,6 +1,7 @@
 import request from "supertest";
 import jwt from "jsonwebtoken";
-import { beforeEach, describe, expect, it, jest } from "@jest/globals";
+import { afterEach, beforeEach, describe, expect, it, jest } from "@jest/globals";
+import { AppError } from "../src/middleware/error.middleware";
 
 jest.mock("../src/config/prisma");
 jest.mock("../src/entities/karting/karting.service");
@@ -604,5 +605,35 @@ describe("números como string en el body", () => {
 
         expect(circuitoService.create as unknown as jest.Mock)
             .toHaveBeenCalledWith({ distancia: 800, dificultad: "media", maximo: 3 });
+    });
+});
+
+describe("rate limit del login", () => {
+    // el limiter se saltea con NODE_ENV=test: aca lo activamos solo para este describe
+    beforeEach(() => { process.env.NODE_ENV = "development"; });
+    afterEach(() => { process.env.NODE_ENV = "test"; });
+
+    // X-Forwarded-For simula la IP real del cliente que Railway pone delante del proxy
+    const login = (ip: string) => request(app)
+        .post("/api/auth/login")
+        .set("X-Forwarded-For", ip)
+        .send({ mail: "a@a.com", "contraseña": "x" });
+
+    it("cuenta por IP real detrás del proxy y solo los intentos fallidos", async () => {
+        looseMock(authService.login).mockResolvedValue({ token: "t" });
+        for (let i = 0; i < 12; i++) {
+            expect((await login("10.0.0.1")).status).toBe(200);
+        }
+
+        (authService.login as any).mockRejectedValue(new AppError("Credenciales invalidas", 401));
+        for (let i = 0; i < 10; i++) {
+            expect((await login("10.0.0.2")).status).toBe(401);
+        }
+        const bloqueado = await login("10.0.0.2");
+        expect(bloqueado.status).toBe(429);
+        expect(bloqueado.body.message).toMatch(/Demasiados intentos/);
+
+        // otra IP no comparte el cupo
+        expect((await login("10.0.0.3")).status).toBe(401);
     });
 });
