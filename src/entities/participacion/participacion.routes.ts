@@ -8,9 +8,9 @@ const PK = "/:Carrera_fecha/:Carrera_Torneos_idTorneos/:Carrera_Circuitos_idCirc
 
 const participacion = Router();
 
-// Los resultados los carga el personal; un CLIENTE solo ve la tabla general
+// los resultados los carga el personal, el cliente solo ve la tabla
 participacion.get("/", verifyRoles("EMPLEADO", "ADMIN"), ParticipacionesController.getAll);
-// Antes del GET por PK: los dos tienen 4 segmentos y el de PK tomaria "carrera" como fecha
+// antes del GET por PK, sino toma carrera como fecha
 participacion.get(
     "/carrera/:Carrera_fecha/:Carrera_Torneos_idTorneos/:Carrera_Circuitos_idCircuitos",
     verifyRoles("ADMIN", "EMPLEADO", "CLIENTE"),
@@ -18,7 +18,7 @@ participacion.get(
 );
 participacion.get(PK, verifyRoles("EMPLEADO", "ADMIN"), ParticipacionesController.getById);
 participacion.post("/", verifyRoles("EMPLEADO", "ADMIN"), requireFields("Carrera_Torneos_idTorneos", "Carrera_Circuitos_idCircuitos", "Carrera_fecha", "Personas_idPersona", "posicion_final", "tiempo"), ParticipacionesController.create);
-// Clasificación completa de una carrera, en una transacción
+// clasificacion completa en una transaccion
 participacion.post("/carrera", verifyRoles("EMPLEADO", "ADMIN"), requireFields("Carrera_Torneos_idTorneos", "Carrera_Circuitos_idCircuitos", "Carrera_fecha", "resultados"), ParticipacionesController.registrarCarrera);
 participacion.put(PK, verifyRoles("EMPLEADO", "ADMIN"), ParticipacionesController.update);
 participacion.delete(PK, verifyRoles("ADMIN"), ParticipacionesController.delete);

@@ -13,13 +13,13 @@ class PersonasTorneosService {
     private aEntero(valor: unknown): number {
         return Number(valor);
     }
-    //valida que el torneo exista, no haya empezado, tenga cupo y que la persona tenga la licencia
+    // valida que el torneo exista, no haya empezado, tenga cupo y que la persona tenga la licencia
     private async validarTorneo(
         db: Prisma.TransactionClient,
         idTorneo: number,
         idPers: number
     ) {
-        const [torneo, persona] = await Promise.all([ // calida que el torneo y la persona existan
+        const [torneo, persona] = await Promise.all([ // valida que el torneo y la persona existan
             db.torneos.findUnique({ where: { idTorneos: idTorneo }, include: { tiposlicencias: true } }),
             db.personas.findUnique({ where: { idPersona: idPers } })
         ]);
@@ -27,7 +27,7 @@ class PersonasTorneosService {
         if (!torneo) throw new AppError("El torneo ingresado no existe", 404);
         if (!persona) throw new AppError("La persona ingresada no existe", 404);
 
-        if (torneo.fechaInicio <= hoyUTC()) { // que el torneo no haya empezado: el dia de inicio ya cierra
+        if (torneo.fechaInicio <= hoyUTC()) { // que el torneo no haya empezado
             throw new AppError("El torneo ya comenzó: no se admiten inscripciones");
         }
 
@@ -97,7 +97,7 @@ class PersonasTorneosService {
         });
     }
 
-    // lista los inscriptos de un torneo, solo con datos publicos (nada de email ni contraseña)
+    // lista los inscriptos de un torneo sin datos privados
     async getInscriptosTorneo(Torneos_idTorneos: number) {
         validarId(Torneos_idTorneos);
         const inscripciones = await prisma.personas_torneos.findMany({
@@ -109,7 +109,7 @@ class PersonasTorneosService {
     }
 
     async create(data: CreatePersonaTorneo, restringirAPersona?: number) {
-        // valida los id, restringir persona hace que un cliente se inscriba a si mismo (ADMIN podria inscribir a otra persona)
+        // un cliente solo se puede inscribir a si mismo
         const Personas_idPersona = restringirAPersona ?? this.aEntero(data.Personas_idPersona);
         const Torneos_idTorneos = this.aEntero(data.Torneos_idTorneos);
         validarId(Torneos_idTorneos);
@@ -117,7 +117,7 @@ class PersonasTorneosService {
         // comienza la transaccion, previene overbooking si queda un solo cupo
         return await prisma.$transaction(async (db) => {
             await db.$queryRaw`SELECT idTorneos FROM torneos WHERE idTorneos = ${Torneos_idTorneos} FOR UPDATE`;
-            // bloquea tambien a la persona: dos inscripciones suyas a torneos superpuestos no pasan juntas
+            // bloquea tambien a la persona por torneos superpuestos
             await db.$queryRaw`SELECT idPersona FROM personas WHERE idPersona = ${Personas_idPersona} FOR UPDATE`;
             await this.validarTorneo(db, Torneos_idTorneos, Personas_idPersona);
             

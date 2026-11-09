@@ -2,7 +2,7 @@ import "dotenv/config";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import { PrismaClient } from "../generated/prisma/client";
 
-// misma URL que usan las migraciones (prisma.config.ts): una sola fuente para la base
+// la misma url que usan las migraciones
 const url = new URL(process.env.DATABASE_URL ?? "mysql://localhost:3306/karting");
 
 const adapter = new PrismaMariaDb({
@@ -15,7 +15,7 @@ const adapter = new PrismaMariaDb({
     allowPublicKeyRetrieval: true
 });
 
-// la conexion la abre server.ts: importar este modulo no conecta (asi Jest no queda colgado)
+// la conexion la abre server.ts asi jest no queda colgado
 export const prisma = new PrismaClient({
     adapter,
 });

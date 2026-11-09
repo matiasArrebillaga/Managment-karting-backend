@@ -7,7 +7,7 @@ export interface ICarrera {
     Circuitos_idCircuitos: number;
 }
 
-// kartings: ids de los karts que corren la carrera
+// ids de los karts de la carrera
 export type CreateCarrera = Omit<ICarrera, "horaInicio" | "horaFin"> & {
     horaInicio: Date | string;
     horaFin: Date | string;

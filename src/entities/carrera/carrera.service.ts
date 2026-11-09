@@ -18,7 +18,7 @@ class CarrerasService {
         ids.forEach(id => validarId(id));
     }
 
-    // clave de la carrera, con la fecha llevada a medianoche UTC como la guarda el DATE
+    // clave de la carrera, fecha a medianoche utc como el DATE
     private clave(fechaCarrera: Date, Torneos_idTorneos: number, Circuitos_idCircuitos: number) {
         this.validarClaves(Torneos_idTorneos, Circuitos_idCircuitos);
         return {
@@ -30,7 +30,7 @@ class CarrerasService {
         };
     }
 
-    // la carrera con sus karts como lista plana en lugar de la tabla intermedia
+    // los karts como lista y no como tabla intermedia
     private aplanar(carrera: CarreraConKartings) {
         return { ...carrera, kartings: carrera.kartings.map(k => k.kartings) };
     }
@@ -55,16 +55,15 @@ class CarrerasService {
         }
     }
 
-    // solo las horas que se mandan: una carrera vieja con minutos se puede seguir editando sin tocar el horario
+    // solo valida las horas que se mandan
     private validarEnPunto(...horas: Date[]) {
-        // las horas se guardan como 1970-01-01 en UTC: en punto = multiplo exacto de una hora
+        // las horas se guardan como 1970-01-01 utc, en punto = multiplo de una hora
         if (horas.some(hora => hora.getTime() % MS_POR_HORA !== 0)) {
             throw new AppError("Las carreras son en hora en punto (ej: 10:00 a 12:00)");
         }
     }
 
-    // compartido: varias carreras del mismo torneo no se esperan, pero si alguien edita
-    // el cupo o las fechas del torneo (FOR UPDATE) se validan contra el valor nuevo
+    // lock compartido: las carreras no se esperan entre si, editar el torneo si
     private async bloquearTorneo(db: Prisma.TransactionClient, idTorneo: number) {
         await db.$queryRaw`SELECT idTorneos FROM torneos WHERE idTorneos = ${idTorneo} LOCK IN SHARE MODE`;
     }
@@ -88,10 +87,7 @@ class CarrerasService {
         }
     }
 
-    // Un kart por piloto para todo el cupo, y todos de la categoria del torneo.
-    // Se compara por id de tipo de licencia (no por nivel) a proposito: en un torneo
-    // compiten karts de la misma categoria. El nivel se usa para la persona
-    // (validarLicenciaVigente), que es otra regla.
+    // un kart por piloto, de la licencia del torneo
     private async validarKartingsDelTorneo(
         db: Prisma.TransactionClient,
         kartings: number[],
@@ -112,9 +108,8 @@ class CarrerasService {
         }
     }
 
-    // Valida que los karts existan, esten libres en la franja (carreras y reservas) y entren
-    // en el circuito. Se llama con bloquearFranja ya hecho, asi dos altas simultaneas no se
-    // pisan. estado solo se exige a karts nuevos, como en reservas.
+    // valida que los karts existan, esten libres y entren en el circuito
+    // el estado solo se exige a karts nuevos
     private async validarAsignacion(
         db: Prisma.TransactionClient,
         kartings: number[],
@@ -146,13 +141,11 @@ class CarrerasService {
         }
     }
 
-    // Obtener todas las carreras
     async getAll() {
         const carreras = await prisma.carreras.findMany({ include: conKartings });
         return carreras.map(c => this.aplanar(c));
     }
 
-    // Obtener una carrera por su clave primaria compuesta
     async getById(fechaCarrera: Date, Torneos_idTorneos: number, Circuitos_idCircuitos: number) {
         const carrera = await prisma.carreras.findUnique({
             where: this.clave(fechaCarrera, Torneos_idTorneos, Circuitos_idCircuitos),
@@ -162,7 +155,7 @@ class CarrerasService {
         return this.aplanar(carrera);
     }
 
-    // Actualizar horario y/o karts de una carrera; kartings reemplaza la lista completa
+    // kartings reemplaza la lista completa
     async update(
         fechaCarrera: Date,
         Torneos_idTorneos: number,
@@ -179,7 +172,7 @@ class CarrerasService {
         this.validarEnPunto(...Object.values(horas));
 
         return await prisma.$transaction(async (db) => {
-            // primero la fila de la carrera: asi sus karts no cambian por otro PATCH mientras se validan
+            // bloquea la carrera primero asi sus karts no cambian mientras se validan
             await db.$queryRaw`SELECT 1 FROM carreras WHERE Torneos_idTorneos = ${Torneos_idTorneos} AND Circuitos_idCircuitos = ${Circuitos_idCircuitos} AND fechaCarrera = ${fecha.toISOString().slice(0, 10)} FOR UPDATE`;
             const actual = await db.carreras.findUnique({ where, include: conKartings });
             if (!actual) throw new AppError("La carrera indicada no existe", 404);
@@ -199,7 +192,7 @@ class CarrerasService {
                     { exigirDisponibles: nuevosKartings !== undefined, excluir: { Torneos_idTorneos, Circuitos_idCircuitos } }
                 );
             }
-            // solo cuando cambian los karts: cambiar el horario no cambia cuantos ni cuales son
+            // solo si cambian los karts
             if (nuevosKartings !== undefined) {
                 await this.bloquearTorneo(db, Torneos_idTorneos);
                 const torneo = await db.torneos.findUnique({ where: { idTorneos: Torneos_idTorneos } });
@@ -224,7 +217,7 @@ class CarrerasService {
         }, opcionesTxBloqueo);
     }
 
-    // Eliminar una carrera; sus karts asignados se borran en cascada
+    // sus karts se borran en cascada
     async delete(fechaCarrera: Date, Torneos_idTorneos: number, Circuitos_idCircuitos: number) {
         await this.getById(fechaCarrera, Torneos_idTorneos, Circuitos_idCircuitos);
         return await prisma.carreras.delete({
@@ -242,7 +235,7 @@ class CarrerasService {
         this.validarEnPunto(horaInicio, horaFin);
 
         return await prisma.$transaction(async (db) => {
-            // antes de cualquier lectura, para que franjaOcupada vea lo ultimo confirmado (KAN-82)
+            // antes de leer, asi ve lo ultimo confirmado
             await bloquearFranja(db, kartings, data.Circuitos_idCircuitos, fechaCarrera);
             await this.bloquearTorneo(db, data.Torneos_idTorneos);
             const { torneo, circuito } = await this.validarEntidadesRelacionadas(

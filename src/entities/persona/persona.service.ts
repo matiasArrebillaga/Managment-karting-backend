@@ -68,7 +68,7 @@ private async crearPersonaConRol(
         where: { nombre: nombreRol }
     });
 
-    //Esto podria no estar , si estamos pasando un parametro fijo con ese nombre es porque el rol ya esta definido desde antes
+    // esto podria no estar, si pasamos un parametro fijo con ese nombre es porque el rol ya esta definido
     if (!rol) {
         throw new AppError(`El rol ${nombreRol} no existe`);
     }
@@ -104,6 +104,7 @@ private async crearPersonaConRol(
         contraseña: contraseñaHasheada,
         idRol: rol.idRol,
 
+        // solo el cliente se crea con licencia
         ...(tipoInicial && {
             licencias: {
                 create: {
@@ -163,6 +164,7 @@ private async crearPersonaConRol(
     throw new AppError("La localidad ingresada no existe");
   }
 
+  // solo los campos que vinieron
   const datos = {
     ...(data.nombre !== undefined && {
       nombre: data.nombre.trim()
@@ -203,10 +205,10 @@ private async crearPersonaConRol(
         });
     }
 
-    // Asignar un rol a una persona (update tira P2025 -> 404 si la persona no existe)
+    // asigna un rol, P2025 -> 404 si la persona no existe
     async asignarRol(idPersona: number, nombreRol: string) {
         validarId(idPersona);
-        // sin esto un nombreRol undefined hace que findFirst ignore el filtro y devuelva el primer rol
+        // sin esto un nombreRol undefined trae el primer rol
         if (typeof nombreRol !== "string" || nombreRol.trim() === "") throw new AppError("nombreRol es obligatorio");
         const rol = await prisma.roles.findFirst({ where: { nombre: nombreRol.trim() } });
         if (!rol) throw new AppError(`El rol ${nombreRol} no existe`);

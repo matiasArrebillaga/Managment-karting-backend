@@ -17,7 +17,6 @@ const resultado = (fila: any) => ({
 
 class ParticipacionesController {
 
-    // Obtener todas las participaciones
     async getAll(req: Request, res: Response, next: NextFunction) {
         try {
             const participaciones = await ParticipacionesService.getAll();
@@ -29,7 +28,6 @@ class ParticipacionesController {
         }
     }
 
-    // Obtener una participación por su clave primaria compuesta
     async getById(req: Request, res: Response, next: NextFunction) {
         try {
             const Carrera_Torneos_idTorneos =
@@ -65,7 +63,7 @@ class ParticipacionesController {
         }
     }
 
-    // Crear una participación (un piloto suelto). Los puntos del body se ignoran.
+    // los puntos del body se ignoran
     async create(req: Request, res: Response, next: NextFunction) {
         try {
             const data = { ...clavesCarrera(req.body), ...resultado(req.body) };
@@ -79,7 +77,7 @@ class ParticipacionesController {
         }
     }
 
-    // Cargar la clasificación completa de una carrera
+    // carga la clasificacion completa de una carrera
     async registrarCarrera(req: Request, res: Response, next: NextFunction) {
         try {
             if (!Array.isArray(req.body.resultados)) {
@@ -97,7 +95,6 @@ class ParticipacionesController {
         }
     }
 
-    // Actualizar una participación
     async update(req: Request, res: Response, next: NextFunction) {
         try {
             const Carrera_Torneos_idTorneos =
@@ -138,7 +135,6 @@ class ParticipacionesController {
         }
     }
 
-    // Eliminar una participación
     async delete(req: Request, res: Response, next: NextFunction) {
         try {
             const Carrera_Torneos_idTorneos =
@@ -168,7 +164,7 @@ class ParticipacionesController {
             next(error);
         }
     }
-    // Clasificación de una carrera, para cualquier usuario logueado
+    // clasificacion de una carrera, para cualquier logueado
     async getClasificacionCarrera(req: Request, res: Response, next: NextFunction) {
         try {
             const clasificacion = await ParticipacionesService.getClasificacionCarrera(clavesCarrera(req.params));

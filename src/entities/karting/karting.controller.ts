@@ -14,7 +14,7 @@ class KartingController{
         }
     }
     // GET /kartings/disponibles?fecha=2026-10-29&horaInicio=10:00&horaFin=12:00
-    // opcionales: idReserva (reserva en edicion) o idTorneo + idCircuito (carrera en edicion)
+    // opcionales: idReserva o idTorneo + idCircuito cuando se edita
     async getDisponibles (req: Request, res: Response, next: NextFunction){
         try{
             const { fecha, horaInicio, horaFin, idReserva, idTorneo, idCircuito } = req.query;

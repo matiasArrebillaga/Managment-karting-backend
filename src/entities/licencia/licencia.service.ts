@@ -40,7 +40,7 @@ class LicenciaService {
     async create(data: CreateLicencia) {
   this.validarDatos(data);
 
-  // Validar que exista la persona
+  // valida que exista la persona
   const persona = await prisma.personas.findUnique({
     where: {
       idPersona: data.Personas_idPersona
@@ -51,7 +51,7 @@ class LicenciaService {
     throw new AppError("La persona ingresada no existe");
   }
 
-  // Validar que exista el tipo de licencia
+  // valida que exista el tipo de licencia
   const tipoLicencia = await prisma.tiposlicencias.findUnique({
     where: {
       idTipoLicencia: data.TiposLicencias_idTipoLicencia
@@ -114,6 +114,7 @@ class LicenciaService {
     ? actual.fechaVencimiento
     : new Date(data.fechaVencimiento);
 
+  // fechas nuevas + las que ya tenia
   this.validarDatos({
     fechaEmision: emision.toISOString(),
     fechaVencimiento: vencimiento.toISOString()

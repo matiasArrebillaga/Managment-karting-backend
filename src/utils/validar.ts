@@ -4,8 +4,7 @@ export function validarId(id: number) {
     if (!Number.isInteger(id)) throw new AppError("El identificador debe ser un número entero");
 }
 
-// convierte "3" → 3 en los campos indicados. "" y "abc" quedan como estan para que el
-// service los rechace (Number("") seria 0 y pasaria como valido)
+// convierte "3" en 3, "" y "abc" quedan asi el service los rechaza
 export function aNumeros<T extends object>(body: T, ...campos: string[]): T {
     const copia = { ...body } as Record<string, unknown>;
     for (const campo of campos) {

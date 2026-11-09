@@ -45,6 +45,7 @@ export function verifyToken(
     }
 }
 
+// si es cliente devuelve su id para filtrar lo suyo, el staff recibe undefined y ve todo
 export function limitarAPropias(req: AuthRequest): number | undefined {
     return req.user?.rol === "CLIENTE" ? req.user.idPersona : undefined;
 }

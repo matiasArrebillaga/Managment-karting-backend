@@ -8,8 +8,8 @@ import { opcionesTxBloqueo } from "../../utils/ocupacion";
 
 type Franja = { fecha: Date; horaInicio: Date; horaFin: Date };
 
-// el pico de karts en pista al mismo tiempo dentro de un dia. Las franjas son [inicio, fin):
-// a la misma hora primero sale uno y despues entra el otro, asi 10-11 y 11-12 no se pisan
+// pico de karts en pista al mismo tiempo en un dia
+// a la misma hora primero sale uno y despues entra otro, asi 10-11 y 11-12 no se pisan
 function picoDelDia(franjas: Franja[]) {
     const eventos = franjas.flatMap(f => [[f.horaInicio.getTime(), 1], [f.horaFin.getTime(), -1]]);
     eventos.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
@@ -35,8 +35,7 @@ class CircuitoService {
             throw new AppError("El máximo debe ser un número entero mayor que cero");
         }
     }
-    // el maximo nuevo tiene que alcanzar para el cupo de los torneos que corren aca
-    // y para lo que ya esta reservado o asignado de hoy en adelante
+    // el nuevo maximo tiene que cubrir torneos y reservas de hoy en adelante
     private async validarNuevoMaximo(db: Prisma.TransactionClient, idCircuitos: number, maximo: number) {
         const { _max } = await db.torneos.aggregate({
             where: { carreras: { some: { Circuitos_idCircuitos: idCircuitos } } },
@@ -52,7 +51,7 @@ class CircuitoService {
                 where: { Circuitos_idCircuitos: idCircuitos, fechaReserva: { gte: hoy } },
                 select: { fechaReserva: true, horaInicio: true, horaFin: true }
             }),
-            // una fila por kart de cada carrera: cada una ocupa un lugar en la pista
+            // una fila por kart de cada carrera
             db.carreras_kartings.findMany({
                 where: { Carrera_Circuitos_idCircuitos: idCircuitos, Carrera_fecha: { gte: hoy } },
                 select: { Carrera_fecha: true, carreras: { select: { horaInicio: true, horaFin: true } } }
@@ -120,8 +119,7 @@ class CircuitoService {
   }
   const maximo = datos.maximo;
   return await prisma.$transaction(async (db) => {
-    // exclusivo: espera a las reservas y carreras en curso (que lo tienen compartido)
-    // y frena las nuevas hasta el commit, asi nadie valida contra el maximo viejo
+    // bloquea el circuito hasta el commit asi nadie valida contra el maximo viejo
     const circuito = await db.$queryRaw<unknown[]>`SELECT idCircuitos FROM circuitos WHERE idCircuitos = ${idCircuitos} FOR UPDATE`;
     if (circuito.length === 0) throw new AppError("El circuito indicado no existe", 404);
     await this.validarNuevoMaximo(db, idCircuitos, maximo);

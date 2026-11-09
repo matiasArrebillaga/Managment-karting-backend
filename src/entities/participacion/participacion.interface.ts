@@ -14,7 +14,7 @@ export type ClavesCarrera = Pick<
     "Carrera_Torneos_idTorneos" | "Carrera_Circuitos_idCircuitos" | "Carrera_fecha"
 >;
 
-// Una fila de la clasificacion: los puntos no entran, los calcula el servidor por la posicion
+// los puntos los calcula el servidor por la posicion
 export type ResultadoCarrera = Pick<IParticipacion, "Personas_idPersona" | "posicion_final" | "tiempo">;
 
 export type CreateParticipacion = ClavesCarrera & ResultadoCarrera;

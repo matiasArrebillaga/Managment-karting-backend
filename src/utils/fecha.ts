@@ -1,5 +1,6 @@
 import { AppError } from "../middleware/error.middleware";
 
+// partes como numeros 0-23
 const formatoArgentina = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/Argentina/Buenos_Aires",
     hourCycle: "h23",
@@ -7,8 +8,8 @@ const formatoArgentina = new Intl.DateTimeFormat("en-US", {
     hour: "numeric", minute: "numeric", second: "numeric"
 });
 
-// la hora de pared de Argentina guardada como si fuera UTC, igual que los DATE y TIME de la base.
-// no depende del TZ del proceso (en Docker y Railway es UTC)
+// hora de argentina guardada como utc, igual que los DATE y TIME
+// no depende del TZ del server
 export function ahoraArgentina(ahora: Date = new Date()): Date {
     const p = Object.fromEntries(
         formatoArgentina.formatToParts(ahora).map(parte => [parte.type, Number(parte.value)])
@@ -16,17 +17,19 @@ export function ahoraArgentina(ahora: Date = new Date()): Date {
     return new Date(Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second));
 }
 
+// hoy a medianoche utc
 export function hoyUTC(): Date {
     const ahora = ahoraArgentina();
     return new Date(Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth(), ahora.getUTCDate()));
 }
 
-// la hora actual de Argentina en el formato de las columnas TIME (1970-01-01 en UTC)
+// hora actual de argentina en formato TIME (1970-01-01 utc)
 export function horaActualUTC(): Date {
     const ahora = ahoraArgentina();
     return new Date(Date.UTC(1970, 0, 1, ahora.getUTCHours(), ahora.getUTCMinutes(), ahora.getUTCSeconds()));
 }
 
+// "HH:MM" a TIME
 export function normalizarHora(valor: unknown, campo: string): Date {
     if (valor instanceof Date) return valor;
     const partes = /^([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/.exec(String(valor ?? "").trim());
@@ -38,7 +41,7 @@ export function normalizarHora(valor: unknown, campo: string): Date {
 }
 
 
-// las fechas (DATE) viajan como YYYY-MM-DD: un ISO con hora u offset puede correr el dia
+// las fechas van como YYYY-MM-DD, un ISO con hora puede correr el dia
 export function normalizarFecha(fecha: Date | string): Date {
     if (typeof fecha === "string" && !/^\d{4}-\d{2}-\d{2}$/.test(fecha.trim())) {
         throw new AppError("La fecha debe tener formato YYYY-MM-DD");

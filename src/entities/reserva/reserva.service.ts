@@ -9,8 +9,7 @@ import { validarLicenciaVigente } from "../../utils/licencia";
 
 const MS_POR_HORA = 60 * 60 * 1000;
 
-// Reglas que solo corresponden cuando el campo se esta asignando: en un PATCH que no
-// manda fecha no tiene sentido rechazar la reserva por tener una fecha vieja.
+// reglas que solo aplican si el campo viene en el PATCH
 type OpcionesValidacion = {
     idReservaExcluida?: number;
     fechaEsNueva: boolean;
@@ -19,7 +18,7 @@ type OpcionesValidacion = {
 
 class ReservaService {
 
-    //  manda los ids como texto validarId es el que despues decide.
+    // manda los ids como texto, validarId decide despues
     private aEntero(valor: unknown): number {
         return Number(valor);
     }
@@ -28,7 +27,7 @@ class ReservaService {
         if (Number.isNaN(horaInicio.getTime()) || Number.isNaN(horaFin.getTime())) {
             throw new AppError("Las horas de inicio y fin no son válidas");
         }
-        // las horas se guardan como 1970-01-01 en UTC: si inicio y fin caen en punto, la duracion ya es de horas enteras
+        // horas en 1970-01-01 utc, si caen en punto la duracion es en horas enteras
         if (horaInicio.getTime() % MS_POR_HORA !== 0 || horaFin.getTime() % MS_POR_HORA !== 0) {
             throw new AppError("Las reservas son de hora en hora (ej: 10:00 a 12:00)");
         }
@@ -39,7 +38,7 @@ class ReservaService {
 
   
      async listarReservasRango(fechaInicio : Date , fechaFin : Date){
-        // sin esto, una fecha faltante o mal escrita llega a Prisma como Invalid Date y da 500
+        // sin esto una fecha invalida llega a prisma y da 500
         return await prisma.reservas.findMany({
             where: { fechaReserva: { gte: normalizarFecha(fechaInicio), lte: normalizarFecha(fechaFin) } },
             orderBy: [{ fechaReserva: "asc" }, { horaInicio: "asc" }]
@@ -48,13 +47,13 @@ class ReservaService {
     
     // valida que el karting este disponible para el rango horario y el cupo maximo del circuito
     private async validarDisponibilidad(
-        db: Prisma.TransactionClient,    // se agrego que sean transacciones
+        db: Prisma.TransactionClient,
         data: CreateReserva,
         fechaReserva: Date,
         maximoCircuito: number,
         idReservaExcluida?: number
     ) {
-        // incluye las carreras: ocupan el kart y la pista igual que una reserva
+        // las carreras tambien ocupan el kart y la pista
         const solapadas = await franjaOcupada(
             db, fechaReserva, data.horaInicio, data.horaFin, { idReserva: idReservaExcluida }
         );
@@ -83,7 +82,7 @@ class ReservaService {
         const fechaReserva = normalizarFecha(data.fechaReserva);
         const horas = this.horasReservadas(data.horaInicio, data.horaFin);
 
-        if (opciones.fechaEsNueva && fechaReserva < hoyUTC()) { // uso del nuevo util
+        if (opciones.fechaEsNueva && fechaReserva < hoyUTC()) {
             throw new AppError("No se puede reservar en una fecha pasada");
         }
         // hoy solo se puede reservar un horario que todavia no empezo
@@ -92,12 +91,12 @@ class ReservaService {
             throw new AppError("No se puede reservar en un horario que ya pasó");
         }
 
-        // bloquea el kart y el cupo del circuito en ese dia, no el circuito para todas las fechas
+        // bloquea el kart y el cupo del circuito en ese dia
         await bloquearFranja(db, [data.Kartings_idKartings], data.Circuitos_idCircuitos, fechaReserva);
 
         const [persona, karting, circuito] = await Promise.all([
             db.personas.findUnique({ where: { idPersona: data.Personas_idPersona } }),
-            db.kartings.findUnique({ // uso de las transacciones
+            db.kartings.findUnique({
                 where: { idKartings: data.Kartings_idKartings },
                 include: { tiposkarting: { include: { tiposlicencias: true } } }
             }),
@@ -107,12 +106,12 @@ class ReservaService {
         if (!karting) throw new AppError("El karting no existe");
         if (!circuito) throw new AppError("El circuito no existe");
 
-        // mismo criterio que usa carrera.service para no asignar un kart fuera de servicio
+        // mismo criterio que carrera.service para karts fuera de servicio
         if (opciones.kartingEsNuevo && karting.estado?.toLowerCase() !== "disponible") {
             throw new AppError(`El karting no está disponible (estado: ${karting.estado})`);
         }
 
-        // contra el dia reservado, no contra hoy: si para ese dia ya vencio, no sirve
+        // licencia vigente al dia reservado, no a hoy
         await validarLicenciaVigente(
             db,
             data.Personas_idPersona,
@@ -124,7 +123,7 @@ class ReservaService {
             db, data, fechaReserva, circuito.maximo, opciones.idReservaExcluida
         );
 
-        // decimal en lugar de numeros de JS para que la plata no arrastre errores de redondeo
+        // decimal para que la plata no tenga errores de redondeo
         return new Prisma.Decimal(karting.tiposkarting.precioHora).mul(horas);
     }
 
@@ -137,7 +136,7 @@ class ReservaService {
         const reserva = await prisma.reservas.findUnique({
             where: { idReservas },
         });
-        // 404 y no 403: a un cliente no le decimos que la reserva de otro existe
+        // 404 para no revelar reservas ajenas
         if (reserva && restringirAPersona !== undefined
             && reserva.Personas_idPersona !== restringirAPersona) return null;
         return reserva;
@@ -151,8 +150,8 @@ class ReservaService {
             orderBy: [{ fechaReserva: "desc" }, { horaInicio: "asc" }]
         });
     }
-    // un cliente solo opera sobre sus reservas y solo si todavia no pasaron.
-    // 404 y no 403 para la ajena, igual que getById: no le confirmamos que existe.
+    // el cliente solo opera sus reservas y si todavia no pasaron
+    // 404 para la ajena, igual que getById
     // si ya paso, editarla recalcularia el monto con el precio de hoy
     private verificarPuedeOperar(
         reserva: { Personas_idPersona: number; fechaReserva: Date },
@@ -168,7 +167,7 @@ class ReservaService {
     }
 
     async realizarReserva(data: CreateReservaInput, restringirAPersona?: number) {
-        // El monto que venga en el body se ignora: se calcula aca abajo.
+        // el monto del body se ignora, se calcula abajo
         const entrada: CreateReserva = {
             fechaReserva: new Date(data.fechaReserva),
             horaInicio: normalizarHora(data.horaInicio, "horaInicio"),
@@ -178,8 +177,7 @@ class ReservaService {
             Kartings_idKartings: this.aEntero(data.Kartings_idKartings)
         };
 
-        // el cliente no elige a nombre de quien reserva: se le impone su propio id,
-        // asi que tampoco necesita mandarlo.
+        // al cliente se le impone su propio id
         const datos: CreateReserva = restringirAPersona === undefined
             ? entrada
             : { ...entrada, Personas_idPersona: restringirAPersona };

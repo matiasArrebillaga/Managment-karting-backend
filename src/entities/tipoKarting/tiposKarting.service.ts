@@ -18,8 +18,7 @@ class TiposKartingsService {
             !Number.isInteger(data.TiposLicencias_idTipoLicenciaMinima)) {
             throw new AppError("La licencia mínima debe ser un identificador entero");
         }
-        // Es la base del monto de las reservas: un cero o un negativo haria que se
-        // cobre mal en silencio.
+        // es la base del monto, un 0 o negativo cobraria mal
         if (data.precioHora !== undefined &&
             (typeof data.precioHora !== "number" || !Number.isFinite(data.precioHora) || data.precioHora <= 0)) {
             throw new AppError("El precio por hora debe ser un número mayor que cero");
@@ -71,7 +70,6 @@ this.validarDatos(data);
     ...(data.descripcion !== undefined && {
       descripcion: data.descripcion.trim()
     }),
-    // antes no estaba: el precio nuevo se validaba pero nunca se guardaba
     ...(data.precioHora !== undefined && {
       precioHora: data.precioHora
     }),
@@ -90,7 +88,7 @@ this.validarDatos(data);
     if (!licencia) {
       throw new AppError("La licencia mínima ingresada no existe");
     }
-    // se bloquean los karts de este tipo (el mismo candado que toman las carreras) antes de validar
+    // bloquea los karts de este tipo antes de validar
     await db.$queryRaw`SELECT idKartings FROM kartings WHERE TiposKarting_idTiposKarting = ${idTipoKarting} FOR UPDATE`;
     await validarLicenciaEnCarrerasFuturas(db, { TiposKarting_idTiposKarting: idTipoKarting }, idLicencia);
     return await db.tiposkarting.update({ where: { idTiposKarting: idTipoKarting }, data: datos });
