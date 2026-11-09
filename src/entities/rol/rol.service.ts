@@ -1,11 +1,9 @@
+import { validarId } from "../../utils/validar";
 import { AppError } from "../../middleware/error.middleware";
 import { prisma } from "../../config/prisma";
 import { IRol } from "./rol.interface";
 
 class RolService {
-    private validarId(id: number) {
-        if (!Number.isInteger(id)) throw new AppError("El identificador debe ser un número entero");
-    }
 
     private validarDatos(data: Partial<IRol>) {
         if (data.nombre !== undefined && (typeof data.nombre !== "string" || data.nombre.trim().length === 0 || data.nombre.trim().length > 20)) {
@@ -16,7 +14,7 @@ class RolService {
         return await prisma.roles.findMany();
     }
     async getById(idRol:number){
-        this.validarId(idRol);
+        validarId(idRol);
         return await prisma.roles.findUnique({
             where: {idRol}
         });
@@ -41,7 +39,7 @@ class RolService {
   });
 }
     async update(idRol: number, data: Partial<IRol>) {
-  this.validarId(idRol);
+  validarId(idRol);
   this.validarDatos(data);
 
   if (data.nombre !== undefined) {
@@ -69,7 +67,7 @@ class RolService {
   });
 }
     async delete(idRol:number){
-        this.validarId(idRol);
+        validarId(idRol);
         return await prisma.roles.delete({
             where:{idRol}
         });

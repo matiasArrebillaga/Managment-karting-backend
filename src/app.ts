@@ -11,7 +11,7 @@ import rolRoutes from "./entities/rol/rol.routes";
 import { AuthRequest, verifyToken } from "./middleware/auth.middleware";
 import tipoLicenciasRouters from "./entities/tipoLicencia/tiposLicencias.routes";
 import tipoKartingRouters from "./entities/tipoKarting/tiposKarting.routes";
-import torneo from "./entities/torneos/torneo.routes";
+import torneo from "./entities/torneo/torneo.routes";
 import licenciaRoutes from "./entities/licencia/licencia.routes";
 import reservaRoutes from "./entities/reserva/reserva.routes";
 import carreraRoutes from "./entities/carrera/carrera.routes";

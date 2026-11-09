@@ -1,3 +1,4 @@
+import { validarId } from "../../utils/validar";
 
 import { prisma } from "../../config/prisma";
 import type { Prisma } from "../../generated/prisma/client";
@@ -8,9 +9,6 @@ import { CreatePersonaTorneo } from "./inscripciones.interface";
 
 class PersonasTorneosService {
     // valida que el id sea entero como en los otros service importantes
-    private validarId(id: number) {
-        if (!Number.isInteger(id)) throw new AppError("El identificador debe ser un número entero");
-    }
 
     private aEntero(valor: unknown): number {
         return Number(valor);
@@ -74,8 +72,8 @@ class PersonasTorneosService {
         Personas_idPersona: number,
         restringirAPersona?: number
     ) {
-        this.validarId(Torneos_idTorneos);
-        this.validarId(Personas_idPersona);
+        validarId(Torneos_idTorneos);
+        validarId(Personas_idPersona);
 
         if (restringirAPersona !== undefined && Personas_idPersona !== restringirAPersona) {
             return null;
@@ -91,7 +89,7 @@ class PersonasTorneosService {
     }
     // lista las inscripciones de una persona
     async getPorPersona(Personas_idPersona: number) {
-        this.validarId(Personas_idPersona);
+        validarId(Personas_idPersona);
         return await prisma.personas_torneos.findMany({
             where: { Personas_idPersona },
             include: { torneos: true },
@@ -101,7 +99,7 @@ class PersonasTorneosService {
 
     // lista los inscriptos de un torneo, solo con datos publicos (nada de email ni contraseña)
     async getInscriptosTorneo(Torneos_idTorneos: number) {
-        this.validarId(Torneos_idTorneos);
+        validarId(Torneos_idTorneos);
         const inscripciones = await prisma.personas_torneos.findMany({
             where: { Torneos_idTorneos },
             select: { personas: { select: { idPersona: true, nombre: true, apellido: true } } },
@@ -114,8 +112,8 @@ class PersonasTorneosService {
         // valida los id, restringir persona hace que un cliente se inscriba a si mismo (ADMIN podria inscribir a otra persona)
         const Personas_idPersona = restringirAPersona ?? this.aEntero(data.Personas_idPersona);
         const Torneos_idTorneos = this.aEntero(data.Torneos_idTorneos);
-        this.validarId(Torneos_idTorneos);
-        this.validarId(Personas_idPersona);
+        validarId(Torneos_idTorneos);
+        validarId(Personas_idPersona);
         // comienza la transaccion, previene overbooking si queda un solo cupo
         return await prisma.$transaction(async (db) => {
             await db.$queryRaw`SELECT idTorneos FROM torneos WHERE idTorneos = ${Torneos_idTorneos} FOR UPDATE`;
@@ -139,8 +137,8 @@ class PersonasTorneosService {
         Personas_idPersona: number,
         restringirAPersona?: number
     ) {
-        this.validarId(Torneos_idTorneos);
-        this.validarId(Personas_idPersona);
+        validarId(Torneos_idTorneos);
+        validarId(Personas_idPersona);
         // solo podes borrar tu inscripcion igual que create
         if (restringirAPersona !== undefined) {
             if (Personas_idPersona !== restringirAPersona) {

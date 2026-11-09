@@ -1,17 +1,15 @@
+import { validarId } from "../../utils/validar";
 import { AppError } from "../../middleware/error.middleware";
-import {prisma} from "../../config/prisma.js";
-import { CreateTorneos, ITorneos, UpdateTorneos } from "./torneo.interface.js";
-import { hoyUTC } from "../../utils/fecha.js";
-import { Prisma } from "../../generated/prisma/client.js";
-import { opcionesTxBloqueo } from "../../utils/ocupacion.js";
+import {prisma} from "../../config/prisma";
+import { CreateTorneos, ITorneos, UpdateTorneos } from "./torneo.interface";
+import { hoyUTC } from "../../utils/fecha";
+import { Prisma } from "../../generated/prisma/client";
+import { opcionesTxBloqueo } from "../../utils/ocupacion";
 
 const ESTADOS = ["proximo", "en_curso", "finalizado"] as const;
 type EstadoTorneo = typeof ESTADOS[number];
 
 class TorneosService {
-    private validarId(id: number) {
-        if (!Number.isInteger(id)) throw new AppError("El identificador debe ser un número entero");
-    }
 
     private validarDatos(data: Partial<Omit<ITorneos, "idTorneos">>) {
         if (data.nombre !== undefined &&
@@ -128,7 +126,7 @@ class TorneosService {
     }
 
     async getById(idTorneo: number) {
-        this.validarId(idTorneo);
+        validarId(idTorneo);
         const torneo = await prisma.torneos.findUnique({
             where: { idTorneos: idTorneo }
         });
@@ -146,7 +144,7 @@ class TorneosService {
 
    
 async update(idTorneo: number, data: UpdateTorneos) {
-    this.validarId(idTorneo);
+    validarId(idTorneo);
 
     // Construimos solo los campos permitidos y convertimos las fechas recibidas.
     const datos = {
@@ -227,7 +225,7 @@ async update(idTorneo: number, data: UpdateTorneos) {
 
 
     async delete(idTorneo: number) {
-        this.validarId(idTorneo);
+        validarId(idTorneo);
         return await prisma.torneos.delete({
             where: { idTorneos: idTorneo }
         });

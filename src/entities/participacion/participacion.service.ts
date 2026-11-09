@@ -1,25 +1,23 @@
+import { validarId } from "../../utils/validar";
 
-import {prisma} from "../../config/prisma.js";
-import { AppError } from "../../middleware/error.middleware.js";
-import { ahoraArgentina } from "../../utils/fecha.js";
+import {prisma} from "../../config/prisma";
+import { AppError } from "../../middleware/error.middleware";
+import { ahoraArgentina } from "../../utils/fecha";
 import {
     ClavesCarrera,
     CreateParticipacion,
     ResultadoCarrera,
     UpdateParticipacion
-} from "./participacion.interface.js";
+} from "./participacion.interface";
 
 // Escala de la F1: del 11° en adelante no suma
 const PUNTOS_POR_POSICION = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1];
 
 class ParticipacionesService {
-    private validarId(id: number) {
-        if (!Number.isInteger(id)) throw new AppError("El identificador debe ser un número entero");
-    }
     private validarFecha(fecha: Date) {
         if (!(fecha instanceof Date) || Number.isNaN(fecha.getTime())) throw new AppError("La fecha de carrera no es válida");
     }
-    private validarClaves(...ids: number[]) { ids.forEach(id => this.validarId(id)); }
+    private validarClaves(...ids: number[]) { ids.forEach(id => validarId(id)); }
 
     private validarClavesCarrera(claves: ClavesCarrera) {
         this.validarClaves(claves.Carrera_Torneos_idTorneos, claves.Carrera_Circuitos_idCircuitos);
@@ -43,7 +41,7 @@ class ParticipacionesService {
     }
 
     private validarResultado(resultado: ResultadoCarrera) {
-        this.validarId(resultado.Personas_idPersona);
+        validarId(resultado.Personas_idPersona);
         this.validarPosicion(resultado.posicion_final);
         this.validarTiempo(resultado.tiempo);
     }
@@ -244,7 +242,7 @@ class ParticipacionesService {
     // Empate total comparte posicion y la siguiente salta (1, 1, 3).
     // ponytail: agrega en memoria; alcanza para torneos de decenas de pilotos.
     async getTablaGeneral(idTorneo: number) {
-        this.validarId(idTorneo);
+        validarId(idTorneo);
         const torneo = await prisma.torneos.findUnique({ where: { idTorneos: idTorneo } });
         if (!torneo) throw new AppError("El torneo indicado no existe", 404);
 

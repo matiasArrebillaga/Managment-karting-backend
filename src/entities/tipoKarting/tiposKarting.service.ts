@@ -1,3 +1,4 @@
+import { validarId } from "../../utils/validar";
 import { AppError } from "../../middleware/error.middleware";
 import {prisma} from "../../config/prisma"
 import { opcionesTxBloqueo, validarLicenciaEnCarrerasFuturas } from "../../utils/ocupacion"
@@ -5,9 +6,6 @@ import { opcionesTxBloqueo, validarLicenciaEnCarrerasFuturas } from "../../utils
 import { CreateTiposKartings, ITiposKartings, UpdateTiposKartings } from "./tiposKarting.interface"
 
 class TiposKartingsService {
-    private validarId(id: number) {
-        if (!Number.isInteger(id)) throw new AppError("El identificador debe ser un número entero");
-    }
 
     private validarDatos(data: CreateTiposKartings | UpdateTiposKartings) {
         for (const campo of ["nombre", "descripcion"] as const) {
@@ -31,7 +29,7 @@ class TiposKartingsService {
         return await prisma.tiposkarting.findMany();
     }
     async getById(idTipoKarting:number){
-        this.validarId(idTipoKarting);
+        validarId(idTipoKarting);
         return await prisma.tiposkarting.findUnique({
             where: {idTiposKarting : idTipoKarting}
         });
@@ -63,7 +61,7 @@ class TiposKartingsService {
 }
 
   async update(idTipoKarting: number, data: UpdateTiposKartings) {
-this.validarId(idTipoKarting);
+validarId(idTipoKarting);
 this.validarDatos(data);
 
   const datos = {
@@ -99,7 +97,7 @@ this.validarDatos(data);
   }, opcionesTxBloqueo);
 }
     async delete(idTipoKarting:number){
-        this.validarId(idTipoKarting);
+        validarId(idTipoKarting);
         return await prisma.tiposkarting.delete({
             where:{idTiposKarting : idTipoKarting}
         });

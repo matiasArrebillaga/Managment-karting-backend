@@ -98,7 +98,7 @@ catch (error) {
                 });
             }
 
-            res.status(200).json(torneoEliminado);
+            res.status(200).json({ message: "Torneo eliminado correctamente" });
 
         } catch (error) {
             next(error);

@@ -1,3 +1,4 @@
+import { validarId } from "../../utils/validar";
 import { prisma } from "../../config/prisma";
 import { Prisma } from "../../generated/prisma/client";
 import { AppError } from "../../middleware/error.middleware";
@@ -17,9 +18,6 @@ type OpcionesValidacion = {
 };
 
 class ReservaService {
-    private validarId(id: number) {
-        if (!Number.isInteger(id)) throw new AppError("El identificador debe ser un número entero");
-    }
 
     //  manda los ids como texto validarId es el que despues decide.
     private aEntero(valor: unknown): number {
@@ -80,7 +78,7 @@ class ReservaService {
         opciones: OpcionesValidacion
     ) {
         for (const campo of ["Personas_idPersona", "Circuitos_idCircuitos", "Kartings_idKartings"] as const) {
-            this.validarId(data[campo]);
+            validarId(data[campo]);
         }
         const fechaReserva = normalizarFecha(data.fechaReserva);
         const horas = this.horasReservadas(data.horaInicio, data.horaFin);
@@ -135,7 +133,7 @@ class ReservaService {
     }
 
     async getById(idReservas: number, restringirAPersona?: number) {
-        this.validarId(idReservas);
+        validarId(idReservas);
         const reserva = await prisma.reservas.findUnique({
             where: { idReservas },
         });
@@ -147,7 +145,7 @@ class ReservaService {
 
     // obtiene todas las reservas de una persona 
     async getPorPersona(Personas_idPersona: number) {
-        this.validarId(Personas_idPersona);
+        validarId(Personas_idPersona);
         return await prisma.reservas.findMany({
             where: { Personas_idPersona },
             orderBy: [{ fechaReserva: "desc" }, { horaInicio: "asc" }]
@@ -207,7 +205,7 @@ class ReservaService {
     }
     // tiene las mismas validacion que create 
     async update(idReservas: number, data: UpdateReservaInput, restringirAPersona?: number) {
-        this.validarId(idReservas);
+        validarId(idReservas);
         const actual = await prisma.reservas.findUnique({ where: { idReservas } });
         if (!actual) throw new AppError("La reserva indicada no existe", 404);
         this.verificarPuedeOperar(actual, restringirAPersona);
@@ -253,7 +251,7 @@ class ReservaService {
     }
 
     async delete(idReservas: number, restringirAPersona?: number) {
-        this.validarId(idReservas);
+        validarId(idReservas);
         if (restringirAPersona !== undefined) {
             const actual = await prisma.reservas.findUnique({ where: { idReservas } });
             if (!actual) throw new AppError("La reserva indicada no existe", 404);

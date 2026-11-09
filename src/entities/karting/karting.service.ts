@@ -1,3 +1,4 @@
+import { validarId } from "../../utils/validar";
 import { AppError } from "../../middleware/error.middleware";
 import { CreateKarting, IKarting, UpdateKarting } from "./karting.interface";
 import { prisma } from "../../config/prisma";
@@ -5,9 +6,6 @@ import { normalizarFecha, normalizarHora } from "../../utils/fecha";
 import { Excluir, franjaOcupada, opcionesTxBloqueo, validarLicenciaEnCarrerasFuturas } from "../../utils/ocupacion";
 
 class KartingService {
-    private validarId(id: number) {
-        if (!Number.isInteger(id)) throw new AppError("El identificador debe ser un número entero");
-    }
 
     private validarDatos(data: CreateKarting | UpdateKarting) {
         for (const campo of ["categoria", "modelo", "estado"] as const) {
@@ -55,7 +53,7 @@ class KartingService {
     }
 
     async getById(idKartings: number) {
-        this.validarId(idKartings);
+        validarId(idKartings);
         return await prisma.kartings.findUnique({
             where: { idKartings }
         });
@@ -88,7 +86,7 @@ async create(data: CreateKarting) {
 }
 
     async update(idKartings: number, data: UpdateKarting) {
-  this.validarId(idKartings);
+  validarId(idKartings);
   this.validarDatos(data);
 
   const datos = {
@@ -125,7 +123,7 @@ async create(data: CreateKarting) {
   }, opcionesTxBloqueo);
 }
     async delete(idKartings: number) {
-        this.validarId(idKartings);
+        validarId(idKartings);
         return await prisma.kartings.delete({
             where: { idKartings }
         });

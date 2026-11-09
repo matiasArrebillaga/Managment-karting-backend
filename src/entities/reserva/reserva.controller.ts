@@ -97,7 +97,7 @@ class ReservaController {
                 });
             }
 
-            res.status(200).json(reservaEliminada);
+            res.status(200).json({ message: "Reserva eliminada correctamente" });
         } catch (error) {
             next(error);
         }

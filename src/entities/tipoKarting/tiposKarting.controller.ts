@@ -1,3 +1,4 @@
+import { aNumeros } from "../../utils/validar";
 import {Request , Response, NextFunction} from "express";
 import { ITiposKartings } from "./tiposKarting.interface";
 import TiposKartingsService from "./tiposKarting.service";
@@ -28,7 +29,7 @@ class TiposKartingsController{
     }
     async create (req: Request, res: Response, next: NextFunction){
         try {
-            const data: ITiposKartings = req.body
+            const data: ITiposKartings = aNumeros(req.body, "TiposLicencias_idTipoLicenciaMinima", "precioHora");
             const nuevoTiposKartings= await TiposKartingsService.create(data);
             res.status(201).json(nuevoTiposKartings);
         }catch (error){
@@ -38,7 +39,7 @@ class TiposKartingsController{
     async update (req: Request, res:Response, next: NextFunction){
         try{
             const id = Number(req.params.id)
-            const tiposKartingsActualizado = await TiposKartingsService.update(id,req.body)
+            const tiposKartingsActualizado = await TiposKartingsService.update(id, aNumeros(req.body, "TiposLicencias_idTipoLicenciaMinima", "precioHora"))
             if (!tiposKartingsActualizado){
                 return res.status(404).json({
                     message: "Tipos de karting no encontrados"

@@ -1,11 +1,9 @@
+import { validarId } from "../../utils/validar";
 import { AppError } from "../../middleware/error.middleware";
 import { type CreateLicencia, type UpdateLicencia } from "./licencia.interface";
 import { prisma } from "../../config/prisma";
 
 class LicenciaService {
-    private validarId(id: number) {
-        if (!Number.isInteger(id)) throw new AppError("El identificador debe ser un número entero");
-    }
     private validarDatos(data: CreateLicencia | UpdateLicencia) {
         for (const campo of ["Personas_idPersona", "TiposLicencias_idTipoLicencia"] as const) {
             if (data[campo] !== undefined && !Number.isInteger(data[campo])) throw new AppError(`El campo ${campo} debe ser un identificador entero`);
@@ -23,7 +21,7 @@ class LicenciaService {
     }
 
     async getPorPersona(Personas_idPersona: number) {
-        this.validarId(Personas_idPersona);
+        validarId(Personas_idPersona);
         return await prisma.licencias.findMany({
             where: { Personas_idPersona },
             include: { tiposlicencias: true },
@@ -32,7 +30,7 @@ class LicenciaService {
     }
 
     async getById(idLicencias: number) {
-        this.validarId(idLicencias);
+        validarId(idLicencias);
         return await prisma.licencias.findUnique({
             where: { idLicencias }
         });
@@ -79,7 +77,7 @@ class LicenciaService {
 
 
     async update(idLicencias: number, data: UpdateLicencia) {
-  this.validarId(idLicencias);
+  validarId(idLicencias);
   this.validarDatos(data);
 
   const actual = await prisma.licencias.findUnique({
@@ -143,7 +141,7 @@ class LicenciaService {
 }
 
     async delete(idLicencias: number) {
-        this.validarId(idLicencias);
+        validarId(idLicencias);
         return await prisma.licencias.delete({
             where: { idLicencias }
         });

@@ -1,12 +1,10 @@
+import { validarId } from "../../utils/validar";
 import { AppError } from "../../middleware/error.middleware";
 import {prisma} from "../../config/prisma"
 import { IPersona, UpdatePersona , CreatePersona } from "./persona.interface"
 import bcrypt from "bcryptjs";
 
 class PersonaService {
-    private validarId(id: number) {
-        if (!Number.isInteger(id)) throw new AppError("El identificador debe ser un número entero");
-    }
     private validarDatos(data: CreatePersona | UpdatePersona) {
         for (const campo of ["nombre", "apellido", "dni", "mail", "telefono"] as const) {
             const valor = data[campo];
@@ -130,7 +128,7 @@ private async crearPersonaConRol(
         });
     }
     async getById(idPersona:number){
-        this.validarId(idPersona);
+        validarId(idPersona);
         return await prisma.personas.findUnique({
             where: {idPersona},
             omit: {contraseña: true}
@@ -138,7 +136,7 @@ private async crearPersonaConRol(
     }
 
     async update(idPersona: number, data: UpdatePersona) {
-  this.validarId(idPersona);
+  validarId(idPersona);
   this.validarDatos(data);
 
   if (data.mail !== undefined) {
@@ -199,7 +197,7 @@ private async crearPersonaConRol(
   });
 }
     async delete(idPersona:number){
-        this.validarId(idPersona);
+        validarId(idPersona);
         return await prisma.personas.delete({
             where:{idPersona}
         });
@@ -207,7 +205,7 @@ private async crearPersonaConRol(
 
     // Asignar un rol a una persona (update tira P2025 -> 404 si la persona no existe)
     async asignarRol(idPersona: number, nombreRol: string) {
-        this.validarId(idPersona);
+        validarId(idPersona);
         // sin esto un nombreRol undefined hace que findFirst ignore el filtro y devuelva el primer rol
         if (typeof nombreRol !== "string" || nombreRol.trim() === "") throw new AppError("nombreRol es obligatorio");
         const rol = await prisma.roles.findFirst({ where: { nombre: nombreRol.trim() } });

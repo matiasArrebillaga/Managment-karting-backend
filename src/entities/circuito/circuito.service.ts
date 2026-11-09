@@ -1,6 +1,7 @@
+import { validarId } from "../../utils/validar";
 import { AppError } from "../../middleware/error.middleware";
 import { prisma } from "../../config/prisma";
-import { CreateCircuito, ICircuito, UpdateCircuito } from "./circuto.interface";
+import { CreateCircuito, ICircuito, UpdateCircuito } from "./circuito.interface";
 import { Prisma } from "../../generated/prisma/client";
 import { hoyUTC } from "../../utils/fecha";
 import { opcionesTxBloqueo } from "../../utils/ocupacion";
@@ -22,11 +23,6 @@ function picoDelDia(franjas: Franja[]) {
 }
 
 class CircuitoService {
-    private validarId(id: number) {
-        if (!Number.isInteger(id)) {
-            throw new AppError("El identificador debe ser un número entero");
-        }
-    }
 
     private validarDatos(data: CreateCircuito | UpdateCircuito){
         if (data.distancia !== undefined && (!Number.isInteger(data.distancia)|| data.distancia <= 0)){
@@ -83,7 +79,7 @@ class CircuitoService {
         return await prisma.circuitos.findMany();
     }
     async getById(idCircuitos:number){
-        this.validarId(idCircuitos);
+        validarId(idCircuitos);
         return await prisma.circuitos.findUnique({
             where: {idCircuitos}
         });
@@ -104,7 +100,7 @@ class CircuitoService {
 }
 
     async update(idCircuitos: number, data: UpdateCircuito) {
-  this.validarId(idCircuitos);
+  validarId(idCircuitos);
   this.validarDatos(data);
 
   const datos = {
@@ -133,7 +129,7 @@ class CircuitoService {
   }, opcionesTxBloqueo);
 }
     async delete(idCircuitos:number){
-        this.validarId(idCircuitos);
+        validarId(idCircuitos);
         return await prisma.circuitos.delete({
             where:{idCircuitos}
         });

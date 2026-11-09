@@ -1,3 +1,4 @@
+import { aNumeros } from "../../utils/validar";
 import {Request , Response, NextFunction} from "express";
 import personaService from "./persona.service";
 import { CreatePersona, IPersona } from "./persona.interface";
@@ -27,7 +28,7 @@ class PersonaController{
     }
     async create (req: Request, res: Response, next: NextFunction){
         try {
-            const data: CreatePersona = req.body
+            const data: CreatePersona = aNumeros(req.body, "Localidades_idLocalidades");
             const nuevoPersona= await personaService.create(data);
             res.status(201).json(nuevoPersona);
         }catch (error){
@@ -37,7 +38,7 @@ class PersonaController{
 
     async crearEmpleado(req: Request, res: Response, next: NextFunction) {
     try {
-        const persona = await personaService.crearEmpleado(req.body);
+        const persona = await personaService.crearEmpleado(aNumeros(req.body, "Localidades_idLocalidades"));
 
         res.status(201).json(persona);
     } catch (error) {
@@ -63,7 +64,7 @@ class PersonaController{
     async update (req: Request, res:Response, next: NextFunction){
         try{
             const id = Number(req.params.id)
-            const personaActualizado = await personaService.update(id,req.body)
+            const personaActualizado = await personaService.update(id, aNumeros(req.body, "Localidades_idLocalidades"))
             if (!personaActualizado){
                 return res.status(404).json({
                     message: "Persona no encontrada"

@@ -10,7 +10,7 @@ jest.mock("../src/entities/circuito/circuito.service");
 jest.mock("../src/entities/rol/rol.service");
 jest.mock("../src/entities/tipoLicencia/tiposLicencias.service");
 jest.mock("../src/entities/tipoKarting/tiposKarting.service");
-jest.mock("../src/entities/torneos/torneo.service");
+jest.mock("../src/entities/torneo/torneo.service");
 jest.mock("../src/entities/licencia/licencia.service");
 jest.mock("../src/entities/reserva/reserva.service");
 jest.mock("../src/entities/carrera/carrera.service");
@@ -26,7 +26,7 @@ import circuitoService from "../src/entities/circuito/circuito.service";
 import rolService from "../src/entities/rol/rol.service";
 import tipoLicenciaService from "../src/entities/tipoLicencia/tiposLicencias.service";
 import tipoKartingService from "../src/entities/tipoKarting/tiposKarting.service";
-import torneoService from "../src/entities/torneos/torneo.service";
+import torneoService from "../src/entities/torneo/torneo.service";
 import licenciaService from "../src/entities/licencia/licencia.service";
 import reservaService from "../src/entities/reserva/reserva.service";
 import carreraService from "../src/entities/carrera/carrera.service";
@@ -592,5 +592,17 @@ describe("borrado solo ADMIN", () => {
 
         expect(response.status).toBe(403);
         expect(service.delete as unknown as jest.Mock).not.toHaveBeenCalled();
+    });
+});
+
+describe("números como string en el body", () => {
+    it("un circuito con maximo \"3\" llega al service como número", async () => {
+        await request(app)
+            .post("/api/circuitos")
+            .set("Authorization", `Bearer ${token("ADMIN")}`)
+            .send({ distancia: "800", dificultad: "media", maximo: "3" });
+
+        expect(circuitoService.create as unknown as jest.Mock)
+            .toHaveBeenCalledWith({ distancia: 800, dificultad: "media", maximo: 3 });
     });
 });

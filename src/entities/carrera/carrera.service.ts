@@ -1,9 +1,10 @@
-import {prisma} from "../../config/prisma.js";
-import { Prisma } from "../../generated/prisma/client.js";
-import { CreateCarrera, UpdateCarrera } from "../carrera/carrera.interface.js";
-import { normalizarFecha, normalizarHora } from "../../utils/fecha.js";
-import { bloquearFranja, franjaOcupada, opcionesTxBloqueo } from "../../utils/ocupacion.js";
-import { AppError } from "../../middleware/error.middleware.js";
+import { validarId } from "../../utils/validar";
+import {prisma} from "../../config/prisma";
+import { Prisma } from "../../generated/prisma/client";
+import { CreateCarrera, UpdateCarrera } from "../carrera/carrera.interface";
+import { normalizarFecha, normalizarHora } from "../../utils/fecha";
+import { bloquearFranja, franjaOcupada, opcionesTxBloqueo } from "../../utils/ocupacion";
+import { AppError } from "../../middleware/error.middleware";
 
 // trae los karts asignados de cada carrera
 const conKartings = { kartings: { include: { kartings: true } } } as const;
@@ -13,11 +14,8 @@ const MS_POR_HORA = 60 * 60 * 1000;
 type CarreraConKartings = Prisma.carrerasGetPayload<{ include: typeof conKartings }>;
 
 class CarrerasService {
-    private validarId(id: number) {
-        if (!Number.isInteger(id)) throw new AppError("El identificador debe ser un número entero");
-    }
     private validarClaves(...ids: number[]) {
-        ids.forEach(id => this.validarId(id));
+        ids.forEach(id => validarId(id));
     }
 
     // clave de la carrera, con la fecha llevada a medianoche UTC como la guarda el DATE
@@ -41,7 +39,7 @@ class CarrerasService {
         if (!Array.isArray(kartings) || kartings.length === 0) {
             throw new AppError("La carrera debe tener al menos un karting");
         }
-        kartings.forEach(id => this.validarId(id));
+        kartings.forEach(id => validarId(id));
         if (new Set(kartings).size !== kartings.length) {
             throw new AppError("Hay kartings repetidos en la carrera");
         }
@@ -270,7 +268,7 @@ class CarrerasService {
     }
 
     async getByTorneo(idTorneo: number) {
-        this.validarId(idTorneo);
+        validarId(idTorneo);
         const carreras = await prisma.carreras.findMany({
             where: { Torneos_idTorneos: idTorneo },
             include: { circuitos: true, ...conKartings },

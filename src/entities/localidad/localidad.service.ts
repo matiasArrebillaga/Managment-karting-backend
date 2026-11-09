@@ -1,3 +1,4 @@
+import { validarId } from "../../utils/validar";
 import { AppError } from "../../middleware/error.middleware";
 import {prisma} from "../../config/prisma"
 import { CreateLocalidad, ILocalidad, UpdateLocalidad } from "./localidad.interface";
@@ -7,11 +8,6 @@ import { CreateLocalidad, ILocalidad, UpdateLocalidad } from "./localidad.interf
 // flujo completo: APP -> localidad.routes -> localidad.controller(localidad.interface) -> localidad.service
 class LocalidadService {
     // primero estan las funciones privadas que validan los datos que despues se van a usar
-    private validarId(id: number) {
-        if (!Number.isInteger(id)) { // valida que el id sea integer (es para proteccion, no tendria que ser necesario)
-            throw new AppError("El identificador debe ser un número entero");
-        }
-    }
     // validacion de que se ingresa un texto valido
     // valida que sea un string, que cuando se saque los espacios no sea 0 la longitud y que tenga menos de 45 caracteres
     private validarDatos(data: CreateLocalidad | UpdateLocalidad) {
@@ -25,7 +21,7 @@ class LocalidadService {
     }
 
     async getById(idLocalidades:number){
-        this.validarId(idLocalidades);
+        validarId(idLocalidades);
         return await prisma.localidades.findUnique({
             where: {idLocalidades}// busqueda por ID de prisma
         });
@@ -38,7 +34,7 @@ class LocalidadService {
     }
     // recibe el id y la interface de update
     async update(idLocalidades: number, data: UpdateLocalidad) {
-  this.validarId(idLocalidades);
+  validarId(idLocalidades);
   this.validarDatos(data);
 
   const datos = {
@@ -53,7 +49,7 @@ class LocalidadService {
   });
 }
     async delete(idLocalidades:number){
-        this.validarId(idLocalidades);
+        validarId(idLocalidades);
         return await prisma.localidades.delete({
             where:{idLocalidades}
         });

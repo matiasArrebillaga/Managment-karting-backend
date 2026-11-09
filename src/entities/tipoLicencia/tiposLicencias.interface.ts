@@ -1,9 +1,9 @@
 export interface ITiposLicencias {
-    idTipoLicencias?: number;
+    idTipoLicencia?: number;
     nombre: string;
     descripcion: string;
     nivel: number;
 }
 
-export type CreateTiposLicencias = Omit<ITiposLicencias, "idTipoLicencias">;
+export type CreateTiposLicencias = Omit<ITiposLicencias, "idTipoLicencia">;
 export type UpdateTiposLicencias = Partial<CreateTiposLicencias>;
