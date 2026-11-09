@@ -41,6 +41,22 @@ export function errorHandler(err: unknown, req: Request, res: Response, next: Ne
             message: err.message
         });
     }
+    // errores de express.json(): JSON mal formado (400) o body demasiado grande (413).
+    // traen su propio status 4xx; el mensaje es nuestro para no exponer el del parser
+    const status = typeof err === "object" && err !== null ? (err as { status?: unknown }).status : undefined;
+    if (typeof status === "number" && status >= 400 && status < 500) {
+        return res.status(status).json({
+            message: status === 413
+                ? "El cuerpo de la request es demasiado grande"
+                : "El cuerpo de la request no es un JSON válido"
+        });
+    }
+    // Prisma recibio un dato con el tipo equivocado (ej: un NaN como id): es culpa de la request
+    if (err instanceof Error && err.name === "PrismaClientValidationError") {
+        return res.status(400).json({
+            message: "Los datos enviados no son válidos"
+        });
+    }
 // transforma los errores de la base de datos y envia el status correspondiente
     if (typeof err === "object" && err !== null && "code" in err) {
         const code = (err as { code?: string }).code;
@@ -57,6 +73,13 @@ export function errorHandler(err: unknown, req: Request, res: Response, next: Ne
         if (code === "P2003") { // clave foranea: el id referenciado no existe o el registro esta en uso
             return res.status(409).json({
                 message: "El recurso referenciado no existe o está en uso"
+            });
+        }
+        // P2028: la transaccion espero un candado mas de lo permitido; P2034: deadlock.
+        // no es un fallo nuestro: otra operacion tenia el mismo horario, se puede reintentar
+        if (code === "P2028" || code === "P2034") {
+            return res.status(409).json({
+                message: "Hay otra operación sobre ese horario, intentá de nuevo"
             });
         }
     }

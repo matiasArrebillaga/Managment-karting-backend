@@ -19,6 +19,10 @@ beforeEach(() => {
         create: jest.fn(async ({ data }: any) => data),
         update: jest.fn(async ({ data }: any) => data)
     };
+
+    db.carreras_kartings = {
+        findMany: jest.fn(async () => [])
+    };
 });
 
 const kartingValido = {
@@ -66,5 +70,60 @@ describe("seguridad de karting", () => {
         expect(datosEnviados).toEqual({ modelo: "K2" });
         expect(datosEnviados).not.toHaveProperty("idKartings");
         expect(datosEnviados).not.toHaveProperty("reservas");
+    });
+});
+
+describe("cambiar el tipo de un kart asignado a carreras futuras", () => {
+    it("rechaza si el tipo nuevo no es de la licencia del torneo", async () => {
+        db.tiposkarting.findUnique = jest.fn(async () => ({ idTiposKarting: 2, TiposLicencias_idTipoLicenciaMinima: 3 }));
+        db.carreras_kartings.findMany = jest.fn(async () => [{ carreras: { torneos: { nombre: "Copa Rosario" } } }]);
+
+        await expect(kartingService.update(1, { TiposKarting_idTiposKarting: 2 })).rejects.toThrow("Copa Rosario");
+        expect(db.kartings.update).not.toHaveBeenCalled();
+    });
+
+    it("bloquea el kart antes de validar y filtra por la licencia del tipo nuevo", async () => {
+        db.tiposkarting.findUnique = jest.fn(async () => ({ idTiposKarting: 2, TiposLicencias_idTipoLicenciaMinima: 3 }));
+
+        await kartingService.update(1, { TiposKarting_idTiposKarting: 2 });
+
+        expect(db.$queryRaw).toHaveBeenCalled();
+        const where = db.carreras_kartings.findMany.mock.calls[0][0].where;
+        expect(where.kartings).toEqual({ idKartings: 1 });
+        expect(where.carreras).toEqual({ torneos: { TiposLicencias_idTipoLicencia: { not: 3 } } });
+        expect(db.kartings.update).toHaveBeenCalled();
+    });
+});
+
+describe("kartings disponibles en una franja", () => {
+    const filtroKartings = () => db.kartings.findMany.mock.calls[0][0].where;
+
+    beforeEach(() => {
+        db.kartings = { findMany: jest.fn(async () => [] as unknown[]) };
+        // kart 4 reservado y kart 7 en una carrera, los dos en la franja pedida
+        db.reservas = { findMany: jest.fn(async () => [{ Kartings_idKartings: 4, Circuitos_idCircuitos: 1 }]) };
+        db.carreras_kartings = { findMany: jest.fn(async () => [{ Kartings_idKartings: 7, Carrera_Circuitos_idCircuitos: 2 }]) };
+    });
+
+    it("excluye los ocupados por reservas y carreras y los que no estan Disponible", async () => {
+        await kartingService.getDisponibles("2026-10-29", "10:00", "12:00");
+
+        expect(filtroKartings()).toEqual({ estado: "Disponible", idKartings: { notIn: [4, 7] } });
+    });
+
+    it("al editar no cuenta la reserva que se esta editando", async () => {
+        await kartingService.getDisponibles("2026-10-29", "10:00", "12:00", { idReserva: 8 });
+
+        expect(db.reservas.findMany.mock.calls[0][0].where.NOT).toEqual({ idReservas: 8 });
+    });
+
+    it("rechaza una franja invertida", async () => {
+        await expect(kartingService.getDisponibles("2026-10-29", "12:00", "10:00"))
+            .rejects.toThrow("La hora de inicio debe ser anterior a la hora de fin");
+    });
+
+    it("rechaza una fecha invalida (400, no 500)", async () => {
+        await expect(kartingService.getDisponibles(undefined, "10:00", "12:00"))
+            .rejects.toThrow("La fecha no es válida");
     });
 });

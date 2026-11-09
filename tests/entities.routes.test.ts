@@ -526,6 +526,18 @@ describe("campos obligatorios", () => {
     });
 });
 
+describe("body mal formado", () => {
+    it("un JSON roto responde 400 y no 500", async () => {
+        const response = await request(app)
+            .post("/api/auth/login")
+            .set("Content-Type", "application/json")
+            .send('{"mail": "a@a.com",');
+
+        expect(response.status).toBe(400);
+        expect(response.body.message).toBe("El cuerpo de la request no es un JSON válido");
+    });
+});
+
 describe("documentación OpenAPI", () => {
     it("manda el token a las rutas protegidas y deja públicas las de auth", async () => {
         const { body: spec } = await request(app).get("/api-docs.json");
