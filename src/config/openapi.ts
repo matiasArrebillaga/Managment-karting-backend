@@ -221,7 +221,44 @@ for (const resource of crudResources) {
             }
         }
     };
+
+    // errores comunes de las rutas protegidas: se agregan a todas las operaciones del recurso
+    for (const ruta of [resource.path, `${resource.path}/{id}`]) {
+        for (const [metodo, operacion] of Object.entries(paths[ruta])) {
+            if (metodo === "parameters") continue;
+            const { responses } = operacion as { responses: Record<string, object> };
+            responses["401"] = { $ref: "#/components/responses/Unauthorized" };
+            responses["403"] = { $ref: "#/components/responses/Forbidden" };
+            if (metodo === "post" || metodo === "patch") {
+                responses["409"] = { $ref: "#/components/responses/Conflict" };
+            }
+        }
+    }
 }
+
+paths["/api/kartings/disponibles"] = {
+    get: {
+        tags: ["Kartings"],
+        summary: "Kartings libres en una franja horaria",
+        parameters: [
+            { name: "fecha", in: "query", required: true, schema: { type: "string", format: "date" }, example: "2026-12-01" },
+            { name: "horaInicio", in: "query", required: true, schema: { type: "string" }, example: "10:00" },
+            { name: "horaFin", in: "query", required: true, schema: { type: "string" }, example: "12:00" },
+            { name: "idReserva", in: "query", required: false, schema: { type: "integer" }, description: "Excluye esta reserva (al editarla)" },
+            { name: "idTorneo", in: "query", required: false, schema: { type: "integer" }, description: "Con idCircuito, excluye esa carrera (al editarla)" },
+            { name: "idCircuito", in: "query", required: false, schema: { type: "integer" } }
+        ],
+        responses: {
+            "200": {
+                description: "Kartings disponibles",
+                content: { "application/json": { schema: { type: "array", items: { $ref: "#/components/schemas/Karting" } } } }
+            },
+            "400": { description: "Parámetros inválidos" },
+            "401": { $ref: "#/components/responses/Unauthorized" },
+            "403": { $ref: "#/components/responses/Forbidden" }
+        }
+    }
+};
 
 const compositeResources = [
     {
@@ -727,7 +764,7 @@ const options: swaggerJSDoc.Options = {
             version: "1.0.0",
             description: "Documentación de la API de gestión de karting."
         },
-        servers: [{ url: "http://localhost:3000", description: "Servidor local" }],
+        servers: [{ url: "/", description: "Mismo host que sirve la documentación" }],
         tags: [
             { name: "Sistema" },
             { name: "Autenticación" },
@@ -735,6 +772,11 @@ const options: swaggerJSDoc.Options = {
             ...compositeResources.map(({ tag }) => ({ name: tag }))
         ],
         components: {
+            responses: {
+                Unauthorized: { description: "Token faltante, inválido o vencido" },
+                Forbidden: { description: "El rol del usuario no tiene permiso" },
+                Conflict: { description: "Conflicto con datos existentes (duplicado, cupo u ocupación)" }
+            },
             securitySchemes: {
                 bearerAuth: {
                     type: "http",
