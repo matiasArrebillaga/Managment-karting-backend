@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, jest } from "@jest/globals";
+import { afterEach, beforeEach, describe, expect, it, jest } from "@jest/globals";
 
 jest.mock("../src/config/prisma");
 
@@ -38,7 +38,9 @@ const filtroSolapes = () => db.reservas.findMany.mock.calls[0][0].where;
 
 beforeEach(() => {
     db.$transaction.mockClear();
-    db.$queryRaw.mockClear();
+    // el SELECT del circuito en bloquearFranja tiene que encontrarlo
+    db.$queryRaw = jest.fn(async () => [{ idCircuitos: 1 }]);
+    db.$executeRaw.mockClear();
     db.personas = { findUnique: jest.fn(async () => ({ idPersona: 1 })) };
     db.kartings = { findUnique: jest.fn(async () => KARTING_SENIOR) };
     db.circuitos = { findUnique: jest.fn(async () => ({ idCircuitos: 1, maximo: 8 })) };
@@ -71,7 +73,17 @@ describe("calculo del monto", () => {
         await expect(reservaService.realizarReserva({
             ...reservaValida(),
             horaFin: hora("11:30")
-        })).rejects.toThrow(/horas enteras/);
+        })).rejects.toThrow(/de hora en hora/);
+
+        expect(db.reservas.create).not.toHaveBeenCalled();
+    });
+
+    it("rechaza horas enteras que no empiecen en punto (10:30 a 11:30)", async () => {
+        await expect(reservaService.realizarReserva({
+            ...reservaValida(),
+            horaInicio: hora("10:30"),
+            horaFin: hora("11:30")
+        })).rejects.toThrow(/de hora en hora/);
 
         expect(db.reservas.create).not.toHaveBeenCalled();
     });
@@ -104,6 +116,26 @@ describe("controles de disponibilidad", () => {
         })).rejects.toThrow(/fecha pasada/);
 
         expect(db.reservas.create).not.toHaveBeenCalled();
+    });
+
+    describe("reserva para hoy (reloj fijo: 15/06/2026 21:30 en Argentina, ya es 16/06 en UTC)", () => {
+        const HOY = new Date(Date.UTC(2026, 5, 15));
+        beforeEach(() => { jest.useFakeTimers().setSystemTime(new Date("2026-06-15T21:30:00-03:00")); });
+        afterEach(() => { jest.useRealTimers(); });
+
+        it("rechaza un horario que ya empezo", async () => {
+            await expect(reservaService.realizarReserva({
+                ...reservaValida(), fechaReserva: HOY, horaInicio: hora("21:00"), horaFin: hora("22:00")
+            })).rejects.toThrow("No se puede reservar en un horario que ya pasó");
+
+            expect(db.reservas.create).not.toHaveBeenCalled();
+        });
+
+        it("con el server en UTC, un horario de mas tarde hoy se puede reservar", async () => {
+            await expect(reservaService.realizarReserva({
+                ...reservaValida(), fechaReserva: HOY, horaInicio: hora("22:00"), horaFin: hora("23:00")
+            })).resolves.toMatchObject({ idReservas: 99 });
+        });
     });
 
     it("rechaza asignar un karting que no esta disponible", async () => {
@@ -266,8 +298,9 @@ describe("pertenencia", () => {
     it("un cliente no puede modificar la reserva de otro", async () => {
         db.reservas.findUnique = jest.fn(async () => ({ ...reservaValida(), idReservas: 50, Personas_idPersona: 2 }));
 
+        // 404 como en getById: no le confirma que la reserva existe
         await expect(reservaService.update(50, { horaFin: hora("13:00") }, 7))
-            .rejects.toMatchObject({ statusCode: 403 });
+            .rejects.toMatchObject({ statusCode: 404 });
 
         expect(db.reservas.update).not.toHaveBeenCalled();
     });
@@ -285,7 +318,7 @@ describe("pertenencia", () => {
         db.reservas.delete = jest.fn(async () => ({}));
 
         await expect(reservaService.delete(50, 7))
-            .rejects.toMatchObject({ statusCode: 403 });
+            .rejects.toMatchObject({ statusCode: 404 });
 
         expect(db.reservas.delete).not.toHaveBeenCalled();
     });
@@ -297,6 +330,47 @@ describe("pertenencia", () => {
         await reservaService.delete(50, 7);
 
         expect(db.reservas.delete).toHaveBeenCalledWith({ where: { idReservas: 50 } });
+    });
+
+    describe("reservas pasadas", () => {
+        const RESERVA_PASADA = { ...reservaValida(), fechaReserva: new Date(Date.UTC(2020, 0, 10)), idReservas: 50, Personas_idPersona: 7 };
+
+        it("un cliente no puede editar una reserva que ya paso", async () => {
+            db.reservas.findUnique = jest.fn(async () => RESERVA_PASADA);
+
+            await expect(reservaService.update(50, { horaFin: hora("13:00") }, 7))
+                .rejects.toMatchObject({ statusCode: 403 });
+            expect(db.reservas.update).not.toHaveBeenCalled();
+        });
+
+        it("un cliente no puede borrar una reserva que ya paso", async () => {
+            db.reservas.findUnique = jest.fn(async () => RESERVA_PASADA);
+            db.reservas.delete = jest.fn(async () => ({}));
+
+            await expect(reservaService.delete(50, 7)).rejects.toMatchObject({ statusCode: 403 });
+            expect(db.reservas.delete).not.toHaveBeenCalled();
+        });
+
+        it("un empleado si puede borrarla", async () => {
+            db.reservas.delete = jest.fn(async () => ({ idReservas: 50 }));
+
+            await reservaService.delete(50);
+
+            expect(db.reservas.delete).toHaveBeenCalled();
+        });
+    });
+
+    it("404 explicito si la reserva a editar no existe", async () => {
+        db.reservas.findUnique = jest.fn(async () => null);
+
+        await expect(reservaService.update(50, { horaFin: hora("13:00") }))
+            .rejects.toMatchObject({ statusCode: 404 });
+    });
+
+    it("la licencia se valida contra el dia reservado, no contra hoy", async () => {
+        await reservaService.realizarReserva(reservaValida());
+
+        expect(db.licencias.findFirst.mock.calls[0][0].where.fechaVencimiento).toEqual({ gte: EN_UN_ANIO });
     });
 
     it("sin restriccion (empleado o admin) opera sobre cualquiera", async () => {
@@ -320,14 +394,27 @@ describe("pertenencia", () => {
 });
 
 describe("solapamiento y escritura en la misma transaccion", () => {
-    it("el alta valida y graba dentro de $transaction, con los recursos lockeados", async () => {
+    it("el alta bloquea kart, circuito compartido y franja del dia, en ese orden", async () => {
         await reservaService.realizarReserva(reservaValida());
 
         expect(db.$transaction).toHaveBeenCalledTimes(1);
-        // kart y circuito, en ese orden, para no cruzar locks entre requests
-        expect(db.$queryRaw).toHaveBeenCalledTimes(2);
-        expect(db.$queryRaw.mock.calls[0][0].join("?")).toContain("kartings");
-        expect(db.$queryRaw.mock.calls[1][0].join("?")).toContain("circuitos");
+        expect(db.$transaction.mock.calls[0][1]).toEqual({ isolationLevel: "ReadCommitted" });
+        const sql = (call: any) => call[0].join("?");
+        expect(sql(db.$queryRaw.mock.calls[0])).toContain("FROM kartings");
+        expect(sql(db.$queryRaw.mock.calls[0])).toContain("FOR UPDATE");
+        // el circuito ya no se bloquea exclusivo: dos reservas de otros dias no se esperan
+        expect(sql(db.$queryRaw.mock.calls[1])).toContain("FROM circuitos");
+        expect(sql(db.$queryRaw.mock.calls[1])).toContain("LOCK IN SHARE MODE");
+        // la franja se bloquea con el dia como texto YYYY-MM-DD
+        expect(sql(db.$executeRaw.mock.calls[0])).toContain("franjas_circuito");
+        expect(db.$executeRaw.mock.calls[0].slice(1)).toEqual([1, EN_UN_ANIO.toISOString().slice(0, 10)]);
+    });
+
+    it("con un circuito inexistente corta con 400 antes de tocar la franja", async () => {
+        db.$queryRaw = jest.fn(async () => []);
+
+        await expect(reservaService.realizarReserva(reservaValida())).rejects.toThrow("El circuito no existe");
+        expect(db.$executeRaw).not.toHaveBeenCalled();
     });
 
     it("el patch tambien revalida y graba dentro de $transaction", async () => {
@@ -368,6 +455,11 @@ describe("normalizacion de la entrada", () => {
         await expect(reservaService.realizarReserva(
             { ...reservaValida(), horaInicio: undefined } as any
         )).rejects.toThrow("El campo horaInicio debe tener formato HH:MM");
+    });
+
+    it("rechaza el listado por rango sin fechas validas (400, no 500)", async () => {
+        await expect(reservaService.listarReservasRango(new Date("x"), new Date("2026-10-31")))
+            .rejects.toMatchObject({ statusCode: 400, message: "La fecha no es válida" });
     });
 
     it("descarta del patch los campos que no son de la reserva", async () => {

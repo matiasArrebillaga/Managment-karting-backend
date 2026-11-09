@@ -12,6 +12,22 @@ class KartingController{
             next(error);
         }
     }
+    // GET /kartings/disponibles?fecha=2026-10-29&horaInicio=10:00&horaFin=12:00
+    // opcionales: idReserva (reserva en edicion) o idTorneo + idCircuito (carrera en edicion)
+    async getDisponibles (req: Request, res: Response, next: NextFunction){
+        try{
+            const { fecha, horaInicio, horaFin, idReserva, idTorneo, idCircuito } = req.query;
+            const kartings = await kartingService.getDisponibles(fecha, horaInicio, horaFin, {
+                ...(idReserva !== undefined && { idReserva: Number(idReserva) }),
+                ...(idTorneo !== undefined && idCircuito !== undefined && {
+                    carrera: { Torneos_idTorneos: Number(idTorneo), Circuitos_idCircuitos: Number(idCircuito) }
+                })
+            });
+            res.json(kartings);
+        }catch(error){
+            next(error);
+        }
+    }
     async getById (req: Request, res: Response, next: NextFunction){
         try{
             const id = Number(req.params.id)

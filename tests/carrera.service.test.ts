@@ -20,6 +20,8 @@ let kartsEnBase: Record<number, string>;
 const LICENCIA_DEL_KART: Record<number, number> = { 4: 1, 5: 1, 6: 1, 7: 2 };
 
 beforeEach(() => {
+    db.$queryRaw = jest.fn(async () => [{ idCircuitos: 1 }]);
+    db.$executeRaw.mockClear();
     kartsEnBase = { 4: "Disponible", 5: "Disponible", 6: "Mantenimiento", 7: "Disponible" };
     db.kartings = {
         findMany: jest.fn(async ({ where }: any) => where.idKartings.in
@@ -78,6 +80,12 @@ describe("alta de una carrera con varios kartings", () => {
         expect(db.carreras.create).not.toHaveBeenCalled();
     });
 
+    it("rechaza horas que no sean en punto (10:30 a 11:30)", async () => {
+        await expect(carreraService.crearCarrera({ ...carreraValida(), horaInicio: "10:30", horaFin: "11:30" }))
+            .rejects.toThrow(/hora en punto/);
+        expect(db.carreras.create).not.toHaveBeenCalled();
+    });
+
     it("rechaza si un karting esta reservado en esa franja", async () => {
         db.reservas.findMany = jest.fn(async () => [
             { Kartings_idKartings: 5, Circuitos_idCircuitos: 2 }
@@ -123,6 +131,48 @@ describe("alta de una carrera con varios kartings", () => {
     });
 });
 
+describe("bloqueos de la carrera", () => {
+    const sql = (call: any) => call[0].join("?");
+
+    it("el alta bloquea karts y franja antes de leer torneo y circuito (KAN-82)", async () => {
+        await carreraService.crearCarrera(carreraValida());
+
+        expect(db.$transaction.mock.calls.at(-1)[1]).toEqual({ isolationLevel: "ReadCommitted" });
+        expect(sql(db.$queryRaw.mock.calls[0])).toContain("FROM kartings");
+        expect(db.$executeRaw).toHaveBeenCalledTimes(1);
+        // con REPEATABLE READ una lectura previa fijaba la foto y franjaOcupada no veia reservas nuevas
+        expect(db.$executeRaw.mock.invocationCallOrder[0])
+            .toBeLessThan(db.torneos.findUnique.mock.invocationCallOrder[0]);
+    });
+
+    it("el update bloquea la carrera, despues sus karts y despues la franja", async () => {
+        await carreraService.update(FECHA, 1, 1, { horaFin: hora("12:00") });
+
+        expect(sql(db.$queryRaw.mock.calls[0])).toContain("FROM carreras");
+        // sin kartings en el body bloquea los que ya tiene (el 6)
+        expect(sql(db.$queryRaw.mock.calls[1])).toContain("FROM kartings");
+        expect(db.$queryRaw.mock.calls[1].slice(1)).toContainEqual(expect.objectContaining({ values: [6] }));
+        expect(sql(db.$queryRaw.mock.calls[2])).toContain("LOCK IN SHARE MODE");
+        expect(db.$executeRaw).toHaveBeenCalledTimes(1);
+    });
+
+    it("una carrera sin karts guardados no arma un IN () invalido", async () => {
+        db.carreras.findUnique = jest.fn(async () => ({
+            horaInicio: hora("10:00"), horaFin: hora("11:00"), kartings: []
+        }));
+
+        await carreraService.update(FECHA, 1, 1, { horaFin: hora("12:00") });
+
+        expect(db.$queryRaw.mock.calls.map(sql).some((q: string) => q.includes("FROM kartings"))).toBe(false);
+    });
+
+    it("un patch sin horario ni karts no toma candados de franja", async () => {
+        await carreraService.update(FECHA, 1, 1, {});
+
+        expect(db.$executeRaw).not.toHaveBeenCalled();
+    });
+});
+
 describe("update de una carrera", () => {
     it("al cambiar el horario se excluye a si misma, mira reservas y no exige estado a sus karts", async () => {
         await carreraService.update(FECHA, 1, 1, { horaFin: hora("12:00") });
@@ -154,6 +204,22 @@ describe("update de una carrera", () => {
         await expect(carreraService.update(FECHA, 1, 1, { kartings: [4, 7] }))
             .rejects.toThrow(/kartings 7 no son del tipo de licencia/);
         expect(db.carreras.update).not.toHaveBeenCalled();
+    });
+
+    it("rechaza un horario nuevo que no sea en punto", async () => {
+        await expect(carreraService.update(FECHA, 1, 1, { horaFin: hora("11:30") }))
+            .rejects.toThrow(/hora en punto/);
+        expect(db.carreras.update).not.toHaveBeenCalled();
+    });
+
+    it("una carrera vieja con minutos se edita si no se manda el horario", async () => {
+        db.carreras.findUnique = jest.fn(async () => ({
+            horaInicio: hora("16:56"), horaFin: hora("17:57"),
+            kartings: [{ Kartings_idKartings: 4, kartings: { idKartings: 4 } }]
+        }));
+
+        await carreraService.update(FECHA, 1, 1, { kartings: [4, 5] });
+        expect(db.carreras.update).toHaveBeenCalled();
     });
 
     it("404 si la carrera no existe", async () => {

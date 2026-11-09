@@ -2,8 +2,9 @@ import { prisma } from "../../config/prisma";
 import { Prisma } from "../../generated/prisma/client";
 import { AppError } from "../../middleware/error.middleware";
 import { CreateReserva, CreateReservaInput, UpdateReservaInput } from "./reserva.interface";
-import { hoyUTC, normalizarHora } from "../../utils/fecha";
-import { franjaOcupada } from "../../utils/ocupacion";
+import { horaActualUTC, hoyUTC, normalizarFecha, normalizarHora } from "../../utils/fecha";
+import { bloquearFranja, franjaOcupada, opcionesTxBloqueo } from "../../utils/ocupacion";
+import { validarLicenciaVigente } from "../../utils/licencia";
 
 const MS_POR_HORA = 60 * 60 * 1000;
 
@@ -20,12 +21,6 @@ class ReservaService {
         if (!Number.isInteger(id)) throw new AppError("El identificador debe ser un número entero");
     }
 
-    private normalizarFecha(fecha: Date | string): Date {
-        const valor = new Date(fecha);
-        if (Number.isNaN(valor.getTime())) throw new AppError("La fecha de reserva no es válida");
-        return new Date(Date.UTC(valor.getUTCFullYear(), valor.getUTCMonth(), valor.getUTCDate()));
-    }
-
     //  manda los ids como texto validarId es el que despues decide.
     private aEntero(valor: unknown): number {
         return Number(valor);
@@ -35,40 +30,20 @@ class ReservaService {
         if (Number.isNaN(horaInicio.getTime()) || Number.isNaN(horaFin.getTime())) {
             throw new AppError("Las horas de inicio y fin no son válidas");
         }
+        // las horas se guardan como 1970-01-01 en UTC: si inicio y fin caen en punto, la duracion ya es de horas enteras
+        if (horaInicio.getTime() % MS_POR_HORA !== 0 || horaFin.getTime() % MS_POR_HORA !== 0) {
+            throw new AppError("Las reservas son de hora en hora (ej: 10:00 a 12:00)");
+        }
         const duracion = horaFin.getTime() - horaInicio.getTime();
         if (duracion <= 0) throw new AppError("La hora de inicio debe ser anterior a la hora de fin");
-        if (duracion % MS_POR_HORA !== 0) throw new AppError("La reserva debe ser de horas enteras");
         return duracion / MS_POR_HORA;
     }
 
-    //bloquea karting y circuitos para evitar problemas de solapamiento y sea una transaccion
-    private async bloquearRecursos(db: Prisma.TransactionClient, idKart: number, idCirc: number) {
-        await db.$queryRaw`SELECT idKartings FROM kartings WHERE idKartings = ${idKart} FOR UPDATE`;
-        await db.$queryRaw`SELECT idCircuitos FROM circuitos WHERE idCircuitos = ${idCirc} FOR UPDATE`;
-    }
-
-    private async validarLicencia(
-        db: Prisma.TransactionClient,
-        Personas_idPersona: number,
-        nivelRequerido: number
-    ) {
-        const licenciaValida = await db.licencias.findFirst({
-            where: {
-                Personas_idPersona,
-                fechaVencimiento: { gte: new Date() },
-                tiposlicencias: { nivel: { gte: nivelRequerido } }
-            }
-        });
-        if (!licenciaValida) {
-            throw new AppError(
-                "La persona no cuenta con una licencia de nivel suficiente para el karting"
-            );
-        }
-    }
   
      async listarReservasRango(fechaInicio : Date , fechaFin : Date){
+        // sin esto, una fecha faltante o mal escrita llega a Prisma como Invalid Date y da 500
         return await prisma.reservas.findMany({
-            where: { fechaReserva: { gte: fechaInicio, lte: fechaFin } },
+            where: { fechaReserva: { gte: normalizarFecha(fechaInicio), lte: normalizarFecha(fechaFin) } },
             orderBy: [{ fechaReserva: "asc" }, { horaInicio: "asc" }]
         });
     }
@@ -107,14 +82,20 @@ class ReservaService {
         for (const campo of ["Personas_idPersona", "Circuitos_idCircuitos", "Kartings_idKartings"] as const) {
             this.validarId(data[campo]);
         }
-        const fechaReserva = this.normalizarFecha(data.fechaReserva);
+        const fechaReserva = normalizarFecha(data.fechaReserva);
         const horas = this.horasReservadas(data.horaInicio, data.horaFin);
 
         if (opciones.fechaEsNueva && fechaReserva < hoyUTC()) { // uso del nuevo util
             throw new AppError("No se puede reservar en una fecha pasada");
         }
+        // hoy solo se puede reservar un horario que todavia no empezo
+        if (opciones.fechaEsNueva && fechaReserva.getTime() === hoyUTC().getTime()
+            && data.horaInicio <= horaActualUTC()) {
+            throw new AppError("No se puede reservar en un horario que ya pasó");
+        }
 
-        await this.bloquearRecursos(db, data.Kartings_idKartings, data.Circuitos_idCircuitos);
+        // bloquea el kart y el cupo del circuito en ese dia, no el circuito para todas las fechas
+        await bloquearFranja(db, [data.Kartings_idKartings], data.Circuitos_idCircuitos, fechaReserva);
 
         const [persona, karting, circuito] = await Promise.all([
             db.personas.findUnique({ where: { idPersona: data.Personas_idPersona } }),
@@ -133,10 +114,13 @@ class ReservaService {
             throw new AppError(`El karting no está disponible (estado: ${karting.estado})`);
         }
 
-        await this.validarLicencia(
+        // contra el dia reservado, no contra hoy: si para ese dia ya vencio, no sirve
+        await validarLicenciaVigente(
             db,
             data.Personas_idPersona,
-            karting.tiposkarting.tiposlicencias.nivel
+            karting.tiposkarting.tiposlicencias.nivel,
+            fechaReserva,
+            "para el karting"
         );
         await this.validarDisponibilidad(
             db, data, fechaReserva, circuito.maximo, opciones.idReservaExcluida
@@ -169,10 +153,19 @@ class ReservaService {
             orderBy: [{ fechaReserva: "desc" }, { horaInicio: "asc" }]
         });
     }
-    // valida que puedas actualizar solo tu propia reserva
-    private verificarPertenencia(duenio: number, restringirAPersona?: number) {
-        if (restringirAPersona !== undefined && duenio !== restringirAPersona) {
-            throw new AppError("No podés operar sobre la reserva de otra persona", 403);
+    // un cliente solo opera sobre sus reservas y solo si todavia no pasaron.
+    // 404 y no 403 para la ajena, igual que getById: no le confirmamos que existe.
+    // si ya paso, editarla recalcularia el monto con el precio de hoy
+    private verificarPuedeOperar(
+        reserva: { Personas_idPersona: number; fechaReserva: Date },
+        restringirAPersona?: number
+    ) {
+        if (restringirAPersona === undefined) return;
+        if (reserva.Personas_idPersona !== restringirAPersona) {
+            throw new AppError("La reserva indicada no existe", 404);
+        }
+        if (reserva.fechaReserva < hoyUTC()) {
+            throw new AppError("La reserva ya pasó: solo un empleado puede modificarla o borrarla", 403);
         }
     }
 
@@ -201,7 +194,7 @@ class ReservaService {
             });
             return await db.reservas.create({
                 data: {
-                    fechaReserva: this.normalizarFecha(datos.fechaReserva),
+                    fechaReserva: normalizarFecha(datos.fechaReserva),
                     horaInicio: datos.horaInicio,
                     horaFin: datos.horaFin,
                     monto,
@@ -210,14 +203,14 @@ class ReservaService {
                     Kartings_idKartings: datos.Kartings_idKartings
                 }
             });
-        });
+        }, opcionesTxBloqueo);
     }
     // tiene las mismas validacion que create 
     async update(idReservas: number, data: UpdateReservaInput, restringirAPersona?: number) {
         this.validarId(idReservas);
         const actual = await prisma.reservas.findUnique({ where: { idReservas } });
-        if (!actual) throw new AppError("La reserva indicada no existe");
-        this.verificarPertenencia(actual.Personas_idPersona, restringirAPersona);
+        if (!actual) throw new AppError("La reserva indicada no existe", 404);
+        this.verificarPuedeOperar(actual, restringirAPersona);
         const resultante: CreateReserva = {
             // cambia solo los campos necesarios y deja los otros igual    
             fechaReserva: data.fechaReserva !== undefined
@@ -252,19 +245,19 @@ class ReservaService {
                 where: { idReservas },
                 data: {
                     ...resultante,
-                    fechaReserva: this.normalizarFecha(resultante.fechaReserva),
+                    fechaReserva: normalizarFecha(resultante.fechaReserva),
                     monto
                 }
             });
-        });
+        }, opcionesTxBloqueo);
     }
 
     async delete(idReservas: number, restringirAPersona?: number) {
         this.validarId(idReservas);
         if (restringirAPersona !== undefined) {
             const actual = await prisma.reservas.findUnique({ where: { idReservas } });
-            if (!actual) throw new AppError("La reserva indicada no existe");
-            this.verificarPertenencia(actual.Personas_idPersona, restringirAPersona);
+            if (!actual) throw new AppError("La reserva indicada no existe", 404);
+            this.verificarPuedeOperar(actual, restringirAPersona);
         }
         return await prisma.reservas.delete({
             where: { idReservas },

@@ -6,6 +6,7 @@ export const prisma = {
     // y da igual si el service corre adentro o afuera de la transaccion.
     $transaction: jest.fn(async (cb: any) => cb(prisma)),
     $queryRaw: jest.fn(async () => []),
+    $executeRaw: jest.fn(async () => 1),
     circuitos: {},
     kartings: {},
     personas: {},
