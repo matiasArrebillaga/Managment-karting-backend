@@ -1,6 +1,6 @@
 import { AppError } from "../../middleware/error.middleware";
 import {prisma} from "../../config/prisma"
-import { CreateLocalidad, ILocalidad, UpdateLocalidad } from "./localidad.interface";
+import { CreateLocalidad, UpdateLocalidad } from "./localidad.interface";
 
 // SERVICE DE LOCALIDAD
 // es llamado desde el controllador

@@ -2,7 +2,7 @@ import { AppError } from "../../middleware/error.middleware";
 import {prisma} from "../../config/prisma"
 import { opcionesTxBloqueo, validarLicenciaEnCarrerasFuturas } from "../../utils/ocupacion"
 
-import { CreateTiposKartings, ITiposKartings, UpdateTiposKartings } from "./tiposKarting.interface"
+import { CreateTiposKartings, UpdateTiposKartings } from "./tiposKarting.interface"
 
 class TiposKartingsService {
     private validarId(id: number) {
@@ -100,6 +100,13 @@ this.validarDatos(data);
 }
     async delete(idTipoKarting:number){
         this.validarId(idTipoKarting);
+        const tipoKarting = await prisma.tiposkarting.findUnique({
+          where : {idTiposKarting : idTipoKarting}
+        });
+
+        if (!tipoKarting){
+          throw new AppError("El tipo de karting que desea eliminar no existe");
+        }
         return await prisma.tiposkarting.delete({
             where:{idTiposKarting : idTipoKarting}
         });

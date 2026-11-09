@@ -1,5 +1,5 @@
 import { AppError } from "../../middleware/error.middleware";
-import { CreateKarting, IKarting, UpdateKarting } from "./karting.interface";
+import { CreateKarting, UpdateKarting } from "./karting.interface";
 import { prisma } from "../../config/prisma";
 import { normalizarFecha, normalizarHora } from "../../utils/fecha";
 import { Excluir, franjaOcupada, opcionesTxBloqueo, validarLicenciaEnCarrerasFuturas } from "../../utils/ocupacion";

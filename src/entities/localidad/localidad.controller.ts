@@ -1,6 +1,6 @@
 import {Request , Response, NextFunction} from "express";
 import localidadService from "./localidad.service";
-import { CreateLocalidad, ILocalidad } from "./localidad.interface";
+import { CreateLocalidad} from "./localidad.interface";
 
 // el controlador recibe la request desde la ruta y por cada metodo llama al service correspondiente
 class LocalidadController{
