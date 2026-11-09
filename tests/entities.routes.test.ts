@@ -125,6 +125,28 @@ describe("rutas protegidas de todas las entidades", () => {
         expect(service.getAll).not.toHaveBeenCalled();
     });
 
+    it("rechaza con 401 un token firmado con otro secreto", async () => {
+        const falso = jwt.sign({ idPersona: 1, mail: "x@x.com", rol: "ADMIN" }, "otro-secreto");
+        const response = await request(app)
+            .get("/api/kartings")
+            .set("Authorization", `Bearer ${falso}`);
+
+        expect(response.status).toBe(401);
+        expect(kartingService.getAll).not.toHaveBeenCalled();
+    });
+
+    it("rechaza con 401 un token vencido", async () => {
+        const vencido = jwt.sign(
+            { idPersona: 1, mail: "x@x.com", rol: "ADMIN", exp: Math.floor(Date.now() / 1000) - 60 },
+            process.env.JWT_SECRET as string
+        );
+        const response = await request(app)
+            .get("/api/kartings")
+            .set("Authorization", `Bearer ${vencido}`);
+
+        expect(response.status).toBe(401);
+    });
+
     it.each(routes)("permite consultar %s con un rol autorizado", async (path, role, service) => {
         const response = await request(app)
             .get(path)
@@ -415,6 +437,14 @@ describe("rutas con claves compuestas", () => {
 });
 
 describe("resultados de carrera", () => {
+    it("rechaza con 400 una fecha de carrera con hora en la URL", async () => {
+        const response = await request(app)
+            .get("/api/participaciones/2026-11-09T03:00:00-03:00/1/1/1")
+            .set("Authorization", `Bearer ${token("ADMIN")}`);
+
+        expect(response.status).toBe(400);
+    });
+
     it("un CLIENTE no puede cargarse resultados", async () => {
         const response = await request(app)
             .post("/api/participaciones")

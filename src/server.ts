@@ -1,5 +1,14 @@
+import "dotenv/config"; // primero que todo: los modulos de abajo leen process.env al importarse
 import app from "./app";
 import { prisma } from "./config/prisma";
+
+// sin estas variables el login da 500 y CORS queda abierto: mejor no arrancar
+for (const variable of ["JWT_SECRET", "FRONTEND_URL", "DATABASE_URL"]) {
+    if (!process.env[variable]) {
+        console.error(`Falta la variable de entorno ${variable}`);
+        process.exit(1);
+    }
+}
 
 const PORT = Number(process.env.PORT) || 3000; // Railway inyecta PORT; en local no existe y usamos 3000
 
@@ -19,3 +28,15 @@ async function startServer() {
 }
 
 startServer();
+
+// Railway manda SIGTERM al redeployar; Ctrl+C manda SIGINT. Cerramos el pool antes de salir
+async function apagar(senal: string) {
+    console.log(`${senal} recibido, cerrando conexión a la base`);
+    await prisma.$disconnect();
+    process.exit(0);
+}
+process.on("SIGTERM", () => void apagar("SIGTERM"));
+process.on("SIGINT", () => void apagar("SIGINT"));
+process.on("unhandledRejection", (error) => {
+    console.error("Promesa rechazada sin manejar:", error);
+});

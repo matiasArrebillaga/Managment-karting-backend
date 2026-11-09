@@ -1,11 +1,12 @@
 
 import { Request, Response, NextFunction} from "express";
+import { normalizarFecha } from "../../utils/fecha";
 import ParticipacionesService from "./participacion.service";
 
 const clavesCarrera = (body: any) => ({
     Carrera_Torneos_idTorneos: Number(body.Carrera_Torneos_idTorneos),
     Carrera_Circuitos_idCircuitos: Number(body.Carrera_Circuitos_idCircuitos),
-    Carrera_fecha: new Date(String(body.Carrera_fecha))
+    Carrera_fecha: normalizarFecha(String(body.Carrera_fecha))
 });
 
 const resultado = (fila: any) => ({
@@ -38,7 +39,7 @@ class ParticipacionesController {
                 Number(req.params.Carrera_Circuitos_idCircuitos);
 
             const Carrera_fecha =
-                new Date(String(req.params.Carrera_fecha));
+                normalizarFecha(String(req.params.Carrera_fecha));
 
             const Personas_idPersona =
                 Number(req.params.Personas_idPersona);
@@ -106,7 +107,7 @@ class ParticipacionesController {
                 Number(req.params.Carrera_Circuitos_idCircuitos);
 
             const Carrera_fecha =
-                new Date(String(req.params.Carrera_fecha));
+                normalizarFecha(String(req.params.Carrera_fecha));
 
             const Personas_idPersona =
                 Number(req.params.Personas_idPersona);
@@ -147,7 +148,7 @@ class ParticipacionesController {
                 Number(req.params.Carrera_Circuitos_idCircuitos);
 
             const Carrera_fecha =
-                new Date(String(req.params.Carrera_fecha));
+                normalizarFecha(String(req.params.Carrera_fecha));
 
             const Personas_idPersona =
                 Number(req.params.Personas_idPersona);

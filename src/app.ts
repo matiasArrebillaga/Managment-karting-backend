@@ -1,5 +1,7 @@
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import kartingRoutes from "./entities/karting/karting.routes";
 import personaRoutes from "./entities/persona/persona.routes";
 import localidadRoutes from "./entities/localidad/localidad.routes";
@@ -21,6 +23,8 @@ import { errorHandler, notFoundHandler } from "./middleware/error.middleware";
 
 const app = express(); // declaracion de uso de express para el server
 
+app.use(helmet()); // headers de seguridad (no-sniff, frameguard, CSP, etc.)
+
 // mecanismo de seguridad para controlar la conexion entre el cliente y el server
 app.use(cors({
     origin: process.env.FRONTEND_URL, 
@@ -35,6 +39,17 @@ app.get("/api-docs.json", (req, res) => {
 });
 
 // ruta de login y registro, obtiene el token entonces no requiere verificacion
+// freno a la fuerza bruta: 10 intentos cada 15 minutos por IP. En los tests se saltea
+const limiteAuth = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 10,
+    standardHeaders: "draft-8",
+    legacyHeaders: false,
+    skip: () => process.env.NODE_ENV === "test",
+    message: { message: "Demasiados intentos. Probá de nuevo en unos minutos." }
+});
+app.use("/api/auth/login", limiteAuth);
+app.use("/api/auth/register", limiteAuth);
 app.use("/api/auth", authRoutes);
 
 // todas las rutas protegidas cada una acorde al nivel de acceso en las rutas

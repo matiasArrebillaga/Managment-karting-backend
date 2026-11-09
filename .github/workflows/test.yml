@@ -33,7 +33,7 @@ jobs:
 
       # 4. Corre los tests (usan Prisma mockeado, no hace falta una DB real)
       - name: Ejecutar tests
-        run: npm test -- --runInBand --forceExit
+        run: npm test -- --runInBand
 
       # 5. Verifica que el proyecto compile sin errores de TypeScript
       - name: Compilar proyecto

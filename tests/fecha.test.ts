@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, jest } from "@jest/globals";
-import { ahoraArgentina, horaActualUTC, hoyUTC, normalizarHora } from "../src/utils/fecha";
+import { ahoraArgentina, horaActualUTC, hoyUTC, normalizarFecha, normalizarHora } from "../src/utils/fecha";
 
 afterEach(() => {
     jest.useRealTimers();
@@ -30,4 +30,20 @@ describe("normalizarHora", () => {
         expect(() => normalizarHora("9:5", "horaInicio")).toThrow("HH:MM");
         expect(() => normalizarHora(undefined, "horaFin")).toThrow("El campo horaFin");
     });
+});
+
+describe("normalizarFecha estricta", () => {
+    it("acepta YYYY-MM-DD y devuelve medianoche UTC", () => {
+        expect(normalizarFecha("2026-11-09").toISOString()).toBe("2026-11-09T00:00:00.000Z");
+    });
+
+    it("acepta un Date", () => {
+        expect(normalizarFecha(new Date("2026-11-09T15:00:00Z")).toISOString()).toBe("2026-11-09T00:00:00.000Z");
+    });
+
+    it.each(["2026-11-09T03:00:00-03:00", "2026-11-09T00:00:00Z", "09/11/2026", "", "2026-13-40"])(
+        "rechaza %p", valor => {
+            expect(() => normalizarFecha(valor)).toThrow();
+        }
+    );
 });

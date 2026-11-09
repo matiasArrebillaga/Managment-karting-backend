@@ -38,8 +38,12 @@ export function normalizarHora(valor: unknown, campo: string): Date {
 }
 
 
+// las fechas (DATE) viajan como YYYY-MM-DD: un ISO con hora u offset puede correr el dia
 export function normalizarFecha(fecha: Date | string): Date {
-    const valor = fecha instanceof Date ? fecha : new Date(fecha);
+    if (typeof fecha === "string" && !/^\d{4}-\d{2}-\d{2}$/.test(fecha.trim())) {
+        throw new AppError("La fecha debe tener formato YYYY-MM-DD");
+    }
+    const valor = fecha instanceof Date ? fecha : new Date(`${fecha.trim()}T00:00:00.000Z`);
 
     if (Number.isNaN(valor.getTime())) {
         throw new AppError("La fecha no es válida");
