@@ -385,6 +385,14 @@ for (const resource of compositeResources) {
 // por el servidor no queda ningun campo modificable.
 delete (paths["/api/inscripciones/{Torneos_idTorneos}/{Personas_idPersona}"] as Record<string, unknown>).put;
 
+// rutas que no tienen endpoint en el router
+delete (paths["/api/inscripciones/{Torneos_idTorneos}/{Personas_idPersona}"] as Record<string, unknown>).get;
+delete (paths["/api/roles"] as Record<string, unknown>).post;
+delete (paths["/api/roles/{id}"] as Record<string, unknown>).patch;
+delete (paths["/api/roles/{id}"] as Record<string, unknown>).delete;
+delete (paths["/api/personas/{id}"] as Record<string, unknown>).get;
+delete (paths["/api/torneos/{id}"] as Record<string, unknown>).get;
+
 paths["/api/inscripciones/mias"] = {
     get: {
         tags: ["Inscripciones"],

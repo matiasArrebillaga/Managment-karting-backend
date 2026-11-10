@@ -27,11 +27,7 @@ personasTorneos.get(
     PersonasTorneosController.getInscriptosTorneo
 );
 
-personasTorneos.get(
-    "/:Torneos_idTorneos/:Personas_idPersona",
-    verifyRoles("CLIENTE","EMPLEADO","ADMIN"),
-    PersonasTorneosController.getById
-);
+
 
 personasTorneos.post(
     "/",

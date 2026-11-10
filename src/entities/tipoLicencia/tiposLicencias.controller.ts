@@ -38,11 +38,6 @@ class TiposLicenciasController{
         try{
             const id = Number(req.params.id)
             const tiposLicenciasActualizado = await tiposLicenciasService.update(id,req.body)
-            if (!tiposLicenciasActualizado){
-                return res.status(404).json({
-                    message: "Tipos de licencias no encontrados"
-                })
-            }
             res.status(200).json(tiposLicenciasActualizado)
         }catch(error){
             next(error);
@@ -51,12 +46,7 @@ class TiposLicenciasController{
         async delete (req: Request, res: Response, next: NextFunction){
         try {
             const id = Number(req.params.id);
-            const tiposLicenciasEliminado = await tiposLicenciasService.delete(id);
-            if (!tiposLicenciasEliminado){
-                return res.status(404).json({
-                    message: "Tipos de licencias no encontrado"
-                });
-            }
+            await tiposLicenciasService.delete(id);
             res.status(200).json({
                 message: "Tipo de licencia eliminado correctamente"
             });

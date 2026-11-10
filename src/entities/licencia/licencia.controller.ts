@@ -49,11 +49,6 @@ class LicenciaController{
         try{
             const id = Number(req.params.id)
             const licenciaActualizada = await LicenciaService.update(id, aNumeros(req.body, "Personas_idPersona", "TiposLicencias_idTipoLicencia"))
-            if (!licenciaActualizada){
-                return res.status(404).json({
-                    message: "Licencia no encontrada"
-                })
-            }
             res.status(200).json(licenciaActualizada)
         }catch(error){
             next(error);
@@ -62,12 +57,7 @@ class LicenciaController{
         async delete (req: Request, res: Response, next: NextFunction){
         try {
             const id = Number(req.params.id);
-            const licenciaEliminada = await LicenciaService.delete(id);
-            if (!licenciaEliminada){
-                return res.status(404).json({
-                    message: "Licencia no encontrada"
-                });
-            }
+            await LicenciaService.delete(id);
             res.status(200).json({
                 message: "Licencia eliminada correctamente"
             });

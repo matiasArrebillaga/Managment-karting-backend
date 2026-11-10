@@ -8,7 +8,7 @@ import localidadRoutes from "./entities/localidad/localidad.routes";
 import circuitoRoutes from "./entities/circuito/circuito.routes";
 import authRoutes from "./entities/auth/auth.routes";
 import rolRoutes from "./entities/rol/rol.routes";
-import { AuthRequest, verifyToken } from "./middleware/auth.middleware";
+import { verifyToken } from "./middleware/auth.middleware";
 import tipoLicenciasRouters from "./entities/tipoLicencia/tiposLicencias.routes";
 import tipoKartingRouters from "./entities/tipoKarting/tiposKarting.routes";
 import torneo from "./entities/torneo/torneo.routes";

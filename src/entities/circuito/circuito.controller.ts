@@ -39,11 +39,6 @@ class CircuitoController{
         try{
             const id = Number(req.params.id)
             const circuitoActualizado = await circuitoService.update(id, aNumeros(req.body, "distancia", "maximo"))
-            if (!circuitoActualizado){
-                return res.status(404).json({
-                    message: "Circuito no encontrado"
-                })
-            }
             res.status(200).json(circuitoActualizado)
         }catch(error){
             next(error);
@@ -52,12 +47,7 @@ class CircuitoController{
         async delete (req: Request, res: Response, next: NextFunction){
         try {
             const id = Number(req.params.id);
-            const circuitoEliminado = await circuitoService.delete(id);
-            if (!circuitoEliminado){
-                return res.status(404).json({
-                    message: "Circuito no encontrado"
-                });
-            }
+            await circuitoService.delete(id);
             res.status(200).json({
                 message: "Circuito eliminado correctamente"
             });            

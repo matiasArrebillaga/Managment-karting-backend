@@ -1,7 +1,7 @@
 import { validarId } from "../../utils/validar";
 import { AppError } from "../../middleware/error.middleware";
 import {prisma} from "../../config/prisma"
-import { CreateTiposLicencias, ITiposLicencias, UpdateTiposLicencias } from "./tiposLicencias.interface"
+import { CreateTiposLicencias,  UpdateTiposLicencias } from "./tiposLicencias.interface"
 
 class TiposLicenciasService {
 

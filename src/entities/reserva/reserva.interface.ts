@@ -10,7 +10,6 @@ export interface IReserva {
 }
 
 export type CreateReserva = Omit<IReserva,"idReservas">;
-export type UpdateReserva = Partial<CreateReserva>;
 
 // lo que llega de la request, el service lo pasa a Date
 export type CreateReservaInput = {

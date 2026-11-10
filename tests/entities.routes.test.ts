@@ -75,7 +75,6 @@ const bodies: Record<string, object> = {
     "/api/personas": persona,
     "/api/localidades": { nombre: "Rosario" },
     "/api/circuitos": { distancia: 1000, dificultad: "media", maximo: 10 },
-    "/api/roles": { nombre: "EMPLEADO" },
     "/api/tiposLicencias": { nombre: "B", descripcion: "basica", nivel: 1 },
     "/api/tiposKartings": { nombre: "Pro", descripcion: "rapido", precioHora: 100, TiposLicencias_idTipoLicenciaMinima: 1 },
     "/api/torneos": { nombre: "T", descripcion: "D", cupoMaximo: 10, fechaInicio: "2026-12-01", fechaFin: "2026-12-10", TiposLicencias_idTipoLicencia: 1 },
@@ -90,10 +89,10 @@ beforeEach(() => {
         looseMock(service.getAll).mockResolvedValue([]);
         looseMock(service.getById).mockResolvedValue({});
         // reserva ya no expone create(): su unica via de alta es realizarReserva(),
-        // que es la que valida y calcula el monto.
+        // que es la que valida y calcula el monto. rol solo tiene lectura
         if (service.create) looseMock(service.create).mockResolvedValue({});
-        looseMock(service.update).mockResolvedValue({});
-        looseMock(service.delete).mockResolvedValue({});
+        if (service.update) looseMock(service.update).mockResolvedValue({});
+        if (service.delete) looseMock(service.delete).mockResolvedValue({});
     }
     looseMock(reservaService.realizarReserva).mockResolvedValue({});
     looseMock(carreraService.crearCarrera).mockResolvedValue({});
@@ -208,7 +207,6 @@ describe("CRUD de las entidades", () => {
         ["/api/personas", "/api/personas/1", "ADMIN", "ADMIN", "ADMIN", personaService, "create"],
         ["/api/localidades", "/api/localidades/1", "EMPLEADO", "EMPLEADO", "ADMIN", localidadService, "create"],
         ["/api/circuitos", "/api/circuitos/1", "ADMIN", "EMPLEADO", "ADMIN", circuitoService, "create"],
-        ["/api/roles", "/api/roles/1", "ADMIN", "ADMIN", "ADMIN", rolService, "create"],
         ["/api/tiposLicencias", "/api/tiposLicencias/1", "EMPLEADO", "EMPLEADO", "ADMIN", tipoLicenciaService, "create"],
         ["/api/tiposKartings", "/api/tiposKartings/1", "EMPLEADO", "EMPLEADO", "ADMIN", tipoKartingService, "create"],
         ["/api/torneos", "/api/torneos/1", "EMPLEADO", "EMPLEADO", "ADMIN", torneoService, "create"],

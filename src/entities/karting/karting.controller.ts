@@ -56,11 +56,6 @@ class KartingController{
         try{
             const id = Number(req.params.id)
             const kartingActualizado = await kartingService.update(id, aNumeros(req.body, "TiposKarting_idTiposKarting"))
-            if (!kartingActualizado){
-                return res.status(404).json({
-                    message: "Karting no encontrado"
-                })
-            }
             res.status(200).json(kartingActualizado)
         }catch(error){
             next(error);
@@ -69,12 +64,7 @@ class KartingController{
         async delete (req: Request, res: Response, next: NextFunction){
         try {
             const id = Number(req.params.id);
-            const kartingEliminado = await kartingService.delete(id);
-            if (!kartingEliminado){
-                return res.status(404).json({
-                    message: "Karting no encontrado"
-                });
-            }
+            await kartingService.delete(id);
             res.status(200).json({
                 message: "Karting eliminado correctamente"
             });            

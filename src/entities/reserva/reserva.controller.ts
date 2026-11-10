@@ -73,12 +73,6 @@ class ReservaController {
                 id, req.body, limitarAPropias(req)
             );
 
-            if (!reservaActualizada) {
-                return res.status(404).json({
-                    message: "Reserva no encontrada",
-                });
-            }
-
             res.status(200).json(reservaActualizada);
         } catch (error) {
             next(error);
@@ -89,13 +83,7 @@ class ReservaController {
         try {
             const id = Number(req.params.id);
 
-            const reservaEliminada = await reservaService.delete(id, limitarAPropias(req));
-
-            if (!reservaEliminada) {
-                return res.status(404).json({
-                    message: "Reserva no encontrada",
-                });
-            }
+            await reservaService.delete(id, limitarAPropias(req));
 
             res.status(200).json({ message: "Reserva eliminada correctamente" });
         } catch (error) {

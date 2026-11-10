@@ -3,7 +3,7 @@ import { AppError } from "../../middleware/error.middleware";
 import {prisma} from "../../config/prisma"
 import { opcionesTxBloqueo, validarLicenciaEnCarrerasFuturas } from "../../utils/ocupacion"
 
-import { CreateTiposKartings, ITiposKartings, UpdateTiposKartings } from "./tiposKarting.interface"
+import { CreateTiposKartings, UpdateTiposKartings } from "./tiposKarting.interface"
 
 class TiposKartingsService {
 

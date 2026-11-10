@@ -40,11 +40,6 @@ class TiposKartingsController{
         try{
             const id = Number(req.params.id)
             const tiposKartingsActualizado = await TiposKartingsService.update(id, aNumeros(req.body, "TiposLicencias_idTipoLicenciaMinima", "precioHora"))
-            if (!tiposKartingsActualizado){
-                return res.status(404).json({
-                    message: "Tipos de karting no encontrados"
-                })
-            }
             res.status(200).json(tiposKartingsActualizado)
         }catch(error){
             next(error);
@@ -53,12 +48,7 @@ class TiposKartingsController{
         async delete (req: Request, res: Response, next: NextFunction){
         try {
             const id = Number(req.params.id);
-            const tiposKartingsEliminado = await TiposKartingsService.delete(id);
-            if (!tiposKartingsEliminado){
-                return res.status(404).json({
-                    message: "Tipos de karting no encontrado"
-                });
-            }
+            await TiposKartingsService.delete(id);
             res.status(200).json({
                 message: "Tipo de karting eliminado correctamente"
             });

@@ -1,7 +1,7 @@
 import { validarId } from "../../utils/validar";
 import { AppError } from "../../middleware/error.middleware";
 import { prisma } from "../../config/prisma";
-import { CreateCircuito, ICircuito, UpdateCircuito } from "./circuito.interface";
+import { CreateCircuito, UpdateCircuito } from "./circuito.interface";
 import { Prisma } from "../../generated/prisma/client";
 import { hoyUTC } from "../../utils/fecha";
 import { opcionesTxBloqueo } from "../../utils/ocupacion";
