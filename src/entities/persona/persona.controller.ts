@@ -1,6 +1,7 @@
+import { aNumeros } from "../../utils/validar";
 import {Request , Response, NextFunction} from "express";
 import personaService from "./persona.service";
-import { CreatePersona, IPersona } from "./persona.interface";
+import { CreatePersona } from "./persona.interface";
 
 class PersonaController{
     async getAll(req: Request, res: Response, next: NextFunction){
@@ -11,23 +12,9 @@ class PersonaController{
             next(error);
         }
     }
-    async getById (req: Request, res: Response, next: NextFunction){
-        try{
-            const id = Number(req.params.id)
-            const persona : IPersona | null = await personaService.getById(id);
-            if (!persona){
-                return res.status(404).json({
-                    message: "Persona no encontrado"
-                });
-            }
-            res.json(persona);
-        }catch(error){
-            next(error);
-        }
-    }
     async create (req: Request, res: Response, next: NextFunction){
         try {
-            const data: CreatePersona = req.body
+            const data: CreatePersona = aNumeros(req.body, "Localidades_idLocalidades");
             const nuevoPersona= await personaService.create(data);
             res.status(201).json(nuevoPersona);
         }catch (error){
@@ -37,7 +24,7 @@ class PersonaController{
 
     async crearEmpleado(req: Request, res: Response, next: NextFunction) {
     try {
-        const persona = await personaService.crearEmpleado(req.body);
+        const persona = await personaService.crearEmpleado(aNumeros(req.body, "Localidades_idLocalidades"));
 
         res.status(201).json(persona);
     } catch (error) {
@@ -50,11 +37,6 @@ class PersonaController{
             const id = Number(req.params.id)
             const { nombreRol } = req.body
             const personaActualizado = await personaService.asignarRol(id, nombreRol)
-            if (!personaActualizado){
-                return res.status(404).json({
-                    message: "Persona no encontrada"
-                })
-            }
             res.status(200).json(personaActualizado)
         }catch(error){
             next(error);
@@ -63,12 +45,7 @@ class PersonaController{
     async update (req: Request, res:Response, next: NextFunction){
         try{
             const id = Number(req.params.id)
-            const personaActualizado = await personaService.update(id,req.body)
-            if (!personaActualizado){
-                return res.status(404).json({
-                    message: "Persona no encontrada"
-                })
-            }
+            const personaActualizado = await personaService.update(id, aNumeros(req.body, "Localidades_idLocalidades"))
             res.status(200).json(personaActualizado)
         }catch(error){
             next(error);
@@ -77,12 +54,7 @@ class PersonaController{
         async delete (req: Request, res: Response, next: NextFunction){
         try {
             const id = Number(req.params.id);
-            const personaEliminado = await personaService.delete(id);
-            if (!personaEliminado){
-                return res.status(404).json({
-                    message: "Persona no encontrado"
-                });
-            }
+            await personaService.delete(id);
             res.status(200).json({
                 message: "Persona eliminada correctamente"
             });

@@ -1,10 +1,10 @@
 export interface ITiposKartings {
-    idTipoKarting?: number;
+    idTiposKarting?: number;
     nombre: string;
     descripcion: string;
     precioHora: number;
     TiposLicencias_idTipoLicenciaMinima: number;
 }
 
-export type CreateTiposKartings = Omit<ITiposKartings, "idTipoKarting">;
+export type CreateTiposKartings = Omit<ITiposKartings, "idTiposKarting">;
 export type UpdateTiposKartings = Partial<CreateTiposKartings>;

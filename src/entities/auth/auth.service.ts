@@ -6,7 +6,7 @@ import {IRegisterDTO, ILoginDTO } from "./auth.interface"
 import personaService from "../persona/persona.service"
 // service de auth aca es la diferencia con un crud simple
 const JWT_SECRET = process.env.JWT_SECRET as string; // clave de entorno
-const JWT_EXPIRES_IN = "1d";// tiempo en el que expira el token 
+const JWT_EXPIRES_IN = "1h"; // corto porque el rol viaja en el token
 
 class AuthService {
 
@@ -31,7 +31,6 @@ class AuthService {
 // logica del login y manejo de tokens
 async login(data: ILoginDTO) {
 // primero busca a la persona por mail e incluye el rol
-    // mail es @unique: findUnique trae a la unica persona con ese mail
     const persona = await prisma.personas.findUnique({
         where: { mail: String(data.mail ?? "").trim().toLowerCase() },
         include: {

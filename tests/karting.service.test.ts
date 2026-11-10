@@ -124,6 +124,6 @@ describe("kartings disponibles en una franja", () => {
 
     it("rechaza una fecha invalida (400, no 500)", async () => {
         await expect(kartingService.getDisponibles(undefined, "10:00", "12:00"))
-            .rejects.toThrow("La fecha no es válida");
+            .rejects.toThrow("La fecha debe tener formato YYYY-MM-DD");
     });
 });

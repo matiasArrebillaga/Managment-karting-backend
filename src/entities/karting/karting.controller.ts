@@ -1,3 +1,4 @@
+import { aNumeros } from "../../utils/validar";
 import {Request, Response, NextFunction} from "express";
 import kartingService from "./karting.service";
 import { IKarting } from "./karting.interface";
@@ -13,7 +14,7 @@ class KartingController{
         }
     }
     // GET /kartings/disponibles?fecha=2026-10-29&horaInicio=10:00&horaFin=12:00
-    // opcionales: idReserva (reserva en edicion) o idTorneo + idCircuito (carrera en edicion)
+    // opcionales: idReserva o idTorneo + idCircuito cuando se edita
     async getDisponibles (req: Request, res: Response, next: NextFunction){
         try{
             const { fecha, horaInicio, horaFin, idReserva, idTorneo, idCircuito } = req.query;
@@ -44,7 +45,7 @@ class KartingController{
     }
     async create (req: Request, res: Response, next: NextFunction){
         try {
-            const data: IKarting = req.body
+            const data: IKarting = aNumeros(req.body, "TiposKarting_idTiposKarting");
             const nuevoKarting= await kartingService.create(data);
             res.status(201).json(nuevoKarting);
         }catch (error){
@@ -54,12 +55,7 @@ class KartingController{
     async update (req: Request, res:Response, next: NextFunction){
         try{
             const id = Number(req.params.id)
-            const kartingActualizado = await kartingService.update(id,req.body)
-            if (!kartingActualizado){
-                return res.status(404).json({
-                    message: "Karting no encontrado"
-                })
-            }
+            const kartingActualizado = await kartingService.update(id, aNumeros(req.body, "TiposKarting_idTiposKarting"))
             res.status(200).json(kartingActualizado)
         }catch(error){
             next(error);
@@ -68,12 +64,7 @@ class KartingController{
         async delete (req: Request, res: Response, next: NextFunction){
         try {
             const id = Number(req.params.id);
-            const kartingEliminado = await kartingService.delete(id);
-            if (!kartingEliminado){
-                return res.status(404).json({
-                    message: "Karting no encontrado"
-                });
-            }
+            await kartingService.delete(id);
             res.status(200).json({
                 message: "Karting eliminado correctamente"
             });            

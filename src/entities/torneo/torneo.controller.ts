@@ -22,26 +22,6 @@ catch (error) {
 
     }
 
-    async getById(req: Request, res: Response, next: NextFunction) {
-        try {
-
-            const id = Number(req.params.id);
-
-            const torneo = await TorneosService.getById(id);
-
-            if (!torneo) {
-                return res.status(404).json({
-                    message: "Torneo no encontrado"
-                });
-            }
-
-            res.json(torneo);
-
-        } catch (error) {
-            next(error);
-        }
-    }
-
     async create(req: Request, res: Response, next: NextFunction) {
         try {
             const data: CreateTorneos = {
@@ -71,12 +51,6 @@ catch (error) {
 
             const torneoActualizado = await TorneosService.update(id, data);
 
-            if (!torneoActualizado) {
-                return res.status(404).json({
-                    message: "Torneo no encontrado"
-                });
-            }
-
             res.status(200).json(torneoActualizado);
 
         } catch (error: any) {
@@ -89,16 +63,9 @@ catch (error) {
 
             const id = Number(req.params.id);
 
-            const torneoEliminado =
-                await TorneosService.delete(id);
+            await TorneosService.delete(id);
 
-            if (!torneoEliminado) {
-                return res.status(404).json({
-                    message: "Torneo no encontrado"
-                });
-            }
-
-            res.status(200).json(torneoEliminado);
+            res.status(200).json({ message: "Torneo eliminado correctamente" });
 
         } catch (error) {
             next(error);

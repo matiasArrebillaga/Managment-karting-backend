@@ -38,13 +38,14 @@ export function verifyToken(
 
         next(); // continua con la request en la ruta
 
-    } catch (error) { // si hay errores lo maneja y cancela la request
-        return res.status(403).json({
+    } catch (error) { // token mal firmado o vencido: no sabemos quien es → 401 (403 queda para rol insuficiente)
+        return res.status(401).json({
             message: "Token inválido o expirado"
         });
     }
 }
 
+// si es cliente devuelve su id para filtrar lo suyo, el staff recibe undefined y ve todo
 export function limitarAPropias(req: AuthRequest): number | undefined {
     return req.user?.rol === "CLIENTE" ? req.user.idPersona : undefined;
 }

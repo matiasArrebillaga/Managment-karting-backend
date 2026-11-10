@@ -1,25 +1,23 @@
+import { validarId } from "../../utils/validar";
 
-import {prisma} from "../../config/prisma.js";
-import { AppError } from "../../middleware/error.middleware.js";
-import { ahoraArgentina } from "../../utils/fecha.js";
+import {prisma} from "../../config/prisma";
+import { AppError } from "../../middleware/error.middleware";
+import { ahoraArgentina } from "../../utils/fecha";
 import {
     ClavesCarrera,
     CreateParticipacion,
     ResultadoCarrera,
     UpdateParticipacion
-} from "./participacion.interface.js";
+} from "./participacion.interface";
 
-// Escala de la F1: del 11° en adelante no suma
+// puntos de la f1, del 11 en adelante no suma
 const PUNTOS_POR_POSICION = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1];
 
 class ParticipacionesService {
-    private validarId(id: number) {
-        if (!Number.isInteger(id)) throw new AppError("El identificador debe ser un número entero");
-    }
     private validarFecha(fecha: Date) {
         if (!(fecha instanceof Date) || Number.isNaN(fecha.getTime())) throw new AppError("La fecha de carrera no es válida");
     }
-    private validarClaves(...ids: number[]) { ids.forEach(id => this.validarId(id)); }
+    private validarClaves(...ids: number[]) { ids.forEach(id => validarId(id)); }
 
     private validarClavesCarrera(claves: ClavesCarrera) {
         this.validarClaves(claves.Carrera_Torneos_idTorneos, claves.Carrera_Circuitos_idCircuitos);
@@ -43,7 +41,7 @@ class ParticipacionesService {
     }
 
     private validarResultado(resultado: ResultadoCarrera) {
-        this.validarId(resultado.Personas_idPersona);
+        validarId(resultado.Personas_idPersona);
         this.validarPosicion(resultado.posicion_final);
         this.validarTiempo(resultado.tiempo);
     }
@@ -62,8 +60,7 @@ class ParticipacionesService {
         return carrera;
     }
 
-    // fechaCarrera (DATE) y horaFin (TIME) llegan como instantes UTC que guardan la hora de
-    // pared del kartodromo; se arman igual que ahoraArgentina() para compararlos contra el reloj.
+    // fecha y hora fin vienen en utc como hora argentina, igual que ahoraArgentina()
     private async obtenerCarreraFinalizada(claves: ClavesCarrera) {
         const carrera = await this.obtenerCarrera(claves);
         const f = carrera.fechaCarrera;
@@ -75,7 +72,7 @@ class ParticipacionesService {
         return carrera;
     }
 
-    // Un solo findMany para todos los pilotos; tambien cubre que la persona exista
+    // un solo findMany para todos los pilotos
     private async validarInscriptos(Torneos_idTorneos: number, idsPersonas: number[]) {
         const inscriptos = await prisma.personas_torneos.findMany({
             where: { Torneos_idTorneos, Personas_idPersona: { in: idsPersonas } },
@@ -118,12 +115,10 @@ class ParticipacionesService {
         };
     }
 
-    // Obtener todas las participaciones
     async getAll() {
         return await prisma.participaciones.findMany();
     }
 
-    // Obtener una participación por su clave primaria compuesta
     async getById(
         Carrera_Torneos_idTorneos: number,
         Carrera_Circuitos_idCircuitos: number,
@@ -135,8 +130,7 @@ class ParticipacionesService {
         });
     }
 
-    // Alta de un piloto suelto (el que falto en la carga de la clasificacion).
-    // Persona o posicion repetida en la carrera las corta la PK y el unique de la DB (409).
+    // alta de un piloto suelto, los repetidos los corta la PK (409)
     async registrarParticipacion(data: CreateParticipacion) {
         this.validarClavesCarrera(data);
         this.validarResultado(data);
@@ -145,7 +139,7 @@ class ParticipacionesService {
         return await prisma.participaciones.create({ data: this.aFila(data, data) });
     }
 
-    // Carga de la clasificacion completa de una carrera, todo o nada
+    // carga la clasificacion completa, todo o nada
     async registrarResultadosCarrera(claves: ClavesCarrera, resultados: ResultadoCarrera[]) {
         this.validarClavesCarrera(claves);
         if (!Array.isArray(resultados) || resultados.length === 0) {
@@ -170,7 +164,7 @@ class ParticipacionesService {
             Carrera_Circuitos_idCircuitos: claves.Carrera_Circuitos_idCircuitos,
             Carrera_fecha: claves.Carrera_fecha
         };
-        // Dos cargas simultaneas chocan contra la PK/unique y la transaccion revierte
+        // dos cargas a la vez chocan en la PK y se revierte
         return await prisma.$transaction(async (tx) => {
             if (await tx.participaciones.count({ where: whereCarrera }) > 0) {
                 throw new AppError("La carrera ya tiene resultados cargados; corregilos con PUT o DELETE", 409);
@@ -180,8 +174,7 @@ class ParticipacionesService {
         });
     }
 
-    // Actualizar una participación: se valida solo lo que viene y la posicion arrastra los puntos.
-    // ponytail: intercambiar dos posiciones choca con el unique; hoy es DELETE + POST. Agregar swap si molesta.
+    // la posicion arrastra los puntos
     async update(
         Carrera_Torneos_idTorneos: number,
         Carrera_Circuitos_idCircuitos: number,
@@ -205,7 +198,6 @@ class ParticipacionesService {
         });
     }
 
-    // Eliminar una participación
     async delete(
         Carrera_Torneos_idTorneos: number,
         Carrera_Circuitos_idCircuitos: number,
@@ -217,7 +209,7 @@ class ParticipacionesService {
         });
     }
 
-    // Resultados de una carrera ordenados por posicion. Sin resultados cargados devuelve [].
+    // sin resultados devuelve []
     async getClasificacionCarrera(claves: ClavesCarrera) {
         this.validarClavesCarrera(claves);
         await this.obtenerCarrera(claves);
@@ -240,11 +232,10 @@ class ParticipacionesService {
         }));
     }
 
-    // Tabla del torneo con desempate F1: a igual puntaje gana quien tenga mas 1°, despues mas 2°...
-    // Empate total comparte posicion y la siguiente salta (1, 1, 3).
-    // ponytail: agrega en memoria; alcanza para torneos de decenas de pilotos.
+    // desempate f1: gana quien tenga mas 1°, despues mas 2°...
+    // empate total comparte posicion (1, 1, 3)
     async getTablaGeneral(idTorneo: number) {
-        this.validarId(idTorneo);
+        validarId(idTorneo);
         const torneo = await prisma.torneos.findUnique({ where: { idTorneos: idTorneo } });
         if (!torneo) throw new AppError("El torneo indicado no existe", 404);
 
@@ -258,11 +249,11 @@ class ParticipacionesService {
             const acumulado = porPersona.get(p.Personas_idPersona)
                 ?? { idPersona: p.Personas_idPersona, puntos: 0, conteo: [] };
             acumulado.puntos += p.puntos;
-            acumulado.conteo[p.posicion_final - 1] = (acumulado.conteo[p.posicion_final - 1] ?? 0) + 1;
+            acumulado.conteo[p.posicion_final - 1] = (acumulado.conteo[p.posicion_final - 1] ?? 0) + 1; // cuantas veces salio 1°, 2°...
             porPersona.set(p.Personas_idPersona, acumulado);
         }
 
-        // negativo si a va antes que b; 0 si estan empatados del todo
+        // negativo si a va antes que b
         const comparar = (a: { puntos: number; conteo: number[] }, b: { puntos: number; conteo: number[] }) => {
             if (a.puntos !== b.puntos) return b.puntos - a.puntos;
             for (let i = 0; i < Math.max(a.conteo.length, b.conteo.length); i++) {
@@ -280,7 +271,7 @@ class ParticipacionesService {
 
         let posicion = 0;
         return ordenados.map((o, i) => {
-            if (i === 0 || comparar(ordenados[i - 1], o) !== 0) posicion = i + 1;
+            if (i === 0 || comparar(ordenados[i - 1], o) !== 0) posicion = i + 1; // empate mantiene la posicion
             const persona = personas.find((p: { idPersona: number }) => p.idPersona === o.idPersona);
             return {
                 posicion,

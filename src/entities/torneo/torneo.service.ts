@@ -1,17 +1,15 @@
+import { validarId } from "../../utils/validar";
 import { AppError } from "../../middleware/error.middleware";
-import {prisma} from "../../config/prisma.js";
-import { CreateTorneos, ITorneos, UpdateTorneos } from "./torneo.interface.js";
-import { hoyUTC } from "../../utils/fecha.js";
-import { Prisma } from "../../generated/prisma/client.js";
-import { opcionesTxBloqueo } from "../../utils/ocupacion.js";
+import {prisma} from "../../config/prisma";
+import { CreateTorneos, ITorneos, UpdateTorneos } from "./torneo.interface";
+import { hoyUTC } from "../../utils/fecha";
+import { Prisma } from "../../generated/prisma/client";
+import { opcionesTxBloqueo } from "../../utils/ocupacion";
 
 const ESTADOS = ["proximo", "en_curso", "finalizado"] as const;
 type EstadoTorneo = typeof ESTADOS[number];
 
 class TorneosService {
-    private validarId(id: number) {
-        if (!Number.isInteger(id)) throw new AppError("El identificador debe ser un número entero");
-    }
 
     private validarDatos(data: Partial<Omit<ITorneos, "idTorneos">>) {
         if (data.nombre !== undefined &&
@@ -104,7 +102,7 @@ class TorneosService {
         }
         const ids = [...new Set(carreras.map(c => c.Circuitos_idCircuitos))];
         if (ids.length === 0) return;
-        // compartido: si a la vez alguien baja el maximo de uno de estos circuitos (FOR UPDATE), uno espera al otro
+        // lock compartido, si alguien baja el maximo del circuito uno espera al otro
         const circuitos = await db.$queryRaw<{ idCircuitos: number; maximo: number }[]>`SELECT idCircuitos, maximo FROM circuitos WHERE idCircuitos IN (${Prisma.join(ids)}) LOCK IN SHARE MODE`;
         const chico = circuitos.find(c => c.maximo < cupo);
         if (chico) {
@@ -128,7 +126,7 @@ class TorneosService {
     }
 
     async getById(idTorneo: number) {
-        this.validarId(idTorneo);
+        validarId(idTorneo);
         const torneo = await prisma.torneos.findUnique({
             where: { idTorneos: idTorneo }
         });
@@ -146,9 +144,9 @@ class TorneosService {
 
    
 async update(idTorneo: number, data: UpdateTorneos) {
-    this.validarId(idTorneo);
+    validarId(idTorneo);
 
-    // Construimos solo los campos permitidos y convertimos las fechas recibidas.
+    // solo los campos permitidos y las fechas convertidas
     const datos = {
         ...(data.nombre !== undefined && {
             nombre: data.nombre
@@ -173,8 +171,7 @@ async update(idTorneo: number, data: UpdateTorneos) {
     this.validarDatos(datos);
 
     return await prisma.$transaction(async (db) => {
-        // el mismo candado que toman las inscripciones y (compartido) las carreras:
-        // mientras se valida no entra un inscripto ni una carrera nueva
+        // mismo lock que inscripciones y carreras, mientras valida no entra nada nuevo
         await db.$queryRaw`SELECT idTorneos FROM torneos WHERE idTorneos = ${idTorneo} FOR UPDATE`;
         const actual = await db.torneos.findUnique({
             where: { idTorneos: idTorneo }
@@ -193,7 +190,7 @@ async update(idTorneo: number, data: UpdateTorneos) {
             );
         }
 
-        // Cambiar la licencia dejaría a las carreras ya armadas con karts de otra licencia.
+        // cambiar la licencia dejaria carreras con karts de otra licencia
         if (
             datos.TiposLicencias_idTipoLicencia !== undefined &&
             datos.TiposLicencias_idTipoLicencia !== actual.TiposLicencias_idTipoLicencia
@@ -227,7 +224,7 @@ async update(idTorneo: number, data: UpdateTorneos) {
 
 
     async delete(idTorneo: number) {
-        this.validarId(idTorneo);
+        validarId(idTorneo);
         return await prisma.torneos.delete({
             where: { idTorneos: idTorneo }
         });

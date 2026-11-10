@@ -1,11 +1,12 @@
 
 import { Request, Response, NextFunction} from "express";
+import { normalizarFecha } from "../../utils/fecha";
 import ParticipacionesService from "./participacion.service";
 
 const clavesCarrera = (body: any) => ({
     Carrera_Torneos_idTorneos: Number(body.Carrera_Torneos_idTorneos),
     Carrera_Circuitos_idCircuitos: Number(body.Carrera_Circuitos_idCircuitos),
-    Carrera_fecha: new Date(String(body.Carrera_fecha))
+    Carrera_fecha: normalizarFecha(String(body.Carrera_fecha))
 });
 
 const resultado = (fila: any) => ({
@@ -16,7 +17,6 @@ const resultado = (fila: any) => ({
 
 class ParticipacionesController {
 
-    // Obtener todas las participaciones
     async getAll(req: Request, res: Response, next: NextFunction) {
         try {
             const participaciones = await ParticipacionesService.getAll();
@@ -28,7 +28,6 @@ class ParticipacionesController {
         }
     }
 
-    // Obtener una participación por su clave primaria compuesta
     async getById(req: Request, res: Response, next: NextFunction) {
         try {
             const Carrera_Torneos_idTorneos =
@@ -38,7 +37,7 @@ class ParticipacionesController {
                 Number(req.params.Carrera_Circuitos_idCircuitos);
 
             const Carrera_fecha =
-                new Date(String(req.params.Carrera_fecha));
+                normalizarFecha(String(req.params.Carrera_fecha));
 
             const Personas_idPersona =
                 Number(req.params.Personas_idPersona);
@@ -64,7 +63,7 @@ class ParticipacionesController {
         }
     }
 
-    // Crear una participación (un piloto suelto). Los puntos del body se ignoran.
+    // los puntos del body se ignoran
     async create(req: Request, res: Response, next: NextFunction) {
         try {
             const data = { ...clavesCarrera(req.body), ...resultado(req.body) };
@@ -78,7 +77,7 @@ class ParticipacionesController {
         }
     }
 
-    // Cargar la clasificación completa de una carrera
+    // carga la clasificacion completa de una carrera
     async registrarCarrera(req: Request, res: Response, next: NextFunction) {
         try {
             if (!Array.isArray(req.body.resultados)) {
@@ -96,7 +95,6 @@ class ParticipacionesController {
         }
     }
 
-    // Actualizar una participación
     async update(req: Request, res: Response, next: NextFunction) {
         try {
             const Carrera_Torneos_idTorneos =
@@ -106,7 +104,7 @@ class ParticipacionesController {
                 Number(req.params.Carrera_Circuitos_idCircuitos);
 
             const Carrera_fecha =
-                new Date(String(req.params.Carrera_fecha));
+                normalizarFecha(String(req.params.Carrera_fecha));
 
             const Personas_idPersona =
                 Number(req.params.Personas_idPersona);
@@ -137,7 +135,6 @@ class ParticipacionesController {
         }
     }
 
-    // Eliminar una participación
     async delete(req: Request, res: Response, next: NextFunction) {
         try {
             const Carrera_Torneos_idTorneos =
@@ -147,7 +144,7 @@ class ParticipacionesController {
                 Number(req.params.Carrera_Circuitos_idCircuitos);
 
             const Carrera_fecha =
-                new Date(String(req.params.Carrera_fecha));
+                normalizarFecha(String(req.params.Carrera_fecha));
 
             const Personas_idPersona =
                 Number(req.params.Personas_idPersona);
@@ -167,7 +164,7 @@ class ParticipacionesController {
             next(error);
         }
     }
-    // Clasificación de una carrera, para cualquier usuario logueado
+    // clasificacion de una carrera, para cualquier logueado
     async getClasificacionCarrera(req: Request, res: Response, next: NextFunction) {
         try {
             const clasificacion = await ParticipacionesService.getClasificacionCarrera(clavesCarrera(req.params));

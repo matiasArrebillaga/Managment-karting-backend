@@ -1,3 +1,4 @@
+import { validarId } from "../../utils/validar";
 import { AppError } from "../../middleware/error.middleware";
 import { CreateKarting, UpdateKarting } from "./karting.interface";
 import { prisma } from "../../config/prisma";
@@ -5,9 +6,6 @@ import { normalizarFecha, normalizarHora } from "../../utils/fecha";
 import { Excluir, franjaOcupada, opcionesTxBloqueo, validarLicenciaEnCarrerasFuturas } from "../../utils/ocupacion";
 
 class KartingService {
-    private validarId(id: number) {
-        if (!Number.isInteger(id)) throw new AppError("El identificador debe ser un número entero");
-    }
 
     private validarDatos(data: CreateKarting | UpdateKarting) {
         for (const campo of ["categoria", "modelo", "estado"] as const) {
@@ -37,8 +35,8 @@ class KartingService {
         return await prisma.kartings.findMany();
     }
 
-    // karts en estado Disponible que no estan en ninguna reserva ni carrera que se solape con la franja.
-    // excluir sirve al editar: la reserva o carrera que se esta editando no cuenta como ocupacion
+    // karts disponibles que no estan en una reserva o carrera en esa franja
+    // excluir es para no contar la reserva o carrera que se esta editando
     async getDisponibles(fecha: unknown, horaInicio: unknown, horaFin: unknown, excluir: Excluir = {}) {
         const dia = normalizarFecha(String(fecha ?? ""));
         const inicio = normalizarHora(horaInicio, "horaInicio");
@@ -55,7 +53,7 @@ class KartingService {
     }
 
     async getById(idKartings: number) {
-        this.validarId(idKartings);
+        validarId(idKartings);
         return await prisma.kartings.findUnique({
             where: { idKartings }
         });
@@ -88,7 +86,7 @@ async create(data: CreateKarting) {
 }
 
     async update(idKartings: number, data: UpdateKarting) {
-  this.validarId(idKartings);
+  validarId(idKartings);
   this.validarDatos(data);
 
   const datos = {
@@ -114,7 +112,7 @@ async create(data: CreateKarting) {
     return await prisma.kartings.update({ where: { idKartings }, data: datos });
   }
   return await prisma.$transaction(async (db) => {
-    // mismo primer candado que reservas y carreras: mientras se valida, nadie asigna este kart
+    // mismo lock que reservas y carreras
     await db.$queryRaw`SELECT idKartings FROM kartings WHERE idKartings = ${idKartings} FOR UPDATE`;
     const tipoKarting = await db.tiposkarting.findUnique({ where: { idTiposKarting: idTipo } });
     if (!tipoKarting) {
@@ -125,7 +123,7 @@ async create(data: CreateKarting) {
   }, opcionesTxBloqueo);
 }
     async delete(idKartings: number) {
-        this.validarId(idKartings);
+        validarId(idKartings);
         return await prisma.kartings.delete({
             where: { idKartings }
         });

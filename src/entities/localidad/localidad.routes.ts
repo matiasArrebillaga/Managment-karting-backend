@@ -20,6 +20,6 @@ router.post("/",verifyRoles("ADMIN","EMPLEADO"), requireFields("nombre"), locali
 router.patch("/:id",verifyRoles("ADMIN","EMPLEADO"), localidadController.update);
 
 //DELETE
-router.delete("/:id",verifyRoles("ADMIN","EMPLEADO"),localidadController.delete);
+router.delete("/:id",verifyRoles("ADMIN"),localidadController.delete);
 
 export default router;

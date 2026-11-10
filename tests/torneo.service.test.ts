@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 jest.mock("../src/config/prisma");
 
 import { prisma } from "../src/config/prisma";
-import torneoService from "../src/entities/torneos/torneo.service";
+import torneoService from "../src/entities/torneo/torneo.service";
 import { hoyUTC } from "../src/utils/fecha";
 
 const db = prisma as unknown as Record<string, any>;

@@ -45,11 +45,6 @@ class LocalidadController{
         try{
             const id = Number(req.params.id)
             const localidadActualizado = await localidadService.update(id,req.body)// usa la interface para actualizacion
-            if (!localidadActualizado){
-                return res.status(404).json({
-                    message: "Localidad no encontrada"
-                })
-            }
             res.status(200).json(localidadActualizado)
         }catch(error){
             next(error);
@@ -60,12 +55,7 @@ class LocalidadController{
         async delete (req: Request, res: Response, next: NextFunction){
         try {
             const id = Number(req.params.id);
-            const localidadEliminado = await localidadService.delete(id);
-            if (!localidadEliminado){
-                return res.status(404).json({
-                    message: "Localidad no encontrada"
-                });
-            }
+            await localidadService.delete(id);
                 res.status(200).json({
                 message: "Localidad eliminada correctamente"
             });

@@ -1,3 +1,4 @@
+import { aNumeros } from "../../utils/validar";
 import LicenciaService from "./licencia.service";
 import {Request , Response, NextFunction} from "express";
 import {ILicencia} from "./licencia.interface"
@@ -37,7 +38,7 @@ class LicenciaController{
     }
     async create (req: Request, res: Response, next: NextFunction){
         try {
-            const data: ILicencia  = req.body
+            const data: ILicencia  = aNumeros(req.body, "Personas_idPersona", "TiposLicencias_idTipoLicencia");
             const nuevaLicencia= await LicenciaService.create(data);
             res.status(201).json(nuevaLicencia);
         }catch (error){
@@ -47,12 +48,7 @@ class LicenciaController{
     async update (req: Request, res:Response, next: NextFunction){
         try{
             const id = Number(req.params.id)
-            const licenciaActualizada = await LicenciaService.update(id,req.body)
-            if (!licenciaActualizada){
-                return res.status(404).json({
-                    message: "Licencia no encontrada"
-                })
-            }
+            const licenciaActualizada = await LicenciaService.update(id, aNumeros(req.body, "Personas_idPersona", "TiposLicencias_idTipoLicencia"))
             res.status(200).json(licenciaActualizada)
         }catch(error){
             next(error);
@@ -61,12 +57,7 @@ class LicenciaController{
         async delete (req: Request, res: Response, next: NextFunction){
         try {
             const id = Number(req.params.id);
-            const licenciaEliminada = await LicenciaService.delete(id);
-            if (!licenciaEliminada){
-                return res.status(404).json({
-                    message: "Licencia no encontrada"
-                });
-            }
+            await LicenciaService.delete(id);
             res.status(200).json({
                 message: "Licencia eliminada correctamente"
             });

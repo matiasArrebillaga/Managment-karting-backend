@@ -1,15 +1,17 @@
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import kartingRoutes from "./entities/karting/karting.routes";
 import personaRoutes from "./entities/persona/persona.routes";
 import localidadRoutes from "./entities/localidad/localidad.routes";
 import circuitoRoutes from "./entities/circuito/circuito.routes";
 import authRoutes from "./entities/auth/auth.routes";
 import rolRoutes from "./entities/rol/rol.routes";
-import { AuthRequest, verifyToken } from "./middleware/auth.middleware";
+import { verifyToken } from "./middleware/auth.middleware";
 import tipoLicenciasRouters from "./entities/tipoLicencia/tiposLicencias.routes";
 import tipoKartingRouters from "./entities/tipoKarting/tiposKarting.routes";
-import torneo from "./entities/torneos/torneo.routes";
+import torneo from "./entities/torneo/torneo.routes";
 import licenciaRoutes from "./entities/licencia/licencia.routes";
 import reservaRoutes from "./entities/reserva/reserva.routes";
 import carreraRoutes from "./entities/carrera/carrera.routes";
@@ -20,6 +22,10 @@ import openapiSpec from "./config/openapi";
 import { errorHandler, notFoundHandler } from "./middleware/error.middleware";
 
 const app = express(); // declaracion de uso de express para el server
+
+// ip real detras del proxy de railway, sino el rate limit ve una sola ip
+app.set("trust proxy", 1);
+app.use(helmet()); // headers de seguridad
 
 // mecanismo de seguridad para controlar la conexion entre el cliente y el server
 app.use(cors({
@@ -35,6 +41,19 @@ app.get("/api-docs.json", (req, res) => {
 });
 
 // ruta de login y registro, obtiene el token entonces no requiere verificacion
+// maximo 10 intentos fallidos cada 15 min por ip, los exitosos no cuentan
+// en los tests no se aplica
+const limiteAuth = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 10,
+    skipSuccessfulRequests: true,
+    standardHeaders: "draft-8",
+    legacyHeaders: false,
+    skip: () => process.env.NODE_ENV === "test",
+    message: { message: "Demasiados intentos. Probá de nuevo en unos minutos." }
+});
+app.use("/api/auth/login", limiteAuth);
+app.use("/api/auth/register", limiteAuth);
 app.use("/api/auth", authRoutes);
 
 // todas las rutas protegidas cada una acorde al nivel de acceso en las rutas

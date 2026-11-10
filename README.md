@@ -52,8 +52,7 @@ Cada entidad sigue el mismo esquema: la ruta recibe el pedido, el controller lee
 
    | Variable | Uso |
    |---|---|
-   | `DB_HOST`, `DB_PORT`, `DB_USERNAME`, `DB_PASSWORD`, `DB_DATABASE` | Conexión de la aplicación a la base |
-   | `DATABASE_URL` | Conexión usada por Prisma para migraciones y seed |
+   | `DATABASE_URL` | Conexión a la base (app, migraciones y seed) |
    | `JWT_SECRET` | Clave para firmar los tokens |
    | `FRONTEND_URL` | Origen permitido por CORS |
    | `SEED_ADMIN_MAIL`, `SEED_ADMIN_PASSWORD` | Usuario administrador inicial (contraseña de al menos 8 caracteres) |

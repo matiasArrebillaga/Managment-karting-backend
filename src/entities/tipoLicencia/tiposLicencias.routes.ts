@@ -6,7 +6,7 @@ import { verifyRoles } from "../../middleware/auth.middleware";
 const router = Router();
 
 
-// lectura abierta al CLIENTE: los torneos muestran y filtran por la licencia mínima
+// el cliente puede leer porque los torneos filtran por licencia
 router.get("/",verifyRoles("CLIENTE","EMPLEADO","ADMIN"), TiposLicenciasController.getAll);
 router.get("/:id",verifyRoles("CLIENTE","EMPLEADO","ADMIN"), TiposLicenciasController.getById);
 router.post("/",verifyRoles("EMPLEADO","ADMIN"), requireFields("nombre", "descripcion", "nivel"), TiposLicenciasController.create);

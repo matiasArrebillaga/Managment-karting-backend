@@ -41,34 +41,6 @@ class PersonasTorneosController {
         }
     }
 
-    async getById(req: AuthRequest, res: Response, next: NextFunction) {
-        try {
-            const Torneos_idTorneos =
-                Number(req.params.Torneos_idTorneos);
-
-            const Personas_idPersona =
-                Number(req.params.Personas_idPersona);
-
-            const inscripcion =
-                await PersonasTorneosService.getById(
-                    Torneos_idTorneos,
-                    Personas_idPersona,
-                    limitarAPropias(req)
-                );
-
-            if (!inscripcion) {
-                return res.status(404).json({
-                    message: "Inscripción no encontrada"
-                });
-            }
-
-            res.status(200).json(inscripcion);
-
-        } catch (error) {
-            next(error);
-        }
-    }
-
     async create(req: AuthRequest, res: Response, next: NextFunction) {
         try {
             const inscripcion =

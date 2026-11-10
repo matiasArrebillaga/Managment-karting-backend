@@ -1,3 +1,4 @@
+import { validarId } from "../../utils/validar";
 import { AppError } from "../../middleware/error.middleware";
 import {prisma} from "../../config/prisma"
 import { opcionesTxBloqueo, validarLicenciaEnCarrerasFuturas } from "../../utils/ocupacion"
@@ -5,9 +6,6 @@ import { opcionesTxBloqueo, validarLicenciaEnCarrerasFuturas } from "../../utils
 import { CreateTiposKartings, UpdateTiposKartings } from "./tiposKarting.interface"
 
 class TiposKartingsService {
-    private validarId(id: number) {
-        if (!Number.isInteger(id)) throw new AppError("El identificador debe ser un número entero");
-    }
 
     private validarDatos(data: CreateTiposKartings | UpdateTiposKartings) {
         for (const campo of ["nombre", "descripcion"] as const) {
@@ -20,8 +18,7 @@ class TiposKartingsService {
             !Number.isInteger(data.TiposLicencias_idTipoLicenciaMinima)) {
             throw new AppError("La licencia mínima debe ser un identificador entero");
         }
-        // Es la base del monto de las reservas: un cero o un negativo haria que se
-        // cobre mal en silencio.
+        // es la base del monto, un 0 o negativo cobraria mal
         if (data.precioHora !== undefined &&
             (typeof data.precioHora !== "number" || !Number.isFinite(data.precioHora) || data.precioHora <= 0)) {
             throw new AppError("El precio por hora debe ser un número mayor que cero");
@@ -31,7 +28,7 @@ class TiposKartingsService {
         return await prisma.tiposkarting.findMany();
     }
     async getById(idTipoKarting:number){
-        this.validarId(idTipoKarting);
+        validarId(idTipoKarting);
         return await prisma.tiposkarting.findUnique({
             where: {idTiposKarting : idTipoKarting}
         });
@@ -63,7 +60,7 @@ class TiposKartingsService {
 }
 
   async update(idTipoKarting: number, data: UpdateTiposKartings) {
-this.validarId(idTipoKarting);
+validarId(idTipoKarting);
 this.validarDatos(data);
 
   const datos = {
@@ -73,7 +70,6 @@ this.validarDatos(data);
     ...(data.descripcion !== undefined && {
       descripcion: data.descripcion.trim()
     }),
-    // antes no estaba: el precio nuevo se validaba pero nunca se guardaba
     ...(data.precioHora !== undefined && {
       precioHora: data.precioHora
     }),
@@ -92,21 +88,14 @@ this.validarDatos(data);
     if (!licencia) {
       throw new AppError("La licencia mínima ingresada no existe");
     }
-    // se bloquean los karts de este tipo (el mismo candado que toman las carreras) antes de validar
+    // bloquea los karts de este tipo antes de validar
     await db.$queryRaw`SELECT idKartings FROM kartings WHERE TiposKarting_idTiposKarting = ${idTipoKarting} FOR UPDATE`;
     await validarLicenciaEnCarrerasFuturas(db, { TiposKarting_idTiposKarting: idTipoKarting }, idLicencia);
     return await db.tiposkarting.update({ where: { idTiposKarting: idTipoKarting }, data: datos });
   }, opcionesTxBloqueo);
 }
     async delete(idTipoKarting:number){
-        this.validarId(idTipoKarting);
-        const tipoKarting = await prisma.tiposkarting.findUnique({
-          where : {idTiposKarting : idTipoKarting}
-        });
-
-        if (!tipoKarting){
-          throw new AppError("El tipo de karting que desea eliminar no existe");
-        }
+        validarId(idTipoKarting);
         return await prisma.tiposkarting.delete({
             where:{idTiposKarting : idTipoKarting}
         });

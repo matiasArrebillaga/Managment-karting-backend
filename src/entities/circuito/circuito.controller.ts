@@ -1,6 +1,7 @@
+import { aNumeros } from "../../utils/validar";
 import {Request, Response, NextFunction} from "express";
 import circuitoService from "./circuito.service"
-import { ICircuito } from "./circuto.interface";
+import { ICircuito } from "./circuito.interface";
 
 class CircuitoController{
     async getAll(req: Request, res: Response, next: NextFunction){
@@ -27,7 +28,7 @@ class CircuitoController{
     }
     async create (req: Request, res: Response, next: NextFunction){
      try {
-            const data: ICircuito = req.body
+            const data: ICircuito = aNumeros(req.body, "distancia", "maximo");
             const nuevoCircuito = await circuitoService.create(data);
          res.status(201).json(nuevoCircuito);
         }   catch (error) {
@@ -37,12 +38,7 @@ class CircuitoController{
     async update (req: Request, res:Response, next: NextFunction){
         try{
             const id = Number(req.params.id)
-            const circuitoActualizado = await circuitoService.update(id,req.body)
-            if (!circuitoActualizado){
-                return res.status(404).json({
-                    message: "Circuito no encontrado"
-                })
-            }
+            const circuitoActualizado = await circuitoService.update(id, aNumeros(req.body, "distancia", "maximo"))
             res.status(200).json(circuitoActualizado)
         }catch(error){
             next(error);
@@ -51,12 +47,7 @@ class CircuitoController{
         async delete (req: Request, res: Response, next: NextFunction){
         try {
             const id = Number(req.params.id);
-            const circuitoEliminado = await circuitoService.delete(id);
-            if (!circuitoEliminado){
-                return res.status(404).json({
-                    message: "Circuito no encontrado"
-                });
-            }
+            await circuitoService.delete(id);
             res.status(200).json({
                 message: "Circuito eliminado correctamente"
             });            

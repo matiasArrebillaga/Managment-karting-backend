@@ -1,6 +1,7 @@
 import request from "supertest";
 import jwt from "jsonwebtoken";
-import { beforeEach, describe, expect, it, jest } from "@jest/globals";
+import { afterEach, beforeEach, describe, expect, it, jest } from "@jest/globals";
+import { AppError } from "../src/middleware/error.middleware";
 
 jest.mock("../src/config/prisma");
 jest.mock("../src/entities/karting/karting.service");
@@ -10,7 +11,7 @@ jest.mock("../src/entities/circuito/circuito.service");
 jest.mock("../src/entities/rol/rol.service");
 jest.mock("../src/entities/tipoLicencia/tiposLicencias.service");
 jest.mock("../src/entities/tipoKarting/tiposKarting.service");
-jest.mock("../src/entities/torneos/torneo.service");
+jest.mock("../src/entities/torneo/torneo.service");
 jest.mock("../src/entities/licencia/licencia.service");
 jest.mock("../src/entities/reserva/reserva.service");
 jest.mock("../src/entities/carrera/carrera.service");
@@ -26,7 +27,7 @@ import circuitoService from "../src/entities/circuito/circuito.service";
 import rolService from "../src/entities/rol/rol.service";
 import tipoLicenciaService from "../src/entities/tipoLicencia/tiposLicencias.service";
 import tipoKartingService from "../src/entities/tipoKarting/tiposKarting.service";
-import torneoService from "../src/entities/torneos/torneo.service";
+import torneoService from "../src/entities/torneo/torneo.service";
 import licenciaService from "../src/entities/licencia/licencia.service";
 import reservaService from "../src/entities/reserva/reserva.service";
 import carreraService from "../src/entities/carrera/carrera.service";
@@ -74,7 +75,6 @@ const bodies: Record<string, object> = {
     "/api/personas": persona,
     "/api/localidades": { nombre: "Rosario" },
     "/api/circuitos": { distancia: 1000, dificultad: "media", maximo: 10 },
-    "/api/roles": { nombre: "EMPLEADO" },
     "/api/tiposLicencias": { nombre: "B", descripcion: "basica", nivel: 1 },
     "/api/tiposKartings": { nombre: "Pro", descripcion: "rapido", precioHora: 100, TiposLicencias_idTipoLicenciaMinima: 1 },
     "/api/torneos": { nombre: "T", descripcion: "D", cupoMaximo: 10, fechaInicio: "2026-12-01", fechaFin: "2026-12-10", TiposLicencias_idTipoLicencia: 1 },
@@ -89,10 +89,10 @@ beforeEach(() => {
         looseMock(service.getAll).mockResolvedValue([]);
         looseMock(service.getById).mockResolvedValue({});
         // reserva ya no expone create(): su unica via de alta es realizarReserva(),
-        // que es la que valida y calcula el monto.
+        // que es la que valida y calcula el monto. rol solo tiene lectura
         if (service.create) looseMock(service.create).mockResolvedValue({});
-        looseMock(service.update).mockResolvedValue({});
-        looseMock(service.delete).mockResolvedValue({});
+        if (service.update) looseMock(service.update).mockResolvedValue({});
+        if (service.delete) looseMock(service.delete).mockResolvedValue({});
     }
     looseMock(reservaService.realizarReserva).mockResolvedValue({});
     looseMock(carreraService.crearCarrera).mockResolvedValue({});
@@ -106,12 +106,14 @@ describe("rutas protegidas de todas las entidades", () => {
         ["/api/personas", "ADMIN", personaService],
         ["/api/localidades", "CLIENTE", localidadService],
         ["/api/circuitos", "CLIENTE", circuitoService],
+        ["/api/roles", "ADMIN", rolService],
         ["/api/tiposLicencias", "EMPLEADO", tipoLicenciaService],
         ["/api/tiposKartings", "EMPLEADO", tipoKartingService],
         ["/api/torneos", "CLIENTE", torneoService],
         ["/api/licencias", "EMPLEADO", licenciaService],
         ["/api/reservas", "EMPLEADO", reservaService],
         ["/api/carreras", "CLIENTE", carreraService],
+        ["/api/participaciones", "EMPLEADO", participacionService],
         // el listado completo dejo de ser visible para un CLIENTE: ahora usa /mias
         ["/api/inscripciones", "EMPLEADO", inscripcionService],
     ] as const;
@@ -121,6 +123,28 @@ describe("rutas protegidas de todas las entidades", () => {
 
         expect(response.status).toBe(401);
         expect(service.getAll).not.toHaveBeenCalled();
+    });
+
+    it("rechaza con 401 un token firmado con otro secreto", async () => {
+        const falso = jwt.sign({ idPersona: 1, mail: "x@x.com", rol: "ADMIN" }, "otro-secreto");
+        const response = await request(app)
+            .get("/api/kartings")
+            .set("Authorization", `Bearer ${falso}`);
+
+        expect(response.status).toBe(401);
+        expect(kartingService.getAll).not.toHaveBeenCalled();
+    });
+
+    it("rechaza con 401 un token vencido", async () => {
+        const vencido = jwt.sign(
+            { idPersona: 1, mail: "x@x.com", rol: "ADMIN", exp: Math.floor(Date.now() / 1000) - 60 },
+            process.env.JWT_SECRET as string
+        );
+        const response = await request(app)
+            .get("/api/kartings")
+            .set("Authorization", `Bearer ${vencido}`);
+
+        expect(response.status).toBe(401);
     });
 
     it.each(routes)("permite consultar %s con un rol autorizado", async (path, role, service) => {
@@ -179,9 +203,9 @@ describe("roles de localidades, tiposKartings y licencias", () => {
 
 describe("CRUD de las entidades", () => {
     const entities = [
-        ["/api/kartings", "/api/kartings/1", "EMPLEADO", "EMPLEADO", "EMPLEADO", kartingService, "create"],
+        ["/api/kartings", "/api/kartings/1", "EMPLEADO", "EMPLEADO", "ADMIN", kartingService, "create"],
         ["/api/personas", "/api/personas/1", "ADMIN", "ADMIN", "ADMIN", personaService, "create"],
-        ["/api/localidades", "/api/localidades/1", "EMPLEADO", "EMPLEADO", "EMPLEADO", localidadService, "create"],
+        ["/api/localidades", "/api/localidades/1", "EMPLEADO", "EMPLEADO", "ADMIN", localidadService, "create"],
         ["/api/circuitos", "/api/circuitos/1", "ADMIN", "EMPLEADO", "ADMIN", circuitoService, "create"],
         ["/api/tiposLicencias", "/api/tiposLicencias/1", "EMPLEADO", "EMPLEADO", "ADMIN", tipoLicenciaService, "create"],
         ["/api/tiposKartings", "/api/tiposKartings/1", "EMPLEADO", "EMPLEADO", "ADMIN", tipoKartingService, "create"],
@@ -380,6 +404,15 @@ describe("rutas con claves compuestas", () => {
             "crearCarrera",
             "EMPLEADO",
         ],
+        [
+            "/api/participaciones",
+            "/api/participaciones/2026-01-01/1/1/1",
+            "EMPLEADO",
+            participacionService,
+            "put",
+            "registrarParticipacion",
+            "EMPLEADO",
+        ],
         // inscripciones queda fuera de esta tabla: ya no tiene PUT. Tiene su propio describe.
     ] as const;
 
@@ -402,6 +435,24 @@ describe("rutas con claves compuestas", () => {
     });
 });
 
+describe("resultados de carrera", () => {
+    it("rechaza con 400 una fecha de carrera con hora en la URL", async () => {
+        const response = await request(app)
+            .get("/api/participaciones/2026-11-09T03:00:00-03:00/1/1/1")
+            .set("Authorization", `Bearer ${token("ADMIN")}`);
+
+        expect(response.status).toBe(400);
+    });
+
+    it("un CLIENTE no puede cargarse resultados", async () => {
+        const response = await request(app)
+            .post("/api/participaciones")
+            .set("Authorization", `Bearer ${token("CLIENTE")}`)
+            .send({});
+
+        expect(response.status).toBe(403);
+        expect(participacionService.registrarParticipacion as unknown as jest.Mock).not.toHaveBeenCalled();
+    });
 
     it("un EMPLEADO carga la clasificación completa de una carrera", async () => {
         const response = await request(app)
@@ -452,7 +503,7 @@ describe("rutas con claves compuestas", () => {
         expect(response.status).toBe(400);
         expect(participacionService.registrarResultadosCarrera as unknown as jest.Mock).not.toHaveBeenCalled();
     });
-
+});
 
 describe("autenticación", () => {
     it("registra una persona", async () => {
@@ -526,5 +577,61 @@ describe("documentación OpenAPI", () => {
         for (const path of ["/api/personas/{id}/rol", "/api/personas/empleado", "/api/reservas/fechas", "/api/licencias/mias"]) {
             expect(spec.paths[path]).toBeDefined();
         }
+    });
+});
+
+describe("borrado solo ADMIN", () => {
+    it.each([
+        ["/api/kartings/1", kartingService],
+        ["/api/localidades/1", localidadService],
+    ] as const)("un EMPLEADO no puede borrar %s", async (path, service) => {
+        const response = await request(app)
+            .delete(path)
+            .set("Authorization", `Bearer ${token("EMPLEADO")}`);
+
+        expect(response.status).toBe(403);
+        expect(service.delete as unknown as jest.Mock).not.toHaveBeenCalled();
+    });
+});
+
+describe("números como string en el body", () => {
+    it("un circuito con maximo \"3\" llega al service como número", async () => {
+        await request(app)
+            .post("/api/circuitos")
+            .set("Authorization", `Bearer ${token("ADMIN")}`)
+            .send({ distancia: "800", dificultad: "media", maximo: "3" });
+
+        expect(circuitoService.create as unknown as jest.Mock)
+            .toHaveBeenCalledWith({ distancia: 800, dificultad: "media", maximo: 3 });
+    });
+});
+
+describe("rate limit del login", () => {
+    // el limiter se saltea con NODE_ENV=test: aca lo activamos solo para este describe
+    beforeEach(() => { process.env.NODE_ENV = "development"; });
+    afterEach(() => { process.env.NODE_ENV = "test"; });
+
+    // X-Forwarded-For simula la IP real del cliente que Railway pone delante del proxy
+    const login = (ip: string) => request(app)
+        .post("/api/auth/login")
+        .set("X-Forwarded-For", ip)
+        .send({ mail: "a@a.com", "contraseña": "x" });
+
+    it("cuenta por IP real detrás del proxy y solo los intentos fallidos", async () => {
+        looseMock(authService.login).mockResolvedValue({ token: "t" });
+        for (let i = 0; i < 12; i++) {
+            expect((await login("10.0.0.1")).status).toBe(200);
+        }
+
+        (authService.login as any).mockRejectedValue(new AppError("Credenciales invalidas", 401));
+        for (let i = 0; i < 10; i++) {
+            expect((await login("10.0.0.2")).status).toBe(401);
+        }
+        const bloqueado = await login("10.0.0.2");
+        expect(bloqueado.status).toBe(429);
+        expect(bloqueado.body.message).toMatch(/Demasiados intentos/);
+
+        // otra IP no comparte el cupo
+        expect((await login("10.0.0.3")).status).toBe(401);
     });
 });

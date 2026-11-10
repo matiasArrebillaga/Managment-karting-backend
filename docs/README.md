@@ -94,12 +94,7 @@ Copiar `.env.example` a `.env` y completar las variables de entorno:
 
 | Variable | Descripción |
 |---|---|
-| `DB_HOST` | Host de la base de datos |
-| `DB_PORT` | Puerto de la base de datos |
-| `DB_USERNAME` | Usuario de la base de datos |
-| `DB_PASSWORD` | Contraseña de la base de datos |
-| `DB_DATABASE` | Nombre de la base de datos |
-| `DATABASE_URL` | Conexión utilizada por Prisma |
+| `DATABASE_URL` | Conexión a la base (app, migraciones y seed), ej. `mysql://root:@localhost:3306/karting` |
 | `JWT_SECRET` | Clave para firmar los tokens |
 | `FRONTEND_URL` | Origen permitido por CORS |
 | `SEED_ADMIN_MAIL` | Correo del administrador inicial |

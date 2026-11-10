@@ -1,5 +1,4 @@
-// El monto no forma parte de la entrada: lo calcula el service a partir del
-// precio por hora del tipo de karting y la duracion de la franja reservada.
+// el monto lo calcula el service con el precio por hora y la duracion
 export interface IReserva {
     idReservas ?: number;
     fechaReserva : Date;
@@ -11,10 +10,8 @@ export interface IReserva {
 }
 
 export type CreateReserva = Omit<IReserva,"idReservas">;
-export type UpdateReserva = Partial<CreateReserva>;
 
-// Lo que llega por la request: las horas vienen como "HH:MM" y la fecha como texto.
-// El service las normaliza a Date antes de validar.
+// lo que llega de la request, el service lo pasa a Date
 export type CreateReservaInput = {
     fechaReserva: Date | string;
     horaInicio: Date | string;

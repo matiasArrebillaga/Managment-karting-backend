@@ -9,7 +9,7 @@ const router = Router();
 
 router.post("/register", requireFields("nombre", "apellido", "dni", "fechaNacimiento", "mail", "telefono", "contraseña", "Localidades_idLocalidades"), authController.register);
 router.post("/login", requireFields("mail", "contraseña"), authController.login);
-// publica: el registro necesita las localidades antes de tener token
+// publica porque el registro necesita las localidades
 router.get("/localidades", localidadController.getAll);
 
 export default router;

@@ -20,7 +20,7 @@ personasTorneos.get(
     PersonasTorneosController.getMias
 );
 
-// tambien va antes: si no, "/torneo/5" matchearia "/:Torneos_idTorneos/:Personas_idPersona"
+// tambien va antes, sino /torneo/5 matchea con la de parametros
 personasTorneos.get(
     "/torneo/:idTorneo",
     verifyRoles("CLIENTE","EMPLEADO","ADMIN"),
