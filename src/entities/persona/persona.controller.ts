@@ -54,7 +54,7 @@ class PersonaController{
         async delete (req: Request, res: Response, next: NextFunction){
         try {
             const id = Number(req.params.id);
-            await personaService.delete(id);
+            await personaService.borrarPersona(id);
             res.status(200).json({
                 message: "Persona eliminada correctamente"
             });
