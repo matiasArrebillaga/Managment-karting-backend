@@ -92,7 +92,10 @@ beforeEach(() => {
         // que es la que valida y calcula el monto. rol solo tiene lectura
         if (service.create) looseMock(service.create).mockResolvedValue({});
         if (service.update) looseMock(service.update).mockResolvedValue({});
-        if (service.delete) looseMock(service.delete).mockResolvedValue({});
+        //comprobamos si el servicio tiene un método delete antes de configurarlo
+        if ("delete" in service) {
+        looseMock(service.delete).mockResolvedValue({});
+        }
     }
     looseMock(reservaService.realizarReserva).mockResolvedValue({});
     looseMock(carreraService.crearCarrera).mockResolvedValue({});
@@ -239,9 +242,11 @@ describe("CRUD de las entidades", () => {
             .set("Authorization", `Bearer ${token(deleteRole)}`);
 
         expect(deletion.status).toBe(200);
-        expect((service.delete as unknown as jest.Mock)).toHaveBeenCalledWith(1);
-    });
-});
+        //verificamos que ese método haya sido llamado con el ID 1.
+        if ("delete" in service) {
+        expect(looseMock(service.delete)).toHaveBeenCalledWith(1);
+         }});
+         });
 
 describe("reservas", () => {
     const bodyValido = {

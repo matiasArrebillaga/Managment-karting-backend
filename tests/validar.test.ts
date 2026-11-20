@@ -20,9 +20,17 @@ describe("aNumeros", () => {
 });
 
 describe("validarId", () => {
-    it("acepta enteros y rechaza el resto", () => {
+    it("acepta enteros positivos y rechaza el resto", () => {
+        //No lanza error si es un entero positivo que sea valido
         expect(() => validarId(3)).not.toThrow();
-        expect(() => validarId(NaN)).toThrow("El identificador debe ser un número entero");
+
+        expect(() => validarId(NaN))
+            .toThrow("El identificador debe ser un número entero");
+
         expect(() => validarId(1.5)).toThrow();
+
+        // Rechaza si es 0 el id
+        expect(() => validarId(0)).toThrow();
+        expect(() => validarId(-1)).toThrow();
     });
 });
