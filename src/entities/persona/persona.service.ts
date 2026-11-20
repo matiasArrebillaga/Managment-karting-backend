@@ -30,7 +30,8 @@ class PersonaService {
             }
         }
     }
-   async create(data: CreatePersona) {
+
+async create(data: CreatePersona) {
     return this.crearPersonaConRol(data, "CLIENTE");
 }
 
@@ -198,12 +199,43 @@ private async crearPersonaConRol(
     omit: { contraseña: true }
   });
 }
-    async delete(idPersona:number){
-        validarId(idPersona);
-        return await prisma.personas.delete({
-            where:{idPersona}
+
+
+    async borrarPersona(idPersona: number) {
+    validarId(idPersona);
+
+    const persona = await prisma.personas.findUnique({
+        where: { idPersona },
+        include: {
+            rol: true
+        }
+    });
+
+    if (!persona) {
+        throw new Error("La persona no existe");
+    }
+
+    const nombreRol = persona.rol.nombre.toUpperCase();
+
+    // Si es CLIENTE, realizamos una baja lógica
+    if (nombreRol === "CLIENTE") {
+        return await prisma.personas.update({
+            where: { idPersona },
+            data: {
+                activo: false
+            }
         });
     }
+
+    // Si es EMPLEADO, realizamos una baja física
+    if (nombreRol === "EMPLEADO") {
+        return await prisma.personas.delete({
+            where: { idPersona }
+        });
+    }
+
+    throw new Error("No se permite eliminar personas con este rol");
+}
 
     // asigna un rol, P2025 -> 404 si la persona no existe
     async asignarRol(idPersona: number, nombreRol: string) {

@@ -1,8 +1,9 @@
 import { AppError } from "../middleware/error.middleware";
 
 export function validarId(id: number) {
-    if (!Number.isInteger(id)) throw new AppError("El identificador debe ser un número entero");
-}
+if (!Number.isInteger(id) || id <= 0) {
+    throw new AppError("El identificador debe ser un número entero positivo");
+}}
 
 // convierte "3" en 3, "" y "abc" quedan asi el service los rechaza
 export function aNumeros<T extends object>(body: T, ...campos: string[]): T {
